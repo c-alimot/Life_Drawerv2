@@ -42,6 +42,10 @@ export const API_ERRORS = {
     code: 'TAG_NOT_FOUND',
     message: 'Tag not found',
   },
+  TAG_NAME_EXISTS: {
+    code: 'TAG_NAME_EXISTS',
+    message: 'A tag with this name already exists',
+  },
 
   // Network errors
   NETWORK_ERROR: {
