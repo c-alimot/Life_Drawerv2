@@ -27,14 +27,14 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   if (match) {
     const [, prefix, rest] = match;
     const alias = "@" + prefix;
-    
+
     // Check if we have this alias mapped
     if (aliasMap[alias]) {
       // Resolve relative to the alias path
       const resolvedPath = rest
         ? path.join(aliasMap[alias], rest)
         : aliasMap[alias];
-      
+
       try {
         // Try to resolve with the resolved path
         return originalResolveRequest(context, resolvedPath, platform);
@@ -43,7 +43,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
       }
     }
   }
-  
+
   // Default resolution
   return originalResolveRequest(context, moduleName, platform);
 };

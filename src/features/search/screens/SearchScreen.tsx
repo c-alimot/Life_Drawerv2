@@ -241,7 +241,6 @@ export function SearchScreen() {
             ]}
             accessible
             accessibilityLabel="All entries filter"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -272,7 +271,6 @@ export function SearchScreen() {
             ]}
             accessible
             accessibilityLabel="Filter by mood"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -303,7 +301,6 @@ export function SearchScreen() {
             ]}
             accessible
             accessibilityLabel="Filter by drawer"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -334,7 +331,6 @@ export function SearchScreen() {
             ]}
             accessible
             accessibilityLabel="Filter by tag"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -365,7 +361,6 @@ export function SearchScreen() {
             ]}
             accessible
             accessibilityLabel="Filter by date"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -419,7 +414,6 @@ export function SearchScreen() {
                 ]}
                 accessible
                 accessibilityLabel="Clear mood filter"
-                accessibilityRole="button"
               >
                 <Text
                   style={[theme.typography.body, { color: theme.colors.text }]}
@@ -453,7 +447,6 @@ export function SearchScreen() {
                     ]}
                     accessible
                     accessibilityLabel={`Filter by ${moodData.label}`}
-                    accessibilityRole="button"
                   >
                     <Text style={{ fontSize: 24 }}>{moodData.emoji}</Text>
                     <Text
@@ -501,7 +494,6 @@ export function SearchScreen() {
                 ]}
                 accessible
                 accessibilityLabel="Clear drawer filter"
-                accessibilityRole="button"
               >
                 <Text
                   style={[theme.typography.body, { color: theme.colors.text }]}
@@ -532,7 +524,6 @@ export function SearchScreen() {
                   ]}
                   accessible
                   accessibilityLabel={`Filter by ${drawer.name}`}
-                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -591,7 +582,6 @@ export function SearchScreen() {
                 ]}
                 accessible
                 accessibilityLabel="Clear tag filter"
-                accessibilityRole="button"
               >
                 <Text
                   style={[theme.typography.body, { color: theme.colors.text }]}
@@ -623,7 +613,6 @@ export function SearchScreen() {
                     ]}
                     accessible
                     accessibilityLabel={`Filter by ${tag.name}`}
-                    accessibilityRole="button"
                   >
                     <Text
                       style={[
@@ -690,7 +679,6 @@ export function SearchScreen() {
                   ]}
                   accessible
                   accessibilityLabel={`Filter by ${range}`}
-                  accessibilityRole="button"
                 >
                   <Text
                     style={[
@@ -764,7 +752,6 @@ export function SearchScreen() {
                 onPress={() => handleEntryPress(item.id)}
                 accessible
                 accessibilityLabel={`Entry: ${item.title}`}
-                accessibilityRole="button"
               >
                 <View style={styles.entryHeader}>
                   <Text

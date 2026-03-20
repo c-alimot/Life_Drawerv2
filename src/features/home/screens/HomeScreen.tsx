@@ -108,7 +108,6 @@ export function HomeScreen() {
           <TouchableOpacity
             accessible
             accessibilityLabel="Menu"
-            accessibilityRole="button"
           >
             <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
               ☰
@@ -126,7 +125,6 @@ export function HomeScreen() {
                 : "Set life phase"
             }
             accessibilityHint="Tap to set or change your current life phase"
-            accessibilityRole="button"
           >
             <Text
               style={[
@@ -164,7 +162,6 @@ export function HomeScreen() {
                 accessible
                 accessibilityLabel="Create new entry"
                 accessibilityHint="Open entry creation screen"
-                accessibilityRole="button"
               >
                 <Text
                   style={[
@@ -200,7 +197,6 @@ export function HomeScreen() {
                 accessible
                 accessibilityLabel="Search entries"
                 accessibilityHint="Open search and filter screen"
-                accessibilityRole="button"
               >
                 <Text
                   style={[
@@ -320,7 +316,6 @@ export function HomeScreen() {
                           accessible
                           accessibilityLabel={`Entry: ${entry.title || "Untitled"}`}
                           accessibilityHint={`Created on ${new Date(entry.createdAt).toLocaleDateString()}`}
-                          accessibilityRole="button"
                         >
                           <View style={styles.entryHeader}>
                             <Text
@@ -436,7 +431,6 @@ export function HomeScreen() {
                       accessible
                       accessibilityLabel={`Drawer: ${drawer.name}`}
                       accessibilityHint={`${drawer.entryCount} entries`}
-                      accessibilityRole="button"
                     >
                       <View
                         style={[
