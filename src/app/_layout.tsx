@@ -3,13 +3,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '@store';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import { useTheme } from '@styles/theme';
 import { SplashScreen } from '@features/splash/screens/SplashScreen';
 
 export default function RootLayout() {
   const { session, fetchSession } = useAuthStore();
-  const theme = useTheme();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {

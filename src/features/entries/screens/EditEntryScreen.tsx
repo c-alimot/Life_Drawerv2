@@ -136,7 +136,7 @@ export function EditEntryScreen() {
         const uris = result.assets.map((asset) => asset.uri);
         setNewImageUris((prev) => [...prev, ...uris]);
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to pick images');
     }
   }, [entry?.images]);
@@ -158,7 +158,7 @@ export function EditEntryScreen() {
         const photoUri = result.assets[0].uri;
         setNewImageUris((prev) => [...prev, photoUri]);
       }
-    } catch (error) {
+    } catch (_error) {
       Alert.alert('Error', 'Failed to take photo');
     }
   }, []);

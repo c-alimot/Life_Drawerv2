@@ -8,10 +8,9 @@ import {
   FlatList,
   Alert,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { useTheme } from '@styles/theme';
 import { useEntryDetail } from '../hooks/useEntryDetail';
 import { useAudioPlayer } from '../hooks/useAudioPlayer';
@@ -28,7 +27,7 @@ export function EntryDetailScreen() {
   const { entryId } = route.params as { entryId: string };
   const { entry, isLoading, fetchEntry, deleteEntry, unlinkDrawer, unlinkTag } =
     useEntryDetail(entryId);
-  const { isPlaying, duration, position, play, stop } = useAudioPlayer(
+  const { isPlaying, duration, position, play } = useAudioPlayer(
     entry?.audioUrl || null
   );
 
