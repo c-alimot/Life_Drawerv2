@@ -1,16 +1,22 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { useTheme } from '@styles/theme';
-import { useLogin } from '../hooks/useLogin';
-import { Screen, SafeArea } from '@components/layout';
-import { Button, Input } from '@components/ui';
+import { SafeArea, Screen } from "@components/layout";
+import { Button, Input } from "@components/ui";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "@styles/theme";
+import { Controller, useForm } from "react-hook-form";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { z } from "zod";
+import { useLogin } from "../hooks/useLogin";
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -20,11 +26,15 @@ export function LoginScreen() {
   const navigation = useNavigation();
   const { login, isLoading, error } = useLogin();
 
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
     },
   });
 
@@ -62,7 +72,7 @@ export function LoginScreen() {
                 theme.typography.h2,
                 {
                   color: theme.colors.text,
-                  textAlign: 'center',
+                  textAlign: "center",
                   marginBottom: theme.spacing.md,
                 },
               ]}
@@ -76,14 +86,11 @@ export function LoginScreen() {
             <View
               style={[
                 styles.errorBanner,
-                { backgroundColor: theme.colors.error + '20' },
+                { backgroundColor: theme.colors.error + "20" },
               ]}
             >
               <Text
-                style={[
-                  theme.typography.bodySm,
-                  { color: theme.colors.error },
-                ]}
+                style={[theme.typography.bodySm, { color: theme.colors.error }]}
                 accessible
                 accessibilityRole="alert"
               >
@@ -136,7 +143,10 @@ export function LoginScreen() {
               <Text
                 style={[
                   theme.typography.bodySm,
-                  { color: theme.colors.textSecondary, marginBottom: theme.spacing.lg },
+                  {
+                    color: theme.colors.textSecondary,
+                    marginBottom: theme.spacing.lg,
+                  },
                 ]}
               >
                 Forgot password?
@@ -146,7 +156,7 @@ export function LoginScreen() {
 
           {/* Submit Button */}
           <Button
-            label={isLoading ? 'Signing in...' : 'Sign in'}
+            label={isLoading ? "Signing in..." : "Sign in"}
             onPress={handleSubmit(onSubmit)}
             disabled={isLoading}
             accessibilityLabel="Sign in button"
@@ -155,10 +165,10 @@ export function LoginScreen() {
           {/* Signup Link */}
           <View style={styles.signupLink}>
             <Text style={[theme.typography.body, { color: theme.colors.text }]}>
-              Don't have an account?{' '}
+              Don't have an account?{" "}
             </Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Signup' as never)}
+              onPress={() => navigation.navigate("Signup" as never)}
               accessible
               accessibilityLabel="Create account"
               accessibilityHint="Navigate to signup page"
@@ -166,7 +176,7 @@ export function LoginScreen() {
               <Text
                 style={[
                   theme.typography.body,
-                  { color: theme.colors.primary, fontWeight: '600' },
+                  { color: theme.colors.primary, fontWeight: "600" },
                 ]}
               >
                 Create account
@@ -197,10 +207,10 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   signupLink: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
-    flexWrap: 'wrap',
+    flexWrap: "wrap",
   },
   errorBanner: {
     padding: 12,

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { useAuthStore } from '@store';
-import { tagsApi } from '../api/tags.api';
-import type { CreateTagRequest, ApiError, Tag } from '@types';
+import { useAuthStore } from "@store";
+import type { ApiError, CreateTagRequest, Tag } from "@types";
+import { useCallback, useState } from "react";
+import { tagsApi } from "../api/tags.api";
 
 export function useCreateTag() {
   const { user } = useAuthStore();
@@ -21,9 +21,9 @@ export function useCreateTag() {
         if (!result.success || !result.data) {
           setError(
             result.error || {
-              code: 'UNKNOWN_ERROR',
-              message: 'Failed to create tag',
-            }
+              code: "UNKNOWN_ERROR",
+              message: "Failed to create tag",
+            },
           );
           return null;
         }
@@ -32,13 +32,13 @@ export function useCreateTag() {
       } catch (err) {
         const apiError = err as ApiError;
         setError(apiError);
-        console.error('Create tag error:', apiError);
+        console.error("Create tag error:", apiError);
         return null;
       } finally {
         setIsLoading(false);
       }
     },
-    [user]
+    [user],
   );
 
   return {

@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
-import { useAuthStore } from '@store';
-import { tagsApi } from '../api/tags.api';
-import type { Tag, ApiError } from '@types';
+import { useAuthStore } from "@store";
+import type { ApiError, Tag } from "@types";
+import { useCallback, useState } from "react";
+import { tagsApi } from "../api/tags.api";
 
 export function useTags() {
   const { user } = useAuthStore();
@@ -22,9 +22,9 @@ export function useTags() {
       if (!result.success || !result.data) {
         setError(
           result.error || {
-            code: 'UNKNOWN_ERROR',
-            message: 'Failed to fetch tags',
-          }
+            code: "UNKNOWN_ERROR",
+            message: "Failed to fetch tags",
+          },
         );
         return;
       }
@@ -34,7 +34,7 @@ export function useTags() {
     } catch (err) {
       const apiError = err as ApiError;
       setError(apiError);
-      console.error('Fetch tags error:', apiError);
+      console.error("Fetch tags error:", apiError);
     } finally {
       setIsLoading(false);
     }

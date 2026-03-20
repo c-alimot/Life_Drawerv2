@@ -1,8 +1,5 @@
-import { tagsService } from '@services/supabase/tags';
-import {
-  CreateTagRequest,
-  ApiError,
-} from '@types';
+import { tagsService } from "@services/supabase/tags";
+import { ApiError, CreateTagRequest } from "@types";
 
 export const tagsApi = {
   async createTag(userId: string, data: CreateTagRequest) {
@@ -14,7 +11,7 @@ export const tagsApi = {
         error: null,
       };
     } catch (error) {
-      console.error('Tags API create error:', error);
+      console.error("Tags API create error:", error);
       return {
         success: false,
         data: null,
@@ -32,7 +29,7 @@ export const tagsApi = {
         error: null,
       };
     } catch (error) {
-      console.error('Tags API get error:', error);
+      console.error("Tags API get error:", error);
       return {
         success: false,
         data: null,
@@ -50,7 +47,7 @@ export const tagsApi = {
         error: null,
       };
     } catch (error) {
-      console.error('Tags API get single error:', error);
+      console.error("Tags API get single error:", error);
       return {
         success: false,
         data: null,
@@ -68,7 +65,7 @@ export const tagsApi = {
         error: null,
       };
     } catch (error) {
-      console.error('Tags API delete error:', error);
+      console.error("Tags API delete error:", error);
       return {
         success: false,
         data: null,

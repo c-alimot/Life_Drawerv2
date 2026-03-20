@@ -1,13 +1,13 @@
-import { supabase } from './client';
+import { API_ERRORS } from '@constants/errors';
 import {
+  ApiError,
+  CreateEntryRequest,
   Entry,
   EntryWithRelations,
-  CreateEntryRequest,
-  UpdateEntryRequest,
   SearchEntriesRequest,
-  ApiError,
+  UpdateEntryRequest,
 } from '@types';
-import { API_ERRORS } from '@constants/errors';
+import { supabase } from './client';
 
 export const entriesService = {
   /**
