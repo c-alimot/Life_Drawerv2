@@ -1,24 +1,29 @@
+import { SafeArea, Screen } from "@components/layout";
+import { Button } from "@components/ui";
+import { MOOD_MAP } from "@constants/moods";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
-import { useTheme } from '@styles/theme';
-import { useEntryDetail } from '../hooks/useEntryDetail';
-import { useAudioPlayer } from '../hooks/useAudioPlayer';
-import { MOOD_MAP, type MoodValue } from '@constants/mood';
-import { Screen, SafeArea } from '@components/layout';
-import { Button } from '@components/ui';
+    useFocusEffect,
+    useNavigation,
+    useRoute,
+} from "@react-navigation/native";
+import { useTheme } from "@styles/theme";
+import type { MoodValue } from "@types";
+import { useCallback, useState } from "react";
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
+import { useEntryDetail } from "../hooks/useEntryDetail";
 
-type TabType = 'content' | 'media' | 'details';
+type TabType = "content" | "media" | "details";
 
 export function EntryDetailScreen() {
   const theme = useTheme();
@@ -28,70 +33,70 @@ export function EntryDetailScreen() {
   const { entry, isLoading, fetchEntry, deleteEntry, unlinkDrawer, unlinkTag } =
     useEntryDetail(entryId);
   const { isPlaying, duration, position, play } = useAudioPlayer(
-    entry?.audioUrl || null
+    entry?.audioUrl || null,
   );
 
-  const [activeTab, setActiveTab] = useState<TabType>('content');
+  const [activeTab, setActiveTab] = useState<TabType>("content");
 
   useFocusEffect(
     useCallback(() => {
       fetchEntry();
-    }, [fetchEntry])
+    }, [fetchEntry]),
   );
 
   const handleEdit = useCallback(() => {
-    navigation.navigate('EditEntry' as never, { entryId } as never);
+    navigation.navigate("EditEntry" as never, { entryId } as never);
   }, [navigation, entryId]);
 
   const handleDelete = useCallback(() => {
-    Alert.alert('Delete Entry', 'Are you sure you want to delete this entry?', [
-      { text: 'Cancel', onPress: () => {} },
+    Alert.alert("Delete Entry", "Are you sure you want to delete this entry?", [
+      { text: "Cancel", onPress: () => {} },
       {
-        text: 'Delete',
+        text: "Delete",
         onPress: async () => {
           const success = await deleteEntry();
           if (success) {
-            Alert.alert('Success', 'Entry deleted');
+            Alert.alert("Success", "Entry deleted");
             navigation.goBack();
           } else {
-            Alert.alert('Error', 'Failed to delete entry');
+            Alert.alert("Error", "Failed to delete entry");
           }
         },
-        style: 'destructive',
+        style: "destructive",
       },
     ]);
   }, [deleteEntry, navigation]);
 
   const handleRemoveDrawer = useCallback(
     (drawerId: string) => {
-      Alert.alert('Remove Drawer', 'Remove this entry from this drawer?', [
-        { text: 'Cancel', onPress: () => {} },
+      Alert.alert("Remove Drawer", "Remove this entry from this drawer?", [
+        { text: "Cancel", onPress: () => {} },
         {
-          text: 'Remove',
+          text: "Remove",
           onPress: async () => {
             await unlinkDrawer(drawerId);
           },
-          style: 'destructive',
+          style: "destructive",
         },
       ]);
     },
-    [unlinkDrawer]
+    [unlinkDrawer],
   );
 
   const handleRemoveTag = useCallback(
     (tagId: string) => {
-      Alert.alert('Remove Tag', 'Remove this tag from the entry?', [
-        { text: 'Cancel', onPress: () => {} },
+      Alert.alert("Remove Tag", "Remove this tag from the entry?", [
+        { text: "Cancel", onPress: () => {} },
         {
-          text: 'Remove',
+          text: "Remove",
           onPress: async () => {
             await unlinkTag(tagId);
           },
-          style: 'destructive',
+          style: "destructive",
         },
       ]);
     },
-    [unlinkTag]
+    [unlinkTag],
   );
 
   const handleBack = useCallback(() => {
@@ -124,11 +129,11 @@ export function EntryDetailScreen() {
     );
   }
 
-  const formattedDate = new Date(entry.createdAt).toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
+  const formattedDate = new Date(entry.createdAt).toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   const progressPercent = duration > 0 ? (position / duration) * 100 : 0;
@@ -138,8 +143,14 @@ export function EntryDetailScreen() {
       <Screen style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} accessible accessibilityLabel="Go back">
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>←</Text>
+          <TouchableOpacity
+            onPress={handleBack}
+            accessible
+            accessibilityLabel="Go back"
+          >
+            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+              ←
+            </Text>
           </TouchableOpacity>
           <View style={styles.headerActions}>
             <Button
@@ -154,7 +165,9 @@ export function EntryDetailScreen() {
               accessibilityLabel="Delete entry"
               style={{ marginLeft: theme.spacing.sm }}
             >
-              <Text style={[theme.typography.body, { color: theme.colors.error }]}>
+              <Text
+                style={[theme.typography.body, { color: theme.colors.error }]}
+              >
                 🗑️
               </Text>
             </TouchableOpacity>
@@ -162,14 +175,18 @@ export function EntryDetailScreen() {
         </View>
 
         {/* Tab Navigation */}
-        <View style={[styles.tabBar, { borderBottomColor: theme.colors.border }]}>
+        <View
+          style={[styles.tabBar, { borderBottomColor: theme.colors.border }]}
+        >
           <TouchableOpacity
-            onPress={() => setActiveTab('content')}
+            onPress={() => setActiveTab("content")}
             style={[
               styles.tabButton,
               {
                 borderBottomColor:
-                  activeTab === 'content' ? theme.colors.primary : 'transparent',
+                  activeTab === "content"
+                    ? theme.colors.primary
+                    : "transparent",
               },
             ]}
             accessible
@@ -181,8 +198,10 @@ export function EntryDetailScreen() {
                 theme.typography.body,
                 {
                   color:
-                    activeTab === 'content' ? theme.colors.primary : theme.colors.textSecondary,
-                  fontWeight: activeTab === 'content' ? '600' : '400',
+                    activeTab === "content"
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  fontWeight: activeTab === "content" ? "600" : "400",
                 },
               ]}
             >
@@ -191,12 +210,12 @@ export function EntryDetailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('media')}
+            onPress={() => setActiveTab("media")}
             style={[
               styles.tabButton,
               {
                 borderBottomColor:
-                  activeTab === 'media' ? theme.colors.primary : 'transparent',
+                  activeTab === "media" ? theme.colors.primary : "transparent",
               },
             ]}
             accessible
@@ -208,8 +227,10 @@ export function EntryDetailScreen() {
                 theme.typography.body,
                 {
                   color:
-                    activeTab === 'media' ? theme.colors.primary : theme.colors.textSecondary,
-                  fontWeight: activeTab === 'media' ? '600' : '400',
+                    activeTab === "media"
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  fontWeight: activeTab === "media" ? "600" : "400",
                 },
               ]}
             >
@@ -218,12 +239,14 @@ export function EntryDetailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            onPress={() => setActiveTab('details')}
+            onPress={() => setActiveTab("details")}
             style={[
               styles.tabButton,
               {
                 borderBottomColor:
-                  activeTab === 'details' ? theme.colors.primary : 'transparent',
+                  activeTab === "details"
+                    ? theme.colors.primary
+                    : "transparent",
               },
             ]}
             accessible
@@ -235,8 +258,10 @@ export function EntryDetailScreen() {
                 theme.typography.body,
                 {
                   color:
-                    activeTab === 'details' ? theme.colors.primary : theme.colors.textSecondary,
-                  fontWeight: activeTab === 'details' ? '600' : '400',
+                    activeTab === "details"
+                      ? theme.colors.primary
+                      : theme.colors.textSecondary,
+                  fontWeight: activeTab === "details" ? "600" : "400",
                 },
               ]}
             >
@@ -250,7 +275,7 @@ export function EntryDetailScreen() {
           contentContainerStyle={styles.content}
         >
           {/* Content Tab */}
-          {activeTab === 'content' && (
+          {activeTab === "content" && (
             <View>
               <Text
                 style={[
@@ -276,8 +301,8 @@ export function EntryDetailScreen() {
               {entry.mood && (
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
+                    flexDirection: "row",
+                    alignItems: "center",
                     marginBottom: theme.spacing.lg,
                   }}
                 >
@@ -310,7 +335,7 @@ export function EntryDetailScreen() {
           )}
 
           {/* Media Tab */}
-          {activeTab === 'media' && (
+          {activeTab === "media" && (
             <View>
               {/* Images */}
               {entry.images && entry.images.length > 0 && (
@@ -371,11 +396,13 @@ export function EntryDetailScreen() {
                         { backgroundColor: theme.colors.primary },
                       ]}
                       accessible
-                      accessibilityLabel={isPlaying ? 'Pause audio' : 'Play audio'}
+                      accessibilityLabel={
+                        isPlaying ? "Pause audio" : "Play audio"
+                      }
                       accessibilityRole="button"
                     >
                       <Text style={styles.playButtonText}>
-                        {isPlaying ? '⏸️' : '▶️'}
+                        {isPlaying ? "⏸️" : "▶️"}
                       </Text>
                     </TouchableOpacity>
 
@@ -402,7 +429,8 @@ export function EntryDetailScreen() {
                           { color: theme.colors.textSecondary },
                         ]}
                       >
-                        {Math.floor(position / 1000)}s / {Math.floor(duration / 1000)}s
+                        {Math.floor(position / 1000)}s /{" "}
+                        {Math.floor(duration / 1000)}s
                       </Text>
                     </View>
                   </View>
@@ -412,7 +440,7 @@ export function EntryDetailScreen() {
           )}
 
           {/* Details Tab */}
-          {activeTab === 'details' && (
+          {activeTab === "details" && (
             <View>
               {/* Location */}
               {entry.location && (
@@ -423,7 +451,7 @@ export function EntryDetailScreen() {
                       {
                         color: theme.colors.textSecondary,
                         marginBottom: theme.spacing.sm,
-                        textTransform: 'uppercase',
+                        textTransform: "uppercase",
                       },
                     ]}
                   >
@@ -435,7 +463,9 @@ export function EntryDetailScreen() {
                       { color: theme.colors.text },
                     ]}
                   >
-                    📍 {entry.location.address || `${entry.location.latitude.toFixed(4)}, ${entry.location.longitude.toFixed(4)}`}
+                    📍{" "}
+                    {entry.location.address ||
+                      `${entry.location.latitude.toFixed(4)}, ${entry.location.longitude.toFixed(4)}`}
                   </Text>
                 </View>
               )}
@@ -449,20 +479,22 @@ export function EntryDetailScreen() {
                       {
                         color: theme.colors.textSecondary,
                         marginBottom: theme.spacing.sm,
-                        textTransform: 'uppercase',
+                        textTransform: "uppercase",
                       },
                     ]}
                   >
                     Drawers
                   </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <View
+                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+                  >
                     {entry.drawers.map((drawer) => (
                       <TouchableOpacity
                         key={drawer.id}
                         style={[
                           styles.tagBadge,
                           {
-                            backgroundColor: drawer.color + '20',
+                            backgroundColor: drawer.color + "20",
                             borderColor: drawer.color,
                           },
                         ]}
@@ -494,20 +526,22 @@ export function EntryDetailScreen() {
                       {
                         color: theme.colors.textSecondary,
                         marginBottom: theme.spacing.sm,
-                        textTransform: 'uppercase',
+                        textTransform: "uppercase",
                       },
                     ]}
                   >
                     Tags
                   </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  <View
+                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
+                  >
                     {entry.tags.map((tag) => (
                       <TouchableOpacity
                         key={tag.id}
                         style={[
                           styles.tagBadge,
                           {
-                            backgroundColor: tag.color + '20',
+                            backgroundColor: tag.color + "20",
                             borderColor: tag.color,
                           },
                         ]}
@@ -539,7 +573,7 @@ export function EntryDetailScreen() {
                       {
                         color: theme.colors.textSecondary,
                         marginBottom: theme.spacing.sm,
-                        textTransform: 'uppercase',
+                        textTransform: "uppercase",
                       },
                     ]}
                   >
@@ -564,7 +598,7 @@ export function EntryDetailScreen() {
                     {
                       color: theme.colors.textSecondary,
                       marginBottom: theme.spacing.sm,
-                      textTransform: 'uppercase',
+                      textTransform: "uppercase",
                     },
                   ]}
                 >
@@ -573,7 +607,10 @@ export function EntryDetailScreen() {
                 <Text
                   style={[
                     theme.typography.bodySm,
-                    { color: theme.colors.textSecondary, marginBottom: theme.spacing.xs },
+                    {
+                      color: theme.colors.textSecondary,
+                      marginBottom: theme.spacing.xs,
+                    },
                   ]}
                 >
                   Created: {new Date(entry.createdAt).toLocaleString()}
@@ -600,18 +637,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
   headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   tabBar: {
-    flexDirection: 'row',
+    flexDirection: "row",
     borderBottomWidth: 1,
     paddingHorizontal: 20,
   },
@@ -620,7 +657,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 3,
-    alignItems: 'center',
+    alignItems: "center",
   },
   content: {
     paddingHorizontal: 20,
@@ -629,8 +666,8 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   detailImage: {
     width: 200,
@@ -639,8 +676,8 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   audioPlayer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
@@ -649,8 +686,8 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   playButtonText: {
@@ -663,10 +700,10 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: 8,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
   },
   tagBadge: {
     paddingHorizontal: 12,

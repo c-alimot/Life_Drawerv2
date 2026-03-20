@@ -22,7 +22,7 @@ export const entriesService = {
           user_id: userId,
           title: request.title,
           content: request.content,
-          mood: request.mood || null,
+          mood: (request.mood || null) as any,
         })
         .select()
         .single();
@@ -35,6 +35,7 @@ export const entriesService = {
       if (request.drawerIds && request.drawerIds.length > 0) {
         const { error: drawerError } = await supabase.from('entry_drawers').insert(
           request.drawerIds.map((drawerId) => ({
+            user_id: userId,
             entry_id: entry.id,
             drawer_id: drawerId,
           }))
@@ -51,6 +52,7 @@ export const entriesService = {
       if (request.tagIds && request.tagIds.length > 0) {
         const { error: tagError } = await supabase.from('entry_tags').insert(
           request.tagIds.map((tagId) => ({
+            user_id: userId,
             entry_id: entry.id,
             tag_id: tagId,
           }))
@@ -82,7 +84,6 @@ export const entriesService = {
         .select()
         .eq('id', entryId)
         .eq('user_id', userId)
-        .is('deleted_at', null)
         .single();
 
       if (entryError || !entry) {
@@ -158,8 +159,7 @@ export const entriesService = {
       let query = supabase
         .from('entries')
         .select('*', { count: 'exact' })
-        .eq('user_id', userId)
-        .is('deleted_at', null);
+        .eq('user_id', userId);
 
       // Text search
       if (request?.query) {
@@ -170,7 +170,7 @@ export const entriesService = {
 
       // Mood filter
       if (request?.moodValues && request.moodValues.length > 0) {
-        query = query.in('mood', request.moodValues);
+        query = query.in('mood', request.moodValues as any);
       }
 
       // Date range
@@ -256,7 +256,7 @@ export const entriesService = {
         .update({
           title: request.title,
           content: request.content,
-          mood: request.mood,
+          mood: (request.mood as any),
           updated_at: new Date().toISOString(),
         })
         .eq('id', entryId)
@@ -276,11 +276,10 @@ export const entriesService = {
    */
   async deleteEntry(entryId: string, userId: string): Promise<void> {
     try {
+      // Note: deleted_at column not yet migrated. For now, perform hard delete.
       const { error } = await supabase
         .from('entries')
-        .update({
-          deleted_at: new Date().toISOString(),
-        })
+        .delete()
         .eq('id', entryId)
         .eq('user_id', userId);
 
@@ -294,9 +293,10 @@ export const entriesService = {
   /**
    * Link entry to drawer
    */
-  async linkEntryToDrawer(entryId: string, drawerId: string): Promise<void> {
+  async linkEntryToDrawer(entryId: string, drawerId: string, userId: string): Promise<void> {
     try {
       const { error } = await supabase.from('entry_drawers').insert({
+        user_id: userId,
         entry_id: entryId,
         drawer_id: drawerId,
       });
@@ -329,9 +329,10 @@ export const entriesService = {
   /**
    * Link entry to tag
    */
-  async linkEntryToTag(entryId: string, tagId: string): Promise<void> {
+  async linkEntryToTag(entryId: string, tagId: string, userId: string): Promise<void> {
     try {
       const { error } = await supabase.from('entry_tags').insert({
+        user_id: userId,
         entry_id: entryId,
         tag_id: tagId,
       });

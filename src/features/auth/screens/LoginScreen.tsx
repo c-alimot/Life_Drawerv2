@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useTheme } from '@styles/theme';
 import { useLogin } from '../hooks/useLogin';
 import { Screen, SafeArea } from '@components/layout';
-import { Button, Input, Skeleton } from '@components/ui';
+import { Button, Input } from '@components/ui';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -150,7 +150,6 @@ export function LoginScreen() {
             onPress={handleSubmit(onSubmit)}
             disabled={isLoading}
             accessibilityLabel="Sign in button"
-            accessibilityHint="Submit login form"
           />
 
           {/* Signup Link */}

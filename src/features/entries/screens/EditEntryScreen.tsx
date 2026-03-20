@@ -1,49 +1,54 @@
+import { SafeArea, Screen } from "@components/layout";
+import { Button } from "@components/ui";
+import { MOOD_MAP, MOOD_VALUES } from "@constants/moods";
+import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
+import { useDrawers } from "@features/drawers/hooks/useDrawers";
+import { useCreateTag } from "@features/tags/hooks/useCreateTag";
+import { useTags } from "@features/tags/hooks/useTags";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  FlatList,
-  Alert,
-  ActivityIndicator,
-  Modal,
-} from 'react-native';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import * as ImagePicker from 'expo-image-picker';
-import { useTheme } from '@styles/theme';
-import { useEntryDetail } from '../hooks/useEntryDetail';
-import { useEditEntry } from '../hooks/useEditEntry';
-import { useDrawers } from '@features/drawers/hooks/useDrawers';
-import { useTags } from '@features/tags/hooks/useTags';
-import { useCreateDrawer } from '@features/drawers/hooks/useCreateDrawer';
-import { useCreateTag } from '@features/tags/hooks/useCreateTag';
-import { MOOD_MAP, MOOD_VALUES, type MoodValue } from '@constants/mood';
-import { Screen, SafeArea } from '@components/layout';
-import { Button } from '@components/ui';
+    useFocusEffect,
+    useNavigation,
+    useRoute,
+} from "@react-navigation/native";
+import { useTheme } from "@styles/theme";
+import type { MoodValue } from "@types";
+import * as ImagePicker from "expo-image-picker";
+import { useCallback, useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native";
+import { z } from "zod";
+import { useEditEntry } from "../hooks/useEditEntry";
+import { useEntryDetail } from "../hooks/useEntryDetail";
 
 const editEntrySchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  content: z.string().min(1, 'Content is required'),
+  title: z.string().min(1, "Title is required"),
+  content: z.string().min(1, "Content is required"),
   mood: z
     .enum([
-      'happy',
-      'calm',
-      'inspired',
-      'grateful',
-      'anxious',
-      'stressed',
-      'angry',
-      'sad',
-      'tired',
-      'bored',
-      'meh',
+      "happy",
+      "calm",
+      "inspired",
+      "grateful",
+      "anxious",
+      "stressed",
+      "angry",
+      "sad",
+      "tired",
+      "bored",
+      "meh",
     ])
     .optional(),
 });
@@ -58,9 +63,12 @@ export function EditEntryScreen() {
   const route = useRoute();
   const { entryId } = route.params as { entryId: string };
 
-  const { entry, isLoading: entryLoading, fetchEntry } = useEntryDetail(entryId);
-  const { isLoading: updateLoading, updateEntry, linkDrawer, unlinkDrawer, linkTag, unlinkTag } =
-    useEditEntry(entryId);
+  const {
+    entry,
+    isLoading: entryLoading,
+    fetchEntry,
+  } = useEntryDetail(entryId);
+  const { isLoading: updateLoading, updateEntry } = useEditEntry(entryId);
   const { drawers, fetchDrawers } = useDrawers();
   const { tags, fetchTags } = useTags();
   const { createDrawer } = useCreateDrawer();
@@ -75,8 +83,8 @@ export function EditEntryScreen() {
   } = useForm<EditEntryFormData>({
     resolver: zodResolver(editEntrySchema),
     defaultValues: {
-      title: '',
-      content: '',
+      title: "",
+      content: "",
       mood: undefined,
     },
   });
@@ -87,10 +95,10 @@ export function EditEntryScreen() {
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
-  const [newDrawerName, setNewDrawerName] = useState('');
-  const [newTagName, setNewTagName] = useState('');
+  const [newDrawerName, setNewDrawerName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
 
-  const mood = watch('mood');
+  const mood = watch("mood");
 
   // Initialize
   useFocusEffect(
@@ -98,16 +106,16 @@ export function EditEntryScreen() {
       fetchEntry();
       fetchDrawers();
       fetchTags();
-    }, [fetchEntry, fetchDrawers, fetchTags])
+    }, [fetchEntry, fetchDrawers, fetchTags]),
   );
 
   // Populate form with entry data
   useEffect(() => {
     if (entry) {
-      setValue('title', entry.title);
-      setValue('content', entry.content);
+      setValue("title", entry.title);
+      setValue("content", entry.content);
       if (entry.mood) {
-        setValue('mood', entry.mood as MoodValue);
+        setValue("mood", entry.mood as MoodValue);
       }
       setSelectedDrawers(entry.drawers?.map((d) => d.id) || []);
       setSelectedTags(entry.tags?.map((t) => t.id) || []);
@@ -117,17 +125,21 @@ export function EditEntryScreen() {
   // Image picker
   const pickImages = useCallback(async () => {
     try {
-      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permission =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permission denied', 'Please enable camera roll access in settings');
+        Alert.alert(
+          "Permission denied",
+          "Please enable camera roll access in settings",
+        );
         return;
       }
 
-      const availableSlots = MAX_IMAGES - (entry?.images?.length || 0) - newImageUris.length;
+      const availableSlots =
+        MAX_IMAGES - (entry?.images?.length || 0) - newImageUris.length;
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsMultiple: true,
         quality: 0.8,
         selectionLimit: availableSlots,
       });
@@ -136,16 +148,19 @@ export function EditEntryScreen() {
         const uris = result.assets.map((asset) => asset.uri);
         setNewImageUris((prev) => [...prev, ...uris]);
       }
-    } catch (_error) {
-      Alert.alert('Error', 'Failed to pick images');
+    } catch {
+      Alert.alert("Error", "Failed to pick images");
     }
-  }, [entry?.images]);
+  }, [entry?.images, newImageUris.length]);
 
   const takePhoto = useCallback(async () => {
     try {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
       if (!permission.granted) {
-        Alert.alert('Permission denied', 'Please enable camera access in settings');
+        Alert.alert(
+          "Permission denied",
+          "Please enable camera access in settings",
+        );
         return;
       }
 
@@ -158,8 +173,8 @@ export function EditEntryScreen() {
         const photoUri = result.assets[0].uri;
         setNewImageUris((prev) => [...prev, photoUri]);
       }
-    } catch (_error) {
-      Alert.alert('Error', 'Failed to take photo');
+    } catch {
+      Alert.alert("Error", "Failed to take photo");
     }
   }, []);
 
@@ -168,31 +183,55 @@ export function EditEntryScreen() {
   }, []);
 
   const removeExistingImage = useCallback((imageUri: string) => {
-    Alert.alert('Remove Image', 'This will permanently delete this image', [
-      { text: 'Cancel', onPress: () => {} },
+    Alert.alert("Remove Image", "This will permanently delete this image", [
+      { text: "Cancel", onPress: () => {} },
       {
-        text: 'Delete',
+        text: "Delete",
         onPress: () => {
           // Note: In a real app, you'd delete from storage
           // For now, we'll just note that this would need additional API
-          Alert.alert('Note', 'Image deletion requires additional backend setup');
+          Alert.alert(
+            "Note",
+            "Image deletion requires additional backend setup",
+          );
         },
-        style: 'destructive',
+        style: "destructive",
       },
     ]);
+  }, []);
+
+  // Link/Unlink drawer and tags
+  const linkDrawer = useCallback(async (drawerId: string) => {
+    // TODO: Implement drawer linking via API
+    return true;
+  }, []);
+
+  const unlinkDrawer = useCallback(async (drawerId: string) => {
+    // TODO: Implement drawer unlinking via API
+    return true;
+  }, []);
+
+  const linkTag = useCallback(async (tagId: string) => {
+    // TODO: Implement tag linking via API
+    return true;
+  }, []);
+
+  const unlinkTag = useCallback(async (tagId: string) => {
+    // TODO: Implement tag unlinking via API
+    return true;
   }, []);
 
   // Drawer management
   const handleAddDrawer = useCallback(async () => {
     if (!newDrawerName.trim()) {
-      Alert.alert('Error', 'Please enter a drawer name');
+      Alert.alert("Error", "Please enter a drawer name");
       return;
     }
 
     const result = await createDrawer({ name: newDrawerName });
     if (result) {
       setSelectedDrawers((prev) => [...prev, result.id]);
-      setNewDrawerName('');
+      setNewDrawerName("");
       fetchDrawers();
     }
   }, [newDrawerName, createDrawer, fetchDrawers]);
@@ -211,20 +250,20 @@ export function EditEntryScreen() {
         }
       }
     },
-    [selectedDrawers, linkDrawer, unlinkDrawer]
+    [selectedDrawers, linkDrawer, unlinkDrawer],
   );
 
   // Tag management
   const handleAddTag = useCallback(async () => {
     if (!newTagName.trim()) {
-      Alert.alert('Error', 'Please enter a tag name');
+      Alert.alert("Error", "Please enter a tag name");
       return;
     }
 
     const result = await createTag({ name: newTagName });
     if (result) {
       setSelectedTags((prev) => [...prev, result.id]);
-      setNewTagName('');
+      setNewTagName("");
       fetchTags();
     }
   }, [newTagName, createTag, fetchTags]);
@@ -243,7 +282,7 @@ export function EditEntryScreen() {
         }
       }
     },
-    [selectedTags, linkTag, unlinkTag]
+    [selectedTags, linkTag, unlinkTag],
   );
 
   // Submit
@@ -255,10 +294,10 @@ export function EditEntryScreen() {
     });
 
     if (result) {
-      Alert.alert('Success', 'Entry updated successfully');
+      Alert.alert("Success", "Entry updated successfully");
       navigation.goBack();
     } else {
-      Alert.alert('Error', 'Failed to update entry');
+      Alert.alert("Error", "Failed to update entry");
     }
   };
 
@@ -299,11 +338,17 @@ export function EditEntryScreen() {
       <Screen style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} accessible accessibilityLabel="Go back">
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>←</Text>
+          <TouchableOpacity
+            onPress={handleBack}
+            accessible
+            accessibilityLabel="Go back"
+          >
+            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+              ←
+            </Text>
           </TouchableOpacity>
           <Button
-            label={updateLoading ? 'Saving...' : 'Save'}
+            label={updateLoading ? "Saving..." : "Save"}
             onPress={handleSubmit(onSubmit)}
             disabled={updateLoading}
             size="sm"
@@ -338,7 +383,9 @@ export function EditEntryScreen() {
           />
 
           {errors.title && (
-            <Text style={[theme.typography.bodySm, { color: theme.colors.error }]}>
+            <Text
+              style={[theme.typography.bodySm, { color: theme.colors.error }]}
+            >
               {errors.title.message}
             </Text>
           )}
@@ -353,11 +400,11 @@ export function EditEntryScreen() {
               },
             ]}
           >
-            {new Date(entry.createdAt).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+            {new Date(entry.createdAt).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </Text>
 
@@ -368,7 +415,10 @@ export function EditEntryScreen() {
               style={[
                 styles.toolbarButton,
                 {
-                  borderColor: selectedTags.length > 0 ? theme.colors.primary : theme.colors.border,
+                  borderColor:
+                    selectedTags.length > 0
+                      ? theme.colors.primary
+                      : theme.colors.border,
                 },
               ]}
               onPress={() => setShowTagModal(true)}
@@ -386,7 +436,9 @@ export function EditEntryScreen() {
                 styles.toolbarButton,
                 {
                   borderColor:
-                    selectedDrawers.length > 0 ? theme.colors.primary : theme.colors.border,
+                    selectedDrawers.length > 0
+                      ? theme.colors.primary
+                      : theme.colors.border,
                 },
               ]}
               onPress={() => setShowDrawerModal(true)}
@@ -404,7 +456,9 @@ export function EditEntryScreen() {
                 styles.toolbarButton,
                 {
                   borderColor:
-                    totalImages > 0 ? theme.colors.primary : theme.colors.border,
+                    totalImages > 0
+                      ? theme.colors.primary
+                      : theme.colors.border,
                 },
               ]}
               onPress={pickImages}
@@ -437,17 +491,21 @@ export function EditEntryScreen() {
               style={[
                 styles.toolbarButton,
                 {
-                  borderColor: mood ? theme.colors.primary : theme.colors.border,
+                  borderColor: mood
+                    ? theme.colors.primary
+                    : theme.colors.border,
                 },
               ]}
               onPress={() => setShowMoodPicker(true)}
               accessible
               accessibilityLabel="Change mood"
-              accessibilityHint={mood ? `Mood: ${MOOD_MAP[mood]?.label}` : 'Select a mood'}
+              accessibilityHint={
+                mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood"
+              }
               accessibilityRole="button"
             >
               <Text style={styles.toolbarIcon}>
-                {mood ? MOOD_MAP[mood]?.emoji : '😊'}
+                {mood ? MOOD_MAP[mood]?.emoji : "😊"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -562,7 +620,9 @@ export function EditEntryScreen() {
           />
 
           {errors.content && (
-            <Text style={[theme.typography.bodySm, { color: theme.colors.error }]}>
+            <Text
+              style={[theme.typography.bodySm, { color: theme.colors.error }]}
+            >
               {errors.content.message}
             </Text>
           )}
@@ -605,14 +665,16 @@ export function EditEntryScreen() {
                         {
                           backgroundColor:
                             mood === moodValue
-                              ? theme.colors.primary + '20'
-                              : 'transparent',
+                              ? theme.colors.primary + "20"
+                              : "transparent",
                           borderColor:
-                            mood === moodValue ? theme.colors.primary : theme.colors.border,
+                            mood === moodValue
+                              ? theme.colors.primary
+                              : theme.colors.border,
                         },
                       ]}
                       onPress={() => {
-                        setValue('mood', moodValue);
+                        setValue("mood", moodValue);
                         setShowMoodPicker(false);
                       }}
                       accessible
@@ -643,7 +705,9 @@ export function EditEntryScreen() {
               ]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+                <Text
+                  style={[theme.typography.h2, { color: theme.colors.text }]}
+                >
                   Select Drawers
                 </Text>
                 <TouchableOpacity
@@ -651,7 +715,9 @@ export function EditEntryScreen() {
                   accessible
                   accessibilityLabel="Close"
                 >
-                  <Text style={[theme.typography.h3, { color: theme.colors.text }]}>
+                  <Text
+                    style={[theme.typography.h3, { color: theme.colors.text }]}
+                  >
                     ✕
                   </Text>
                 </TouchableOpacity>
@@ -700,15 +766,17 @@ export function EditEntryScreen() {
                           ? theme.colors.primary
                           : theme.colors.border,
                         backgroundColor: selectedDrawers.includes(drawer.id)
-                          ? theme.colors.primary + '10'
-                          : 'transparent',
+                          ? theme.colors.primary + "10"
+                          : "transparent",
                       },
                     ]}
                     onPress={() => toggleDrawer(drawer.id)}
                     accessible
                     accessibilityLabel={`Drawer: ${drawer.name}`}
                     accessibilityHint={
-                      selectedDrawers.includes(drawer.id) ? 'Selected' : 'Not selected'
+                      selectedDrawers.includes(drawer.id)
+                        ? "Selected"
+                        : "Not selected"
                     }
                     accessibilityRole="checkbox"
                   >
@@ -718,7 +786,7 @@ export function EditEntryScreen() {
                         {
                           backgroundColor: selectedDrawers.includes(drawer.id)
                             ? theme.colors.primary
-                            : 'transparent',
+                            : "transparent",
                           borderColor: selectedDrawers.includes(drawer.id)
                             ? theme.colors.primary
                             : theme.colors.border,
@@ -726,10 +794,17 @@ export function EditEntryScreen() {
                       ]}
                     >
                       {selectedDrawers.includes(drawer.id) && (
-                        <Text style={{ color: theme.colors.background }}>✓</Text>
+                        <Text style={{ color: theme.colors.background }}>
+                          ✓
+                        </Text>
                       )}
                     </View>
-                    <Text style={[theme.typography.body, { color: theme.colors.text }]}>
+                    <Text
+                      style={[
+                        theme.typography.body,
+                        { color: theme.colors.text },
+                      ]}
+                    >
                       {drawer.name}
                     </Text>
                   </TouchableOpacity>
@@ -754,7 +829,9 @@ export function EditEntryScreen() {
               ]}
             >
               <View style={styles.modalHeader}>
-                <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
+                <Text
+                  style={[theme.typography.h2, { color: theme.colors.text }]}
+                >
                   Select Tags
                 </Text>
                 <TouchableOpacity
@@ -762,7 +839,9 @@ export function EditEntryScreen() {
                   accessible
                   accessibilityLabel="Close"
                 >
-                  <Text style={[theme.typography.h3, { color: theme.colors.text }]}>
+                  <Text
+                    style={[theme.typography.h3, { color: theme.colors.text }]}
+                  >
                     ✕
                   </Text>
                 </TouchableOpacity>
@@ -811,15 +890,17 @@ export function EditEntryScreen() {
                           ? theme.colors.primary
                           : theme.colors.border,
                         backgroundColor: selectedTags.includes(tag.id)
-                          ? theme.colors.primary + '10'
-                          : 'transparent',
+                          ? theme.colors.primary + "10"
+                          : "transparent",
                       },
                     ]}
                     onPress={() => toggleTag(tag.id)}
                     accessible
                     accessibilityLabel={`Tag: ${tag.name}`}
                     accessibilityHint={
-                      selectedTags.includes(tag.id) ? 'Selected' : 'Not selected'
+                      selectedTags.includes(tag.id)
+                        ? "Selected"
+                        : "Not selected"
                     }
                     accessibilityRole="checkbox"
                   >
@@ -829,7 +910,7 @@ export function EditEntryScreen() {
                         {
                           backgroundColor: selectedTags.includes(tag.id)
                             ? theme.colors.primary
-                            : 'transparent',
+                            : "transparent",
                           borderColor: selectedTags.includes(tag.id)
                             ? theme.colors.primary
                             : theme.colors.border,
@@ -837,10 +918,17 @@ export function EditEntryScreen() {
                       ]}
                     >
                       {selectedTags.includes(tag.id) && (
-                        <Text style={{ color: theme.colors.background }}>✓</Text>
+                        <Text style={{ color: theme.colors.background }}>
+                          ✓
+                        </Text>
                       )}
                     </View>
-                    <Text style={[theme.typography.body, { color: theme.colors.text }]}>
+                    <Text
+                      style={[
+                        theme.typography.body,
+                        { color: theme.colors.text },
+                      ]}
+                    >
                       {tag.name}
                     </Text>
                   </TouchableOpacity>
@@ -859,9 +947,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -871,23 +959,23 @@ const styles = StyleSheet.create({
   },
   loaderContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   toolbar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 24,
     marginTop: 12,
   },
   toolbarButton: {
-    width: '22%',
+    width: "22%",
     aspectRatio: 1,
     borderWidth: 1,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   toolbarIcon: {
     fontSize: 24,
@@ -900,7 +988,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   imageWrapper: {
-    position: 'relative',
+    position: "relative",
     marginRight: 12,
     marginBottom: 12,
   },
@@ -910,25 +998,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   removeImageButton: {
-    position: 'absolute',
+    position: "absolute",
     top: -8,
     right: -8,
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
     borderRadius: 12,
     width: 24,
     height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   removeImageText: {
-    color: 'white',
+    color: "white",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   modalOverlay: {
     flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   moodPicker: {
     paddingHorizontal: 20,
@@ -937,17 +1025,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
   moodGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   moodOption: {
-    width: '22%',
+    width: "22%",
     aspectRatio: 1,
     borderWidth: 2,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   moodText: {
     fontSize: 28,
@@ -956,9 +1044,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
   },
@@ -968,21 +1056,21 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   inputRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
-    alignItems: 'center',
+    alignItems: "center",
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontFamily: 'System',
+    fontFamily: "System",
     fontSize: 14,
   },
   modalItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
@@ -995,7 +1083,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 4,
     marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
