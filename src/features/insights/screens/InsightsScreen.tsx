@@ -1,8 +1,10 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { MOOD_MAP, MOOD_VALUES, type MoodData, type MoodValue } from "@constants/moods";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
+import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -13,11 +15,10 @@ import {
   View,
 } from "react-native";
 
-type TimeRange = "week" | "month" | "all";
-
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
 const PAGE_TEXT = "#2F2924";
+const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
@@ -25,8 +26,6 @@ const PAGE_BORDER = "#B39C87";
 export function InsightsScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
-
-  const [timeRange, setTimeRange] = useState<TimeRange>("month");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useFocusEffect(
@@ -35,80 +34,15 @@ export function InsightsScreen() {
     }, [fetchEntries]),
   );
 
-  // Calculate date range
-  const getDateRange = useCallback((range: TimeRange) => {
-    const now = new Date();
-    let startDate = new Date();
+  const archiveEntries = useMemo(() => entries ?? [], [entries]);
 
-    if (range === "week") {
-      startDate.setDate(now.getDate() - 7);
-    } else if (range === "month") {
-      startDate.setMonth(now.getMonth() - 1);
-    } else {
-      startDate = new Date(0); // All time
-    }
-
-    return startDate;
-  }, []);
-
-  // Filter entries by time range
-  const filteredEntries = useMemo(() => {
-    if (!entries) return [];
-    const startDate = getDateRange(timeRange);
-    return entries.filter((entry) => new Date(entry.createdAt) >= startDate);
-  }, [entries, timeRange, getDateRange]);
-
-  // Mood distribution
-  const moodDistribution = useMemo(() => {
-    const distribution: Record<MoodValue, number> = {} as Record<
-      MoodValue,
-      number
-    >;
-
-    MOOD_VALUES.forEach((mood) => {
-      distribution[mood] = 0;
-    });
-
-    filteredEntries.forEach((entry) => {
-      if (entry.mood) {
-        distribution[entry.mood as MoodValue]++;
-      }
-    });
-
-    return distribution;
-  }, [filteredEntries]);
-
-  // Entry frequency (by day of week)
-  const entryFrequency = useMemo(() => {
-    const frequency = {
-      Mon: 0,
-      Tue: 0,
-      Wed: 0,
-      Thu: 0,
-      Fri: 0,
-      Sat: 0,
-      Sun: 0,
-    };
-
-    filteredEntries.forEach((entry) => {
-      const date = new Date(entry.createdAt);
-      const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][
-        date.getDay()
-      ];
-      frequency[day as keyof typeof frequency]++;
-    });
-
-    return frequency;
-  }, [filteredEntries]);
-
-  // Tag frequency
   const tagFrequency = useMemo(() => {
     const tagMap: Record<
       string,
       { name: string; count: number; color: string }
     > = {};
 
-    filteredEntries.forEach((entry) => {
+    archiveEntries.forEach((entry) => {
       entry.tags?.forEach((tag) => {
         if (!tagMap[tag.id]) {
           tagMap[tag.id] = { name: tag.name, count: 0, color: tag.color };
@@ -120,16 +54,15 @@ export function InsightsScreen() {
     return Object.values(tagMap)
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [filteredEntries]);
+  }, [archiveEntries]);
 
-  // Drawer frequency
   const drawerFrequency = useMemo(() => {
     const drawerMap: Record<
       string,
       { name: string; count: number; color: string }
     > = {};
 
-    filteredEntries.forEach((entry) => {
+    archiveEntries.forEach((entry) => {
       entry.drawers?.forEach((drawer) => {
         if (!drawerMap[drawer.id]) {
           drawerMap[drawer.id] = {
@@ -145,21 +78,20 @@ export function InsightsScreen() {
     return Object.values(drawerMap)
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [filteredEntries]);
+  }, [archiveEntries]);
 
-  // Statistics
   const stats = useMemo(() => {
-    const totalEntries = filteredEntries.length;
-    const entriesWithAudio = filteredEntries.filter((e) => e.audioUrl).length;
-    const entriesWithImages = filteredEntries.filter(
+    const totalEntries = archiveEntries.length;
+    const entriesWithAudio = archiveEntries.filter((e) => e.audioUrl).length;
+    const entriesWithImages = archiveEntries.filter(
       (e) => e.images && e.images.length > 0,
     ).length;
-    const totalImages = filteredEntries.reduce(
+    const totalImages = archiveEntries.reduce(
       (sum, e) => sum + (e.images?.length || 0),
       0,
     );
     const avgWordsPerEntry = Math.round(
-      filteredEntries.reduce((sum, e) => sum + e.content.split(" ").length, 0) /
+      archiveEntries.reduce((sum, e) => sum + e.content.split(" ").length, 0) /
         (totalEntries || 1),
     );
 
@@ -170,27 +102,31 @@ export function InsightsScreen() {
       totalImages,
       avgWordsPerEntry,
     };
-  }, [filteredEntries]);
+  }, [archiveEntries]);
 
-  // Most common mood
   const mostCommonMood = useMemo(() => {
-    let maxMood: MoodValue | null = null;
+    const counts: Record<string, number> = {};
+    let maxMood: string | null = null;
     let maxCount = 0;
 
-    Object.entries(moodDistribution).forEach(([mood, count]) => {
+    archiveEntries.forEach((entry) => {
+      if (!entry.mood) return;
+      counts[entry.mood] = (counts[entry.mood] || 0) + 1;
+    });
+
+    Object.entries(counts).forEach(([mood, count]) => {
       if (count > maxCount) {
         maxCount = count;
-        maxMood = mood as MoodValue;
+        maxMood = mood;
       }
     });
 
     return maxMood;
-  }, [moodDistribution]);
+  }, [archiveEntries]);
 
-  // Writing streak
   const writingStreak = useMemo(() => {
     const dates = new Set(
-      filteredEntries.map((e) => new Date(e.createdAt).toLocaleDateString()),
+      archiveEntries.map((e) => new Date(e.createdAt).toLocaleDateString()),
     );
 
     let streak = 0;
@@ -203,11 +139,81 @@ export function InsightsScreen() {
     }
 
     return streak;
-  }, [filteredEntries]);
+  }, [archiveEntries]);
 
   const mostCommonMoodData: MoodData | null = mostCommonMood
-    ? MOOD_MAP[mostCommonMood as MoodValue]
+    ? MOOD_MAP[mostCommonMood as keyof typeof MOOD_MAP]
     : null;
+
+  const onThisDayCount = useMemo(() => {
+    const today = new Date();
+    return archiveEntries.filter((entry) => {
+      const entryDate = new Date(entry.createdAt);
+      return (
+        entryDate.getMonth() === today.getMonth() &&
+        entryDate.getDate() === today.getDate() &&
+        entryDate.getFullYear() < today.getFullYear()
+      );
+    }).length;
+  }, [archiveEntries]);
+
+  const hasArchiveContent = stats.totalEntries > 0;
+  const heroTitle = hasArchiveContent
+    ? "Your Story Is Taking Shape"
+    : "Your Journey Begins Here";
+  const heroBody =
+    stats.totalEntries > 0
+      ? "A quiet picture of your archive is beginning to emerge through the moments you keep."
+      : "Welcome to your quiet space. Your archive will evolve as you document your days.";
+
+  const onThisDayBody =
+    onThisDayCount > 0
+      ? `${onThisDayCount} memory${onThisDayCount === 1 ? "" : "ies"} from this date can already return to you as echoes of another year.`
+      : "In one year, your first memories will reappear here as echoes of today.";
+
+  const patternsBody =
+    tagFrequency[0]
+      ? `So far, "${tagFrequency[0].name}" is one of the threads shaping your story. The patterns will deepen as you keep writing.`
+      : drawerFrequency[0]
+        ? `${drawerFrequency[0].name} is starting to define this chapter of your archive. Over time, your themes will become clearer.`
+        : "Over time, your reflections will reveal the themes, moods, and rhythms that define your journey.";
+
+  const galleryItems = [
+    {
+      key: "photos",
+      icon: "image-outline",
+      label: "Photos",
+      value:
+        stats.totalImages > 0
+          ? `${stats.totalImages} saved`
+          : "Imagery will gather here",
+    },
+    {
+      key: "audio",
+      icon: "microphone-outline",
+      label: "Voice Notes",
+      value:
+        stats.entriesWithAudio > 0
+          ? `${stats.entriesWithAudio} recorded`
+          : "Audio moments will appear here",
+    },
+    {
+      key: "mood",
+      icon: "heart-outline",
+      label: "Mood",
+      value: mostCommonMoodData
+        ? mostCommonMoodData.label
+        : "Emotional patterns will emerge",
+    },
+    {
+      key: "drawers",
+      icon: "archive-outline",
+      label: "Drawers",
+      value: drawerFrequency[0]
+        ? drawerFrequency[0].name
+        : "Your themes will take shape",
+    },
+  ] as const;
 
   if (isLoading) {
     return (
@@ -221,11 +227,6 @@ export function InsightsScreen() {
     );
   }
 
-  const maxMoodCount = Math.max(...Object.values(moodDistribution), 1);
-  const maxFrequency = Math.max(...Object.values(entryFrequency), 1);
-  const maxTagCount = Math.max(...tagFrequency.map((t) => t.count), 1);
-  const maxDrawerCount = Math.max(...drawerFrequency.map((d) => d.count), 1);
-
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
@@ -237,602 +238,231 @@ export function InsightsScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setIsMenuOpen(true)}>
-            <Text style={[styles.menuButton, { color: PAGE_TEXT }]}>
-              ☰
-            </Text>
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.pageTitle,
-              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-            ]}
-          >
-            Insights
-          </Text>
-          <View style={{ width: 32 }} />
-        </View>
-
-        {/* Time Range Selector */}
-        <View style={styles.timeRangeSelector}>
-          {(["week", "month", "all"] as const).map((range) => (
-            <TouchableOpacity
-              key={range}
-              onPress={() => setTimeRange(range)}
-              style={[
-                styles.timeRangeButton,
-                {
-                  backgroundColor:
-                    timeRange === range
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                  borderColor: PAGE_BORDER,
-                  shadowColor: PAGE_TEXT,
-                },
-              ]}
-              accessible
-              accessibilityLabel={`Last ${range}`}
-              accessibilityRole="button"
-            >
-              <Text
-                style={[
-                  theme.typography.bodySm,
-                  {
-                    color:
-                      timeRange === range
-                        ? PAGE_BACKGROUND
-                        : PAGE_TEXT,
-                  },
-                ]}
-              >
-                Last {range === "all" ? "All Time" : range}
-              </Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
+              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
             </TouchableOpacity>
-          ))}
+            <Text
+              style={[
+                styles.pageTitle,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              Insights
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
+          >
+            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          {/* Quick Stats */}
-          <View style={styles.statsGrid}>
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  theme.typography.h3,
-                  { color: theme.colors.primary, marginBottom: 4 },
-                ]}
-              >
-                {stats.totalEntries}
-              </Text>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Entries
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  theme.typography.h3,
-                  { color: theme.colors.primary, marginBottom: 4 },
-                ]}
-              >
-                {stats.avgWordsPerEntry}
-              </Text>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Avg Words
-              </Text>
-            </View>
-
-            <View
-              style={[
-                styles.statCard,
-                {
-                  backgroundColor: theme.colors.surface,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-            >
-              <Text
-                style={[
-                  theme.typography.h3,
-                  { color: theme.colors.primary, marginBottom: 4 },
-                ]}
-              >
-                {writingStreak}
-              </Text>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                Day Streak
-              </Text>
-            </View>
-          </View>
-
-          {/* Mood Distribution */}
-          <View style={styles.section}>
+          <View style={styles.heroBlock}>
             <Text
               style={[
-                theme.typography.h3,
+                styles.heroTitle,
                 {
-                  color: theme.colors.text,
-                  marginBottom: theme.spacing.md,
+                  color: hasArchiveContent ? PAGE_PRIMARY : PAGE_TEXT,
+                  fontFamily: theme.fonts.serif,
                 },
               ]}
             >
-              📊 Mood Distribution
+              {hasArchiveContent ? (
+                heroTitle
+              ) : (
+                <>
+                  Your Journey Begins{" "}
+                  <Text style={{ color: PAGE_PRIMARY }}>Here</Text>
+                </>
+              )}
             </Text>
+            <Text
+              style={[
+                styles.heroBody,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              {heroBody}
+            </Text>
+          </View>
 
-            {mostCommonMood && mostCommonMoodData && (
-              <View
-                style={[
-                  styles.highlightCard,
-                  {
-                    backgroundColor: theme.colors.primary + "10",
-                    borderColor: theme.colors.primary,
-                  },
-                ]}
-              >
+          <View style={styles.featureStack}>
+            <View
+              style={[
+                styles.featureCard,
+                {
+                  backgroundColor: PAGE_SURFACE,
+                  borderColor: `${PAGE_BORDER}55`,
+                  shadowColor: PAGE_TEXT,
+                },
+              ]}
+            >
+              <View style={styles.featureIconWrap}>
+                <MaterialCommunityIcons
+                  name="timer-sand"
+                  size={24}
+                  color={PAGE_PRIMARY}
+                />
+              </View>
+              <View style={styles.featureCopy}>
                 <Text
                   style={[
-                    theme.typography.labelSm,
-                    { color: theme.colors.primary },
+                    styles.featureTitle,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
                   ]}
                 >
-                  Most Common Mood
+                  On This Day
                 </Text>
+                <Text style={[styles.featureBody, { color: PAGE_MUTED }]}>
+                  {onThisDayBody}
+                </Text>
+              </View>
+            </View>
+
+            <View
+              style={[
+                styles.featureCard,
+                {
+                  backgroundColor: PAGE_SURFACE,
+                  borderColor: `${PAGE_BORDER}55`,
+                  shadowColor: PAGE_TEXT,
+                },
+              ]}
+            >
+              <View style={styles.featureIconWrap}>
+                <MaterialCommunityIcons
+                  name="star-four-points-outline"
+                  size={24}
+                  color={PAGE_PRIMARY}
+                />
+              </View>
+              <View style={styles.featureCopy}>
+                <Text
+                  style={[
+                    styles.featureTitle,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                  ]}
+                >
+                  Patterns & Themes
+                </Text>
+                <Text style={[styles.featureBody, { color: PAGE_MUTED }]}>
+                  {patternsBody}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <Text
+              style={[
+                styles.sectionTitle,
+                { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+              ]}
+            >
+              The Visual Gallery
+            </Text>
+            <Text
+              style={[
+                styles.sectionBody,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              Imagery and signals from your journey, gathered gently over time.
+            </Text>
+
+            <View style={styles.galleryGrid}>
+              {galleryItems.map((item) => (
                 <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginTop: 8,
-                  }}
+                  key={item.key}
+                  style={[
+                    styles.galleryTile,
+                    {
+                      backgroundColor: PAGE_SURFACE,
+                      borderColor: `${PAGE_BORDER}55`,
+                    },
+                  ]}
                 >
-                  <Text style={{ fontSize: 32, marginRight: 12 }}>
-                    {mostCommonMoodData.emoji}
+                  <MaterialCommunityIcons
+                    name={item.icon}
+                    size={28}
+                    color={theme.colors.textDisabled}
+                  />
+                  <Text style={[styles.galleryLabel, { color: PAGE_TEXT }]}>
+                    {item.label}
                   </Text>
-                  <View>
-                    <Text
-                      style={[
-                        theme.typography.h3,
-                        { color: theme.colors.text },
-                      ]}
-                    >
-                      {mostCommonMoodData.label}
-                    </Text>
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        { color: theme.colors.textSecondary },
-                      ]}
-                    >
-                      {moodDistribution[mostCommonMood]} entries
-                    </Text>
-                  </View>
+                  <Text style={[styles.galleryValue, { color: PAGE_MUTED }]}>
+                    {item.value}
+                  </Text>
                 </View>
-              </View>
-            )}
-
-            <View
-              style={{
-                flexDirection: "row",
-                flexWrap: "wrap",
-                gap: 8,
-                marginTop: theme.spacing.md,
-              }}
-            >
-              {MOOD_VALUES.map((mood) => {
-                const count = moodDistribution[mood];
-                const barHeight = (count / maxMoodCount) * 80;
-
-                return (
-                  <View
-                    key={mood}
-                    style={{
-                      alignItems: "center",
-                      flex: 0,
-                      width: "18%",
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 40,
-                        height: 80,
-                        backgroundColor: theme.colors.surface,
-                        borderRadius: 8,
-                        justifyContent: "flex-end",
-                        alignItems: "center",
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                      }}
-                    >
-                      <View
-                        style={[
-                          {
-                            width: "100%",
-                            height: barHeight,
-                            backgroundColor: theme.colors.primary,
-                            borderRadius: 6,
-                          },
-                        ]}
-                      />
-                    </View>
-                    <Text style={{ fontSize: 16, marginTop: 8 }}>
-                      {MOOD_MAP[mood].emoji}
-                    </Text>
-                    <Text
-                      style={[
-                        theme.typography.labelXs,
-                        { color: theme.colors.textSecondary, marginTop: 4 },
-                      ]}
-                    >
-                      {count}
-                    </Text>
-                  </View>
-                );
-              })}
+              ))}
             </View>
           </View>
 
-          {/* Entry Frequency */}
-          <View style={styles.section}>
+          <View
+            style={[
+              styles.snapshotCard,
+              {
+                backgroundColor: PAGE_SURFACE,
+                borderColor: `${PAGE_BORDER}55`,
+                shadowColor: PAGE_TEXT,
+              },
+            ]}
+          >
             <Text
               style={[
-                theme.typography.h3,
-                {
-                  color: theme.colors.text,
-                  marginBottom: theme.spacing.md,
-                },
+                styles.snapshotTitle,
+                { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
               ]}
             >
-              📅 Entry Frequency
+              Quiet Snapshot
             </Text>
-
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                gap: 4,
-              }}
-            >
-              {Object.entries(entryFrequency).map(([day, count]) => {
-                const barHeight = (count / maxFrequency) * 100;
-
-                return (
-                  <View
-                    key={day}
-                    style={{
-                      alignItems: "center",
-                      flex: 1,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: "100%",
-                        height: 100,
-                        backgroundColor: theme.colors.surface,
-                        borderRadius: 8,
-                        justifyContent: "flex-end",
-                        alignItems: "center",
-                        borderWidth: 1,
-                        borderColor: theme.colors.border,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: "100%",
-                          height: barHeight,
-                          backgroundColor: theme.colors.primary,
-                          borderRadius: 6,
-                        }}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        theme.typography.labelSm,
-                        {
-                          color: theme.colors.textSecondary,
-                          marginTop: 8,
-                        },
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                    <Text
-                      style={[
-                        theme.typography.labelXs,
-                        { color: theme.colors.primary, marginTop: 2 },
-                      ]}
-                    >
-                      {count}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+            <Text style={[styles.snapshotBody, { color: PAGE_MUTED }]}>
+              {stats.totalEntries > 0
+                ? `${stats.totalEntries} entries, ${stats.avgWordsPerEntry} average words, and a ${writingStreak}-day writing rhythm are beginning to shape your archive.`
+                : "Once you begin writing, this space will gently reflect your rhythms, themes, and returning moments."}
+            </Text>
           </View>
 
-          {/* Media Stats */}
-          <View style={styles.section}>
+          <TouchableOpacity
+            style={[
+              styles.primaryCta,
+              {
+                backgroundColor: PAGE_PRIMARY,
+                shadowColor: PAGE_TEXT,
+              },
+            ]}
+            onPress={() => router.push("/create-entry")}
+            accessible
+            accessibilityLabel="Create new entry"
+            accessibilityHint="Open the create entry screen"
+          >
             <Text
               style={[
-                theme.typography.h3,
-                {
-                  color: theme.colors.text,
-                  marginBottom: theme.spacing.md,
-                },
+                styles.primaryCtaText,
+                { color: PAGE_SURFACE },
               ]}
             >
-              📸 Media Statistics
+              Create New Entry
             </Text>
+          </TouchableOpacity>
 
-            <View style={{ gap: 12 }}>
-              <View
-                style={[
-                  styles.statRow,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <View>
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    🖼️ Entries with Images
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: theme.colors.textSecondary, marginTop: 4 },
-                    ]}
-                  >
-                    {stats.totalImages} total images
-                  </Text>
-                </View>
-                <Text
-                  style={[theme.typography.h3, { color: theme.colors.primary }]}
-                >
-                  {stats.entriesWithImages}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.statRow,
-                  {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-              >
-                <View>
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    🎙️ Entries with Audio
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: theme.colors.textSecondary, marginTop: 4 },
-                    ]}
-                  >
-                    Voice recorded entries
-                  </Text>
-                </View>
-                <Text
-                  style={[theme.typography.h3, { color: theme.colors.primary }]}
-                >
-                  {stats.entriesWithAudio}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Top Tags */}
-          {tagFrequency.length > 0 && (
-            <View style={styles.section}>
-              <Text
-                style={[
-                  theme.typography.h3,
-                  {
-                    color: theme.colors.text,
-                    marginBottom: theme.spacing.md,
-                  },
-                ]}
-              >
-                🏷️ Top Tags
-              </Text>
-
-              {tagFrequency.map((tag, index) => {
-                const barWidth = (tag.count / maxTagCount) * 100;
-
-                return (
-                  <View
-                    key={tag.name}
-                    style={{
-                      marginBottom: theme.spacing.md,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          { color: theme.colors.text },
-                        ]}
-                      >
-                        {tag.name}
-                      </Text>
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        {tag.count}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        width: "100%",
-                        height: 8,
-                        backgroundColor: theme.colors.surface,
-                        borderRadius: 4,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: `${barWidth}%`,
-                          height: "100%",
-                          backgroundColor: tag.color,
-                        }}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Top Drawers */}
-          {drawerFrequency.length > 0 && (
-            <View style={styles.section}>
-              <Text
-                style={[
-                  theme.typography.h3,
-                  {
-                    color: theme.colors.text,
-                    marginBottom: theme.spacing.md,
-                  },
-                ]}
-              >
-                📁 Most Used Drawers
-              </Text>
-
-              {drawerFrequency.map((drawer) => {
-                const barWidth = (drawer.count / maxDrawerCount) * 100;
-
-                return (
-                  <View
-                    key={drawer.name}
-                    style={{
-                      marginBottom: theme.spacing.md,
-                    }}
-                  >
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          { color: theme.colors.text },
-                        ]}
-                      >
-                        {drawer.name}
-                      </Text>
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        {drawer.count}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        width: "100%",
-                        height: 8,
-                        backgroundColor: theme.colors.surface,
-                        borderRadius: 4,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: `${barWidth}%`,
-                          height: "100%",
-                          backgroundColor: drawer.color,
-                        }}
-                      />
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Empty State */}
           {stats.totalEntries === 0 && (
-            <View style={styles.emptyContainer}>
+            <View style={styles.emptyHint}>
               <Text
                 style={[
-                  theme.typography.h3,
-                  { color: theme.colors.textSecondary },
+                  styles.emptyHintText,
+                  { color: PAGE_MUTED },
                 ]}
               >
-                No data yet
-              </Text>
-              <Text
-                style={[
-                  theme.typography.body,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginTop: theme.spacing.md,
-                    textAlign: "center",
-                  },
-                ]}
-              >
-                Create some entries to see your insights
+                Your insights will deepen as your archive grows.
               </Text>
             </View>
           )}
@@ -855,86 +485,174 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  menuButton: {
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: "500",
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pageTitle: {
-    fontSize: 40,
-    lineHeight: 46,
-  },
-  timeRangeSelector: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    gap: 8,
-  },
-  timeRangeButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 999,
-    alignItems: "center",
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    marginLeft: 12,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "300",
   },
   content: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 28,
+    paddingTop: 8,
     paddingBottom: 230,
   },
-  section: {
-    marginBottom: 28,
+  heroBlock: {
+    marginTop: 4,
+    marginBottom: 34,
   },
-  statsGrid: {
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+  },
+  heroBody: {
+    marginTop: 18,
+    fontSize: 18,
+    lineHeight: 32,
+    maxWidth: 560,
+  },
+  featureStack: {
+    gap: 18,
+    marginBottom: 40,
+  },
+  featureCard: {
     flexDirection: "row",
-    gap: 12,
-    marginBottom: 28,
-  },
-  statCard: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 22,
+    alignItems: "flex-start",
     borderWidth: 1,
+    borderRadius: 18,
+    padding: 20,
     shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
-  highlightCard: {
-    padding: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    marginBottom: 16,
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  statRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  featureIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: "#F1ECE4",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 22,
-    borderWidth: 1,
-    shadowOpacity: 0.06,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  emptyContainer: {
     justifyContent: "center",
+    marginRight: 18,
+  },
+  featureCopy: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  featureTitle: {
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "300",
+  },
+  featureBody: {
+    marginTop: 12,
+    fontSize: 16,
+    lineHeight: 30,
+  },
+  section: {
+    marginBottom: 40,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: "300",
+  },
+  sectionBody: {
+    marginTop: 14,
+    marginBottom: 18,
+    fontSize: 16,
+    lineHeight: 28,
+  },
+  galleryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 16,
+  },
+  galleryTile: {
+    width: "47%",
+    borderWidth: 1,
+    borderRadius: 18,
+    minHeight: 170,
+    paddingHorizontal: 18,
+    paddingVertical: 20,
     alignItems: "center",
-    paddingVertical: 60,
+    justifyContent: "center",
+    borderStyle: "dashed",
+  },
+  galleryLabel: {
+    marginTop: 16,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  galleryValue: {
+    marginTop: 8,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  snapshotCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 20,
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+    marginBottom: 28,
+  },
+  snapshotTitle: {
+    fontSize: 22,
+    lineHeight: 30,
+    fontWeight: "300",
+  },
+  snapshotBody: {
+    marginTop: 12,
+    fontSize: 16,
+    lineHeight: 30,
+  },
+  primaryCta: {
+    minHeight: 76,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+    marginBottom: 18,
+  },
+  primaryCtaText: {
+    fontSize: 18,
+    lineHeight: 24,
+    fontWeight: "700",
+  },
+  emptyHint: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyHintText: {
+    textAlign: "center",
+    fontSize: 15,
+    lineHeight: 24,
   },
 });

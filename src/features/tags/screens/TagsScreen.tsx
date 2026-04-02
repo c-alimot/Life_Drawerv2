@@ -1,7 +1,9 @@
-import { AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
+import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const EXAMPLE_TAGS = [
   "gratitude",
@@ -33,6 +36,7 @@ const PAGE_BORDER = "#B39C87";
 export function TagsScreen() {
   const theme = useTheme();
   const { tags, isLoading, fetchTags } = useTags();
+  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleCreateTag = useCallback(() => {
@@ -42,10 +46,15 @@ export function TagsScreen() {
     );
   }, []);
 
+  const handleSetLifePhase = useCallback(() => {
+    router.push("/life-phases");
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      fetchActivePhase();
       fetchTags();
-    }, [fetchTags]),
+    }, [fetchActivePhase, fetchTags]),
   );
 
   return (
@@ -58,20 +67,38 @@ export function TagsScreen() {
         />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setIsMenuOpen(true)}>
-            <Text style={[styles.menuButton, { color: PAGE_TEXT }]}>
-              ☰
-            </Text>
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.pageTitle,
-              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-            ]}
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
+              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSetLifePhase}
+              accessible
+              accessibilityLabel={
+                activePhase
+                  ? `Current life phase: ${activePhase.name}`
+                  : "Set life phase"
+              }
+              accessibilityHint="Tap to set or change your current life phase"
+            >
+              <Text
+                style={[
+                  styles.pageTitle,
+                  { color: PAGE_MUTED, fontWeight: "300" },
+                ]}
+              >
+                {activePhase ? activePhase.name : "Set Life Phase"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
           >
-            Tags
-          </Text>
-          <View style={styles.headerSpacer} />
+            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         {isLoading ? (
@@ -79,152 +106,213 @@ export function TagsScreen() {
             <ActivityIndicator size="large" color={PAGE_PRIMARY} />
           </View>
         ) : (
-          <View style={styles.content}>
-            {tags.length === 0 ? (
+          <FlatList
+            data={tags}
+            keyExtractor={(item, index) => item?.id ?? `${item?.name ?? "tag"}-${index}`}
+            contentContainerStyle={styles.content}
+            ListHeaderComponent={
               <>
-                <View style={styles.emptyHero}>
-                  <View
-                    style={[
-                      styles.iconFrame,
-                      { backgroundColor: theme.colors.accent1 },
-                    ]}
-                  >
-                    <Text style={styles.iconText}>🏷️</Text>
-                  </View>
-
+                <View style={styles.heroBlock}>
                   <Text
                     style={[
-                      theme.typography.h2,
-                      styles.heroTitle,
+                      styles.heroTitlePrimary,
                       { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
                     ]}
                   >
-                    Organize with Tags
-                  </Text>
-
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      styles.heroDescription,
-                      { color: PAGE_MUTED },
-                    ]}
-                  >
-                    Tags help you connect entries across different drawers and
-                    life phases. Add quick labels like “gratitude,” “milestone,”
-                    or “reflection” to find related moments easily.
-                  </Text>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.createButton,
-                      {
-                        backgroundColor: PAGE_SECONDARY,
-                        shadowColor: PAGE_TEXT,
-                      },
-                    ]}
-                    onPress={handleCreateTag}
-                    accessible
-                    accessibilityLabel="Create your first tag"
-                  >
-                    <Text style={styles.createButtonText}>
-                      + Create Your First Tag
+                    Small Details{" "}
+                    <Text style={[styles.heroTitleSecondary, { color: PAGE_PRIMARY }]}>
+                      That Connect
                     </Text>
-                  </TouchableOpacity>
+                  </Text>
                 </View>
 
-                <View style={styles.examplesSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.primaryAction,
+                    {
+                      backgroundColor: PAGE_PRIMARY,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  onPress={handleCreateTag}
+                  accessible
+                  accessibilityLabel="Create tag"
+                >
+                  <View style={styles.primaryActionIconBox}>
+                    <Text style={styles.primaryActionIcon}>+</Text>
+                  </View>
+                  <View style={styles.primaryActionCopy}>
+                    <Text
+                      style={[
+                        styles.primaryActionText,
+                        { fontFamily: theme.fonts.serif },
+                      ]}
+                    >
+                      Create Tag
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.sectionHeaderRow}>
                   <Text
                     style={[
                       theme.typography.bodySm,
-                      styles.examplesHeading,
+                      styles.sectionHeaderText,
                       { color: PAGE_MUTED },
                     ]}
                   >
-                    Example Tags
+                    {tags.length > 0 ? "Your Tags" : "Example Tags"}
                   </Text>
-                  <View style={styles.examplesGrid}>
-                    {EXAMPLE_TAGS.map((tag, index) => (
-                      <View
-                        key={tag}
-                        style={[
-                          styles.exampleChip,
-                          {
-                            borderColor: PAGE_BORDER,
-                            backgroundColor: PAGE_SURFACE,
-                            shadowColor: PAGE_TEXT,
-                          },
-                        ]}
-                      >
-                        <View
-                          style={[
-                            styles.exampleDot,
-                            {
-                              backgroundColor:
-                                index % 3 === 1
-                                  ? theme.colors.accent1
-                                  : theme.colors.primary,
-                            },
-                          ]}
-                        />
-                        <Text
-                          style={[
-                            theme.typography.body,
-                            { color: PAGE_MUTED },
-                          ]}
-                        >
-                          {tag}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </>
-            ) : (
-              <FlatList
-                data={tags}
-                keyExtractor={(item) => item.id}
-                numColumns={2}
-                columnWrapperStyle={styles.row}
-                contentContainerStyle={styles.tagsList}
-                renderItem={({ item }) => (
                   <View
                     style={[
-                      styles.tagCard,
+                      styles.sectionDivider,
+                      { backgroundColor: theme.colors.accent1 },
+                    ]}
+                  />
+                </View>
+              </>
+            }
+            ListEmptyComponent={
+              <>
+                {EXAMPLE_TAGS.map((tag, index) => (
+                  <View
+                    key={tag}
+                    style={[
+                      styles.card,
                       {
                         backgroundColor: PAGE_SURFACE,
-                        borderColor: PAGE_BORDER,
                         shadowColor: PAGE_TEXT,
                       },
                     ]}
                   >
                     <View
                       style={[
-                        styles.tagDot,
-                        { backgroundColor: item.color || theme.colors.primary },
-                      ]}
-                    />
-                    <Text
-                      style={[
-                        styles.tagCardTitle,
-                        { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                        styles.icon,
+                        {
+                          backgroundColor:
+                            (index % 3 === 1 ? theme.colors.accent1 : PAGE_PRIMARY) + "22",
+                        },
                       ]}
                     >
-                      {item.name}
-                    </Text>
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        { color: PAGE_MUTED },
-                      ]}
-                    >
-                      {item.entryCount} entries
-                    </Text>
+                      <MaterialCommunityIcons
+                        name="label-outline"
+                        size={24}
+                        color={index % 3 === 1 ? PAGE_BORDER : PAGE_PRIMARY}
+                      />
+                    </View>
+                    <View style={styles.cardContent}>
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                        ]}
+                      >
+                        {tag}
+                      </Text>
+                      <Text
+                        style={[
+                          theme.typography.bodySm,
+                          { color: PAGE_MUTED, fontWeight: "600" },
+                        ]}
+                      >
+                        Example tag for future entries
+                      </Text>
+                    </View>
                   </View>
-                )}
-              />
+                ))}
+
+                <View style={styles.helperPanel}>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      {
+                        color: PAGE_MUTED,
+                        fontFamily: theme.fonts.serif,
+                      },
+                    ]}
+                  >
+                    Tags help you connect moments across drawers and life phases, so related memories stay easy to revisit.
+                  </Text>
+                </View>
+              </>
+            }
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: PAGE_SURFACE,
+                    shadowColor: PAGE_TEXT,
+                  },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.icon,
+                    {
+                      backgroundColor: (item.color || theme.colors.primary) + "22",
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="label-outline"
+                    size={24}
+                    color={item.color || theme.colors.primary}
+                  />
+                </View>
+                <View style={styles.cardContent}>
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={[
+                      theme.typography.bodySm,
+                      { color: PAGE_MUTED, fontWeight: "600" },
+                    ]}
+                  >
+                    {item.entryCount} entries
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={handleCreateTag}
+                  style={styles.cardMore}
+                  accessible
+                  accessibilityLabel={`More options for ${item.name}`}
+                >
+                  <MaterialCommunityIcons
+                    name="dots-vertical"
+                    size={22}
+                    color={theme.colors.textDisabled}
+                  />
+                </TouchableOpacity>
+              </TouchableOpacity>
             )}
-          </View>
+            ListFooterComponent={
+              tags.length > 0 ? (
+                <View style={styles.helperPanel}>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      {
+                        color: PAGE_MUTED,
+                        fontFamily: theme.fonts.serif,
+                      },
+                    ]}
+                  >
+                    Tags help you connect moments across drawers and life phases, so related memories stay easy to revisit.
+                  </Text>
+                </View>
+              ) : null
+            }
+          />
         )}
+
+        <AppBottomNav currentRoute="/tags" />
       </Screen>
     </SafeArea>
   );
@@ -238,20 +326,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  menuButton: {
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: "500",
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pageTitle: {
-    fontSize: 40,
-    lineHeight: 46,
-  },
-  headerSpacer: {
-    width: 32,
+    marginLeft: 12,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "300",
   },
   loader: {
     flex: 1,
@@ -259,114 +353,122 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 230,
   },
-  emptyHero: {
-    alignItems: "center",
-    paddingTop: 56,
+  heroBlock: {
+    marginTop: 6,
+    marginBottom: 30,
   },
-  iconFrame: {
-    width: 112,
-    height: 112,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 28,
+  heroTitlePrimary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
   },
-  iconText: {
-    fontSize: 44,
+  heroTitleSecondary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+    marginTop: 2,
   },
-  heroTitle: {
-    textAlign: "center",
-    marginBottom: 16,
-  },
-  heroDescription: {
-    textAlign: "center",
-    lineHeight: 28,
-    maxWidth: 360,
-    marginBottom: 34,
-  },
-  createButton: {
+  primaryAction: {
+    minHeight: 92,
     borderRadius: 999,
-    minHeight: 64,
-    alignSelf: "stretch",
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 20,
+    paddingHorizontal: 16,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 5,
+    marginBottom: 24,
   },
-  createButtonText: {
-    color: "#F8F6F2",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  examplesSection: {
-    marginTop: 120,
-  },
-  examplesHeading: {
-    textAlign: "center",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    marginBottom: 22,
-  },
-  examplesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 14,
-  },
-  exampleChip: {
-    minWidth: 144,
-    flexDirection: "row",
+  primaryActionIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
+    marginRight: 16,
   },
-  exampleDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 12,
-  },
-  tagsList: {
-    paddingTop: 12,
-  },
-  row: {
-    gap: 12,
-    marginBottom: 12,
-  },
-  tagCard: {
+  primaryActionCopy: {
     flex: 1,
-    borderWidth: 1,
+  },
+  primaryActionIcon: {
+    color: "#F8F6F2",
+    fontSize: 32,
+    lineHeight: 32,
+  },
+  primaryActionText: {
+    color: "#F8F6F2",
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: "300",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  sectionHeaderText: {
+    textTransform: "uppercase",
+    letterSpacing: 2.6,
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 14,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    opacity: 0.7,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
     borderRadius: 22,
-    padding: 18,
-    minHeight: 120,
-    justifyContent: "center",
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 18,
     shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 4,
+    minHeight: 106,
   },
-  tagCardTitle: {
-    fontSize: 24,
-    lineHeight: 30,
+  icon: {
+    width: 54,
+    height: 54,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
   },
-  tagDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginBottom: 12,
+  cardContent: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "300",
+  },
+  cardMore: {
+    width: 28,
+    alignItems: "flex-end",
+    marginLeft: 12,
+  },
+  helperPanel: {
+    marginTop: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  emptyText: {
+    lineHeight: 28,
+    textAlign: "center",
+    fontSize: 18,
+    fontStyle: "italic",
   },
 });

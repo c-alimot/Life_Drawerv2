@@ -7,6 +7,7 @@ import { useLifePhase } from "@features/home/hooks/useLifePhase";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@styles/theme";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
@@ -52,6 +53,12 @@ const entrySchema = z.object({
 type EntryFormData = z.infer<typeof entrySchema>;
 
 const MAX_IMAGES = 10;
+const ENTRY_BACKGROUND = "#EDEAE4";
+const ENTRY_SURFACE = "#FFFFFF";
+const ENTRY_TEXT = "#2F2924";
+const ENTRY_MUTED = "#6F6860";
+const ENTRY_PRIMARY = "#8C9A7F";
+const ENTRY_ACCENT = "#DAC8B1";
 
 interface SelectedMedia {
   imageUris: string[];
@@ -96,7 +103,6 @@ export function CreateEntryScreen() {
   );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -152,35 +158,6 @@ export function CreateEntryScreen() {
       }
     } catch {
       Alert.alert("Error", "Failed to pick images");
-    }
-  }, []);
-
-  const takePhoto = useCallback(async () => {
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-
-      if (!permission.granted) {
-        Alert.alert(
-          "Permission denied",
-          "Please enable camera access in settings"
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ["images"],
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        const photoUri = result.assets[0].uri;
-        setSelectedMedia((prev) => ({
-          ...prev,
-          imageUris: [...prev.imageUris, photoUri].slice(0, MAX_IMAGES),
-        }));
-      }
-    } catch {
-      Alert.alert("Error", "Failed to take photo");
     }
   }, []);
 
@@ -267,21 +244,6 @@ export function CreateEntryScreen() {
       ...prev,
       audioUri: null,
     }));
-  }, []);
-
-  const startVoiceToText = useCallback(async () => {
-    setIsTranscribing(true);
-
-    Alert.alert(
-      "Voice to text unavailable",
-      "This feature is not enabled yet in the current app build."
-    );
-
-    setIsTranscribing(false);
-  }, []);
-
-  const stopVoiceToText = useCallback(async () => {
-    setIsTranscribing(false);
   }, []);
 
   const requestLocation = useCallback(async () => {
@@ -408,6 +370,10 @@ export function CreateEntryScreen() {
     router.back();
   }, []);
 
+  const handleSetPhasePress = useCallback(() => {
+    router.push("/life-phases");
+  }, []);
+
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -417,15 +383,16 @@ export function CreateEntryScreen() {
 
   return (
     <SafeArea>
-      <Screen style={styles.container}>
+      <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
         <View style={styles.header}>
           <TouchableOpacity
             onPress={handleBack}
+            style={styles.headerBack}
             accessible
             accessibilityLabel="Go back"
           >
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
-              ←
+            <Text style={[theme.typography.body, styles.headerBackText]}>
+              Back
             </Text>
           </TouchableOpacity>
 
@@ -434,6 +401,8 @@ export function CreateEntryScreen() {
             onPress={handleSubmit(onSubmit)}
             disabled={isLoading}
             size="sm"
+            textStyle={{ color: "#FFFFFF", letterSpacing: 1.5 }}
+            style={styles.saveButton}
             accessibilityLabel="Save entry"
           />
         </View>
@@ -448,16 +417,25 @@ export function CreateEntryScreen() {
             render={({ field: { onChange, value } }) => (
               <TextInput
                 style={[
-                  theme.typography.h2,
+                  styles.titleInput,
                   {
-                    color: theme.colors.text,
-                    marginBottom: theme.spacing.md,
+                    color: ENTRY_TEXT,
+                    fontFamily: theme.fonts.serif,
                   },
                 ]}
                 placeholder="Add a title"
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholderTextColor={theme.colors.accent2}
                 value={value}
                 onChangeText={onChange}
+                editable
+                cursorColor={ENTRY_PRIMARY}
+                selectionColor={ENTRY_PRIMARY}
+                underlineColorAndroid="transparent"
+                autoCorrect={false}
+                autoCapitalize="sentences"
+                returnKeyType="done"
+                spellCheck={false}
+                focusable
                 accessibilityLabel="Entry title"
               />
             )}
@@ -471,38 +449,50 @@ export function CreateEntryScreen() {
             </Text>
           )}
 
-          <Text
-            style={[
-              theme.typography.body,
-              {
-                color: theme.colors.textSecondary,
-                marginBottom: theme.spacing.lg,
-              },
-            ]}
-          >
-            {currentDate}
-          </Text>
+          <View style={styles.metaRow}>
+            <View style={styles.inlineMetaItem}>
+              <MaterialCommunityIcons
+                name="calendar-blank-outline"
+                size={24}
+                color={ENTRY_PRIMARY}
+              />
+              <Text style={styles.inlineMetaText}>{currentDate}</Text>
+            </View>
 
-          <TouchableOpacity
-            onPress={requestLocation}
-            style={{ marginBottom: theme.spacing.lg }}
-            accessible
-            accessibilityLabel="Add location"
-            accessibilityRole="button"
-          >
-            <Text
-              style={[
-                theme.typography.body,
-                {
-                  color: locationText
-                    ? theme.colors.primary
-                    : theme.colors.textSecondary,
-                },
-              ]}
+            <TouchableOpacity
+              onPress={requestLocation}
+              style={styles.inlineMetaItem}
+              accessible
+              accessibilityLabel="Add location"
+              accessibilityRole="button"
             >
-              {locationText || "Add location"}
-            </Text>
-          </TouchableOpacity>
+              <MaterialCommunityIcons
+                name="map-marker"
+                size={24}
+                color={ENTRY_PRIMARY}
+              />
+              <Text
+                style={[
+                  styles.inlineMetaText,
+                  locationText ? styles.inlineMetaTextActive : null,
+                ]}
+                numberOfLines={1}
+              >
+                {locationText || "Add location"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {activePhase && (
+            <TouchableOpacity
+              onPress={handleSetPhasePress}
+              style={styles.phaseLink}
+              accessible
+              accessibilityLabel={`Life phase: ${activePhase.name}`}
+            >
+              <Text style={styles.phaseLinkText}>{activePhase.name}</Text>
+            </TouchableOpacity>
+          )}
 
           {selectedMedia.location && (
             <TouchableOpacity
@@ -524,8 +514,8 @@ export function CreateEntryScreen() {
                 {
                   borderColor:
                     selectedTags.length > 0
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                      ? ENTRY_PRIMARY
+                      : `${ENTRY_ACCENT}AA`,
                 },
               ]}
               onPress={() => setShowTagModal(true)}
@@ -534,7 +524,11 @@ export function CreateEntryScreen() {
               accessibilityHint={`${selectedTags.length} tags selected`}
               accessibilityRole="button"
             >
-              <Text style={styles.toolbarIcon}>🏷️</Text>
+              <MaterialCommunityIcons
+                name="tag-outline"
+                size={34}
+                color={ENTRY_PRIMARY}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -543,8 +537,8 @@ export function CreateEntryScreen() {
                 {
                   borderColor:
                     selectedDrawers.length > 0
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                      ? ENTRY_PRIMARY
+                      : `${ENTRY_ACCENT}AA`,
                 },
               ]}
               onPress={() => setShowDrawerModal(true)}
@@ -553,7 +547,11 @@ export function CreateEntryScreen() {
               accessibilityHint={`${selectedDrawers.length} drawers selected`}
               accessibilityRole="button"
             >
-              <Text style={styles.toolbarIcon}>📁</Text>
+              <MaterialCommunityIcons
+                name="archive-outline"
+                size={34}
+                color={ENTRY_PRIMARY}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -562,8 +560,8 @@ export function CreateEntryScreen() {
                 {
                   borderColor:
                     selectedMedia.imageUris.length > 0
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                      ? ENTRY_PRIMARY
+                      : `${ENTRY_ACCENT}AA`,
                 },
               ]}
               onPress={pickImages}
@@ -572,20 +570,11 @@ export function CreateEntryScreen() {
               accessibilityHint={`${selectedMedia.imageUris.length}/${MAX_IMAGES} images`}
               accessibilityRole="button"
             >
-              <Text style={styles.toolbarIcon}>🖼️</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                { borderColor: theme.colors.border },
-              ]}
-              onPress={takePhoto}
-              accessible
-              accessibilityLabel="Take photo"
-              accessibilityRole="button"
-            >
-              <Text style={styles.toolbarIcon}>📷</Text>
+              <MaterialCommunityIcons
+                name="image-outline"
+                size={34}
+                color={ENTRY_PRIMARY}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -594,8 +583,8 @@ export function CreateEntryScreen() {
                 {
                   borderColor:
                     selectedMedia.audioUri || isRecording
-                      ? theme.colors.primary
-                      : theme.colors.border,
+                      ? ENTRY_PRIMARY
+                      : `${ENTRY_ACCENT}AA`,
                   backgroundColor: isRecording
                     ? `${theme.colors.error}20`
                     : "transparent",
@@ -608,33 +597,11 @@ export function CreateEntryScreen() {
               }
               accessibilityRole="button"
             >
-              <Text style={styles.toolbarIcon}>
-                {isRecording ? "⏹️" : "🎙️"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor: isTranscribing
-                    ? theme.colors.primary
-                    : theme.colors.border,
-                  backgroundColor: isTranscribing
-                    ? `${theme.colors.primary}20`
-                    : "transparent",
-                },
-              ]}
-              onPress={isTranscribing ? stopVoiceToText : startVoiceToText}
-              accessible
-              accessibilityLabel={
-                isTranscribing ? "Stop voice to text" : "Start voice to text"
-              }
-              accessibilityRole="button"
-            >
-              <Text style={styles.toolbarIcon}>
-                {isTranscribing ? "🎙️" : "🎤"}
-              </Text>
+              <MaterialCommunityIcons
+                name={isRecording ? "stop-circle-outline" : "microphone-outline"}
+                size={34}
+                color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
+              />
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -642,8 +609,8 @@ export function CreateEntryScreen() {
                 styles.toolbarButton,
                 {
                   borderColor: mood
-                    ? theme.colors.primary
-                    : theme.colors.border,
+                    ? ENTRY_PRIMARY
+                    : `${ENTRY_ACCENT}AA`,
                 },
               ]}
               onPress={() => setShowMoodPicker(true)}
@@ -654,9 +621,15 @@ export function CreateEntryScreen() {
               }
               accessibilityRole="button"
             >
-              <Text style={styles.toolbarIcon}>
-                {mood ? MOOD_MAP[mood]?.emoji : "😊"}
-              </Text>
+              {mood ? (
+                <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
+              ) : (
+                <MaterialCommunityIcons
+                  name="emoticon-happy-outline"
+                  size={34}
+                  color={ENTRY_PRIMARY}
+                />
+              )}
             </TouchableOpacity>
           </View>
 
@@ -691,7 +664,7 @@ export function CreateEntryScreen() {
 
           {selectedMedia.audioUri && (
             <View
-              style={[styles.audioBox, { borderColor: theme.colors.border }]}
+              style={[styles.audioBox, { borderColor: ENTRY_ACCENT }]}
             >
               <View style={styles.audioContent}>
                 <Text
@@ -738,12 +711,13 @@ export function CreateEntryScreen() {
                 style={[
                   styles.contentInput,
                   {
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
+                    borderColor: ENTRY_ACCENT,
+                    color: ENTRY_TEXT,
+                    backgroundColor: ENTRY_SURFACE,
                   },
                 ]}
                 placeholder="Start writing..."
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholderTextColor={ENTRY_MUTED}
                 value={value}
                 onChangeText={onChange}
                 multiline
@@ -777,7 +751,7 @@ export function CreateEntryScreen() {
             <View
               style={[
                 styles.moodPicker,
-                { backgroundColor: theme.colors.background },
+                { backgroundColor: ENTRY_BACKGROUND },
               ]}
             >
               <Text
@@ -795,17 +769,17 @@ export function CreateEntryScreen() {
                   return (
                     <TouchableOpacity
                       key={moodValue}
-                      style={[
-                        styles.moodOption,
-                        {
-                          backgroundColor:
+                  style={[
+                    styles.moodOption,
+                    {
+                      backgroundColor:
                             mood === moodValue
-                              ? `${theme.colors.primary}20`
-                              : "transparent",
+                              ? `${ENTRY_PRIMARY}20`
+                              : ENTRY_SURFACE,
                           borderColor:
                             mood === moodValue
-                              ? theme.colors.primary
-                              : theme.colors.border,
+                              ? ENTRY_PRIMARY
+                              : ENTRY_ACCENT,
                         },
                       ]}
                       onPress={() => {
@@ -835,7 +809,7 @@ export function CreateEntryScreen() {
             <Screen
               style={[
                 styles.modalContainer,
-                { backgroundColor: theme.colors.background },
+                { backgroundColor: ENTRY_BACKGROUND },
               ]}
             >
               <View style={styles.modalHeader}>
@@ -869,12 +843,13 @@ export function CreateEntryScreen() {
                         styles.input,
                         {
                           borderColor: theme.colors.border,
-                          color: theme.colors.text,
+                          color: ENTRY_TEXT,
+                          backgroundColor: ENTRY_SURFACE,
                           flex: 1,
                         },
                       ]}
                       placeholder="New drawer name"
-                      placeholderTextColor={theme.colors.textSecondary}
+                      placeholderTextColor={ENTRY_MUTED}
                       value={newDrawerName}
                       onChangeText={setNewDrawerName}
                       accessibilityLabel="New drawer name"
@@ -897,10 +872,10 @@ export function CreateEntryScreen() {
                       {
                         borderColor: selectedDrawers.includes(drawer.id)
                           ? theme.colors.primary
-                          : theme.colors.border,
+                          : ENTRY_ACCENT,
                         backgroundColor: selectedDrawers.includes(drawer.id)
                           ? `${theme.colors.primary}10`
-                          : "transparent",
+                          : ENTRY_SURFACE,
                       },
                     ]}
                     onPress={() => toggleDrawer(drawer.id)}
@@ -922,7 +897,7 @@ export function CreateEntryScreen() {
                             : "transparent",
                           borderColor: selectedDrawers.includes(drawer.id)
                             ? theme.colors.primary
-                            : theme.colors.border,
+                            : ENTRY_ACCENT,
                         },
                       ]}
                     >
@@ -958,7 +933,7 @@ export function CreateEntryScreen() {
             <Screen
               style={[
                 styles.modalContainer,
-                { backgroundColor: theme.colors.background },
+                { backgroundColor: ENTRY_BACKGROUND },
               ]}
             >
               <View style={styles.modalHeader}>
@@ -992,12 +967,13 @@ export function CreateEntryScreen() {
                         styles.input,
                         {
                           borderColor: theme.colors.border,
-                          color: theme.colors.text,
+                          color: ENTRY_TEXT,
+                          backgroundColor: ENTRY_SURFACE,
                           flex: 1,
                         },
                       ]}
                       placeholder="New tag name"
-                      placeholderTextColor={theme.colors.textSecondary}
+                      placeholderTextColor={ENTRY_MUTED}
                       value={newTagName}
                       onChangeText={setNewTagName}
                       accessibilityLabel="New tag name"
@@ -1020,10 +996,10 @@ export function CreateEntryScreen() {
                       {
                         borderColor: selectedTags.includes(tag.id)
                           ? theme.colors.primary
-                          : theme.colors.border,
+                          : ENTRY_ACCENT,
                         backgroundColor: selectedTags.includes(tag.id)
                           ? `${theme.colors.primary}10`
-                          : "transparent",
+                          : ENTRY_SURFACE,
                       },
                     ]}
                     onPress={() => toggleTag(tag.id)}
@@ -1045,7 +1021,7 @@ export function CreateEntryScreen() {
                             : "transparent",
                           borderColor: selectedTags.includes(tag.id)
                             ? theme.colors.primary
-                            : theme.colors.border,
+                            : ENTRY_ACCENT,
                         },
                       ]}
                     >
@@ -1084,36 +1060,105 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 40,
+    paddingBottom: 12,
+  },
+  headerBack: {
+    paddingVertical: 8,
+  },
+  headerBackText: {
+    color: ENTRY_TEXT,
+    fontSize: 18,
+  },
+  saveButton: {
+    backgroundColor: ENTRY_PRIMARY,
+    borderRadius: 999,
+    minHeight: 42,
+    paddingHorizontal: 18,
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 48,
+    paddingTop: 4,
+  },
+  metaRow: {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 24,
+  },
+  inlineMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flexShrink: 1,
+  },
+  inlineMetaText: {
+    color: ENTRY_MUTED,
+    fontSize: 16,
+    lineHeight: 22,
+    flexShrink: 1,
+  },
+  inlineMetaTextActive: {
+    color: ENTRY_PRIMARY,
+  },
+  titleInput: {
+    backgroundColor: "transparent",
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 14,
+    width: "100%",
+    minHeight: 92,
+    fontSize: 44,
+    lineHeight: 52,
+    fontWeight: "300",
+    marginBottom: 18,
+  },
+  phaseLink: {
+    alignSelf: "flex-start",
+    marginTop: -12,
+    marginBottom: 20,
+  },
+  phaseLinkText: {
+    color: ENTRY_PRIMARY,
+    fontSize: 14,
+    fontWeight: "500",
   },
   toolbar: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 24,
-    marginTop: 12,
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 14,
+    marginTop: 4,
   },
   toolbarButton: {
-    width: "22%",
+    width: "17.6%",
     aspectRatio: 1,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "transparent",
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.02,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 10,
+    elevation: 1,
   },
-  toolbarIcon: {
-    fontSize: 24,
+  toolbarMoodIcon: {
+    fontSize: 28,
   },
   contentInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    minHeight: 200,
+    borderRadius: 28,
+    padding: 20,
+    minHeight: 430,
     marginTop: 12,
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 20,
+    elevation: 4,
   },
   imageWrapper: {
     position: "relative",
@@ -1143,12 +1188,18 @@ const styles = StyleSheet.create({
   },
   audioBox: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 22,
+    padding: 16,
     marginBottom: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    backgroundColor: ENTRY_SURFACE,
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 18,
+    elevation: 3,
   },
   audioContent: {
     flex: 1,
@@ -1202,9 +1253,9 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     fontFamily: "System",
     fontSize: 14,
   },
@@ -1212,9 +1263,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 18,
     marginBottom: 8,
   },
   checkbox: {

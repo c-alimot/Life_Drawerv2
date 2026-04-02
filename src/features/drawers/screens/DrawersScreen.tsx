@@ -1,4 +1,5 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 type DrawerListItem = Drawer & { entryCount: number };
 
@@ -39,6 +41,7 @@ const STARTER_DRAWER: DrawerListItem = {
 export function DrawersScreen() {
   const theme = useTheme();
   const { drawers, isLoading, fetchDrawers } = useDrawers();
+  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const hasRealDrawers = drawers.length > 0;
   const displayDrawers: DrawerListItem[] = hasRealDrawers ? drawers : [STARTER_DRAWER];
@@ -57,10 +60,15 @@ export function DrawersScreen() {
     );
   }, []);
 
+  const handleSetLifePhase = useCallback(() => {
+    router.push("/life-phases");
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      fetchActivePhase();
       fetchDrawers();
-    }, [fetchDrawers]),
+    }, [fetchActivePhase, fetchDrawers]),
   );
 
   return (
@@ -73,20 +81,41 @@ export function DrawersScreen() {
         />
 
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => setIsMenuOpen(true)}>
-            <Text style={[styles.menuButton, { color: PAGE_TEXT }]}>
-              ☰
-            </Text>
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.pageTitle,
-              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-            ]}
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={() => setIsMenuOpen(true)}
+              style={styles.headerIconButton}
+            >
+              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSetLifePhase}
+              accessible
+              accessibilityLabel={
+                activePhase
+                  ? `Current life phase: ${activePhase.name}`
+                  : "Set life phase"
+              }
+              accessibilityHint="Tap to set or change your current life phase"
+            >
+              <Text
+                style={[
+                  styles.pageTitle,
+                  { color: PAGE_MUTED, fontWeight: "300" },
+                ]}
+              >
+                {activePhase ? activePhase.name : "Set Life Phase"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={() => router.push("/search")}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
           >
-            Drawers
-          </Text>
-          <View style={styles.headerSpacer} />
+            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
+          </TouchableOpacity>
         </View>
 
         {isLoading ? (
@@ -100,21 +129,64 @@ export function DrawersScreen() {
             contentContainerStyle={styles.content}
             ListHeaderComponent={
               <>
-                <View style={styles.topRow}>
-                  <TouchableOpacity
+                <View style={styles.heroBlock}>
+                  <Text
                     style={[
-                      styles.primaryAction,
-                      {
-                        backgroundColor: PAGE_SECONDARY,
-                        shadowColor: PAGE_TEXT,
-                      },
+                      styles.heroTitlePrimary,
+                      { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
                     ]}
-                    onPress={handleCreateDrawer}
                   >
-                    <Text style={styles.primaryActionIcon}>+</Text>
-                    <Text style={styles.primaryActionText}>Create Drawer</Text>
-                  </TouchableOpacity>
+                    Your Personal{" "}
+                    <Text style={[styles.heroTitleSecondary, { color: PAGE_PRIMARY }]}>
+                      Archive
+                    </Text>
+                  </Text>
+                </View>
 
+                <TouchableOpacity
+                  style={[
+                    styles.primaryAction,
+                    {
+                      backgroundColor: PAGE_PRIMARY,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  onPress={handleCreateDrawer}
+                >
+                  <View style={styles.primaryActionIconBox}>
+                    <Text style={styles.primaryActionIcon}>+</Text>
+                  </View>
+                  <View style={styles.primaryActionCopy}>
+                    <Text
+                      style={[
+                        styles.primaryActionText,
+                        { fontFamily: theme.fonts.serif },
+                      ]}
+                    >
+                      Create Drawer
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.sectionHeaderRow}>
+                  <Text
+                    style={[
+                      theme.typography.bodySm,
+                      styles.sectionHeaderText,
+                      { color: PAGE_MUTED },
+                    ]}
+                  >
+                    Your Drawers
+                  </Text>
+                  <View
+                    style={[
+                      styles.sectionDivider,
+                      { backgroundColor: theme.colors.accent1 },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.topRow}>
                   <TouchableOpacity
                     style={[
                       styles.secondaryAction,
@@ -136,21 +208,6 @@ export function DrawersScreen() {
                     </Text>
                   </TouchableOpacity>
                 </View>
-
-                <View style={styles.sectionHeader}>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      {
-                        color: PAGE_MUTED,
-                        textTransform: "uppercase",
-                        letterSpacing: 2.2,
-                      },
-                    ]}
-                  >
-                    Your Drawers
-                  </Text>
-                </View>
               </>
             }
             renderItem={({ item }) => (
@@ -159,7 +216,6 @@ export function DrawersScreen() {
                   styles.card,
                   {
                     backgroundColor: PAGE_SURFACE,
-                    borderColor: PAGE_BORDER,
                     shadowColor: PAGE_TEXT,
                   },
                 ]}
@@ -183,7 +239,11 @@ export function DrawersScreen() {
                     },
                   ]}
                 >
-                  <Text style={styles.iconText}>{item.icon || "📁"}</Text>
+                  <MaterialCommunityIcons
+                    name="archive-outline"
+                    size={26}
+                    color={item.color || PAGE_PRIMARY}
+                  />
                 </View>
                 <View style={styles.cardContent}>
                   <Text
@@ -198,24 +258,40 @@ export function DrawersScreen() {
                     style={[
                       theme.typography.bodySm,
                       { color: PAGE_MUTED, fontWeight: "600" },
-                    ]}
-                  >
+                      ]}
+                    >
                     {item.entryCount} entries
                   </Text>
                 </View>
+                <TouchableOpacity
+                  onPress={handleEditDrawers}
+                  style={styles.cardMore}
+                  accessible
+                  accessibilityLabel={`More options for ${item.name}`}
+                >
+                  <MaterialCommunityIcons
+                    name="dots-vertical"
+                    size={22}
+                    color={theme.colors.textDisabled}
+                  />
+                </TouchableOpacity>
               </TouchableOpacity>
             )}
             ListFooterComponent={
-              <Text
-                style={[
-                  theme.typography.body,
-                  styles.emptyText,
-                  { color: PAGE_MUTED },
-                ]}
-              >
-                Create new drawers to organize your entries by theme, topic, or
-                anything that matters to you.
-              </Text>
+              <View style={styles.helperPanel}>
+                <Text
+                  style={[
+                    styles.emptyText,
+                    {
+                      color: PAGE_MUTED,
+                      fontFamily: theme.fonts.serif,
+                    },
+                  ]}
+                >
+                  Create new drawers to organize your entries by theme, topic,
+                  or anything that matters to you.
+                </Text>
+              </View>
             }
           />
         )}
@@ -234,20 +310,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  menuButton: {
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: "500",
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pageTitle: {
-    fontSize: 40,
-    lineHeight: 46,
-  },
-  headerSpacer: {
-    width: 32,
+    marginLeft: 12,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "300",
   },
   loader: {
     flex: 1,
@@ -255,86 +337,130 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
+    paddingTop: 4,
     paddingBottom: 230,
+  },
+  heroBlock: {
+    marginTop: 6,
+    marginBottom: 30,
+  },
+  heroTitlePrimary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+  },
+  heroTitleSecondary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+    marginTop: 2,
   },
   topRow: {
     flexDirection: "row",
     gap: 16,
-    marginBottom: 28,
+    marginBottom: 22,
   },
   primaryAction: {
-    flex: 1,
-    minHeight: 96,
+    minHeight: 92,
     borderRadius: 999,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 16,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 5,
+    marginBottom: 24,
+  },
+  primaryActionIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  primaryActionCopy: {
+    flex: 1,
   },
   primaryActionIcon: {
     color: "#F8F6F2",
     fontSize: 32,
-    marginRight: 10,
-    marginTop: -2,
+    lineHeight: 32,
   },
   primaryActionText: {
     color: "#F8F6F2",
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 19,
+    lineHeight: 24,
+    fontWeight: "300",
   },
   secondaryAction: {
-    flex: 1,
-    minHeight: 96,
-    borderRadius: 999,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    display: "none",
   },
-  sectionHeader: {
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 18,
+  },
+  sectionHeaderText: {
+    textTransform: "uppercase",
+    letterSpacing: 2.6,
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 14,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    opacity: 0.7,
   },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
     borderRadius: 22,
-    padding: 18,
-    marginBottom: 14,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 18,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
+    minHeight: 106,
   },
   icon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 54,
+    height: 54,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 14,
-  },
-  iconText: {
-    fontSize: 22,
+    marginRight: 16,
   },
   cardContent: {
     flex: 1,
   },
   cardTitle: {
-    fontSize: 24,
-    lineHeight: 30,
+    fontSize: 22,
+    lineHeight: 28,
+    fontWeight: "300",
+  },
+  cardMore: {
+    width: 28,
+    alignItems: "flex-end",
+    marginLeft: 12,
+  },
+  helperPanel: {
+    marginTop: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   emptyText: {
-    marginTop: 28,
     lineHeight: 28,
     textAlign: "center",
-    paddingHorizontal: 28,
+    fontSize: 18,
+    fontStyle: "italic",
   },
 });

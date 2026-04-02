@@ -1,5 +1,6 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
@@ -22,13 +23,18 @@ interface GroupedEntries {
   [date: string]: any[];
 }
 
+const STARTER_DRAWER = {
+  id: "starter-drawer",
+  name: "My Life Drawer",
+  entryCount: 0,
+  color: "#8C9A7F",
+};
+
 const HOME_BACKGROUND = "#EDEAE4";
 const HOME_TEXT = "#2F2924";
 const HOME_MUTED = "#6F6860";
 const HOME_PRIMARY = "#8C9A7F";
-const HOME_SECONDARY = "#556950";
 const HOME_SURFACE = "#FFFFFF";
-const HOME_ACCENT = "#B39C87";
 
 export function HomeScreen() {
   const theme = useTheme();
@@ -77,10 +83,6 @@ export function HomeScreen() {
     setGroupedEntries(grouped);
   }, [entries]);
 
-  const handleNewEntry = useCallback(() => {
-    router.push("/create-entry");
-  }, []);
-
   const handleSearch = useCallback(() => {
     router.push("/search");
   }, []);
@@ -110,6 +112,7 @@ export function HomeScreen() {
   }, []);
 
   const isLoading = entriesLoading || drawersLoading || phaseLoading;
+  const recentDrawers = drawers.length > 0 ? drawers.slice(0, 5) : [STARTER_DRAWER];
 
   return (
     <SafeArea>
@@ -118,46 +121,51 @@ export function HomeScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleOpenMenu}
-            accessible
-            accessibilityLabel="Open menu"
-            accessibilityRole="button"
-          >
-            <Text style={[styles.menuButton, { color: HOME_TEXT }]}>
-              ☰
-            </Text>
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.headerTitle,
-              { color: HOME_TEXT, fontFamily: theme.fonts.serif },
-            ]}
-          >
-            Home
-          </Text>
-          <TouchableOpacity
-            onPress={handleSetLifePhase}
-            accessible
-            accessibilityLabel={
-              activePhase
-                ? `Current life phase: ${activePhase.name}`
-                : "Set life phase"
-            }
-            accessibilityHint="Tap to set or change your current life phase"
-          >
-            <Text
-              style={[
-                theme.typography.bodySm,
-                {
-                  color: HOME_MUTED,
-                  fontWeight: "600",
-                  textAlign: "right",
-                },
-              ]}
+          <View style={styles.headerLeft}>
+            <TouchableOpacity
+              onPress={handleOpenMenu}
+              style={styles.headerIconButton}
+              accessible
+              accessibilityLabel="Open menu"
+              accessibilityRole="button"
             >
-              {activePhase ? activePhase.name : "Set Life Phase"}
-            </Text>
+              <MaterialCommunityIcons name="menu" size={34} color={HOME_TEXT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSetLifePhase}
+              accessible
+              accessibilityLabel={
+                activePhase
+                  ? `Current life phase: ${activePhase.name}`
+                  : "Set life phase"
+              }
+              accessibilityHint="Tap to set or change your current life phase"
+            >
+              <Text
+                style={[
+                  styles.lifePhaseLink,
+                  {
+                    color: HOME_MUTED,
+                    fontWeight: "300",
+                  },
+                ]}
+              >
+                {activePhase ? activePhase.name : "Set Life Phase"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            onPress={handleSearch}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
+            accessibilityHint="Open search and filter screen"
+          >
+            <MaterialCommunityIcons
+              name="magnify"
+              size={32}
+              color={HOME_PRIMARY}
+            />
           </TouchableOpacity>
         </View>
 
@@ -170,101 +178,38 @@ export function HomeScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.content}
           >
-            {/* Action Buttons */}
-            <View style={styles.actionsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.newEntryButton,
-                  {
-                    backgroundColor: HOME_SECONDARY,
-                    shadowColor: HOME_TEXT,
-                  },
-                ]}
-                onPress={handleNewEntry}
-                accessible
-                accessibilityLabel="Create new entry"
-                accessibilityHint="Open entry creation screen"
-              >
-                <Text
-                  style={[
-                    theme.typography.h3,
-                    {
-                      color: HOME_SURFACE,
-                      marginRight: theme.spacing.sm,
-                    },
-                  ]}
-                >
-                  +
-                </Text>
-                <Text
-                  style={[
-                    theme.typography.body,
-                    {
-                      color: HOME_SURFACE,
-                      fontWeight: "700",
-                    },
-                  ]}
-                >
-                  New Entry
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.searchButton,
-                  {
-                    backgroundColor: HOME_SURFACE,
-                    borderColor: HOME_ACCENT,
-                    shadowColor: HOME_TEXT,
-                  },
-                ]}
-                onPress={handleSearch}
-                accessible
-                accessibilityLabel="Search entries"
-                accessibilityHint="Open search and filter screen"
-              >
-                <Text
-                  style={[
-                    theme.typography.h3,
-                    {
-                      color: HOME_PRIMARY,
-                      marginRight: theme.spacing.sm,
-                    },
-                  ]}
-                >
-                  🔍
-                </Text>
-                <Text
-                  style={[
-                    theme.typography.body,
-                    {
-                      color: HOME_TEXT,
-                      fontWeight: "700",
-                    },
-                  ]}
-                >
-                  Search
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Text
+              style={[
+                styles.heroTitle,
+                {
+                  color: HOME_TEXT,
+                  fontFamily: theme.fonts.serif,
+                },
+              ]}
+            >
+              Document your life,{"\n"}
+              <Text style={{ color: HOME_PRIMARY }}>one moment at a time.</Text>
+            </Text>
 
             {/* Recent Entries Section */}
             <View style={styles.section}>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  {
-                    color: HOME_MUTED,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                    letterSpacing: 2.2,
-                  },
-                ]}
-              >
-                Recent Entries
-              </Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    styles.sectionHeaderText,
+                    { color: HOME_MUTED },
+                  ]}
+                >
+                  Recent Entries
+                </Text>
+                <View
+                  style={[
+                    styles.sectionDivider,
+                    { backgroundColor: theme.colors.accent1 },
+                  ]}
+                />
+              </View>
 
               {entries.length === 0 ? (
                 // Empty State
@@ -272,8 +217,8 @@ export function HomeScreen() {
                   style={[
                     styles.emptyState,
                     {
+                      borderColor: theme.colors.accent1 + "AA",
                       backgroundColor: HOME_SURFACE,
-                      shadowColor: HOME_TEXT,
                     },
                   ]}
                 >
@@ -281,11 +226,11 @@ export function HomeScreen() {
                     style={[
                       styles.emptyIcon,
                       {
-                        backgroundColor: theme.colors.accent1 + "55",
+                        backgroundColor: theme.colors.accent1 + "3D",
                       },
                     ]}
                   >
-                    <Text style={styles.emptyIconText}>✏️</Text>
+                    <Text style={[styles.emptyIconText, { color: HOME_PRIMARY }]}>+</Text>
                   </View>
                   <Text
                     style={[
@@ -306,7 +251,7 @@ export function HomeScreen() {
                         color: HOME_MUTED,
                         textAlign: "center",
                         marginBottom: theme.spacing.lg,
-                        lineHeight: 28,
+                        lineHeight: 30,
                       },
                     ]}
                   >
@@ -314,12 +259,16 @@ export function HomeScreen() {
                     you&apos;re ready.
                   </Text>
                   <Button
-                    label="+ Create First Entry"
+                    label="Create First Entry"
                     onPress={handleCreateFirstEntry}
-                    textStyle={{ color: "#FFFFFF" }}
+                    variant="outline"
+                    textStyle={{ color: HOME_PRIMARY }}
                     style={[
                       styles.inlineCta,
-                      { backgroundColor: HOME_PRIMARY },
+                      {
+                        backgroundColor: "transparent",
+                        borderColor: theme.colors.accent2,
+                      },
                     ]}
                     accessibilityLabel="Create first entry button"
                   />
@@ -425,118 +374,110 @@ export function HomeScreen() {
 
             {/* Recently Opened Drawers Section */}
             <View style={styles.section}>
-              <Text
+              <View style={styles.sectionHeaderRow}>
+                <Text
                   style={[
-                    theme.typography.labelSm,
-                  {
-                    color: HOME_MUTED,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                    letterSpacing: 2.2,
-                  },
-                ]}
-              >
-                Recently Opened Drawers
-              </Text>
-
-              {drawers.length === 0 ? (
-                <View
-                  style={[
-                    styles.infoBox,
-                    {
-                      backgroundColor: HOME_SURFACE,
-                      shadowColor: HOME_TEXT,
-                    },
+                    theme.typography.bodySm,
+                    styles.sectionHeaderText,
+                    { color: HOME_MUTED },
                   ]}
                 >
-                  <Text
+                  Recently Opened Drawers
+                </Text>
+                <View
+                  style={[
+                    styles.sectionDivider,
+                    { backgroundColor: theme.colors.accent1 },
+                  ]}
+                />
+              </View>
+
+              <FlatList
+                data={recentDrawers}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item: drawer }) => (
+                  <TouchableOpacity
                     style={[
-                      theme.typography.bodySm,
-                      { color: HOME_MUTED },
+                      styles.drawerCard,
+                      {
+                        backgroundColor: HOME_SURFACE,
+                        shadowColor: HOME_TEXT,
+                      },
                     ]}
+                    onPress={() => {
+                      if (drawer.id === STARTER_DRAWER.id) {
+                        return;
+                      }
+                      handleDrawerPress(drawer.id);
+                    }}
+                    accessible
+                    accessibilityLabel={`Drawer: ${drawer.name}`}
+                    accessibilityHint={`${drawer.entryCount} entries`}
                   >
-                    You can create custom drawers anytime to organize your
-                    entries by theme or topic
-                  </Text>
-                </View>
-              ) : (
-                <FlatList
-                  data={drawers.slice(0, 5)}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                  renderItem={({ item: drawer }) => (
-                    <TouchableOpacity
+                    <View
                       style={[
-                        styles.drawerCard,
+                        styles.drawerIcon,
                         {
-                          backgroundColor: HOME_SURFACE,
-                          shadowColor: HOME_TEXT,
+                          backgroundColor: (drawer.color || HOME_PRIMARY) + "22",
                         },
                       ]}
-                      onPress={() => handleDrawerPress(drawer.id)}
-                      accessible
-                      accessibilityLabel={`Drawer: ${drawer.name}`}
-                      accessibilityHint={`${drawer.entryCount} entries`}
                     >
-                      <View
+                      <MaterialCommunityIcons
+                        name="archive-outline"
+                        size={26}
+                        color={drawer.color || HOME_PRIMARY}
+                      />
+                    </View>
+                    <View style={styles.drawerInfo}>
+                      <Text
                         style={[
-                          styles.drawerIcon,
+                          styles.drawerTitle,
                           {
-                            backgroundColor: drawer.color || HOME_PRIMARY,
+                            color: HOME_TEXT,
+                            fontFamily: theme.fonts.serif,
                           },
                         ]}
                       >
-                        <Text style={styles.drawerIconText}>
-                          {drawer.icon || "📦"}
-                        </Text>
-                      </View>
-                      <View style={styles.drawerInfo}>
-                        <Text
-                          style={[
-                            styles.drawerTitle,
-                            {
-                              color: HOME_TEXT,
-                              fontFamily: theme.fonts.serif,
-                            },
-                          ]}
-                        >
-                          {drawer.name}
-                        </Text>
-                        <Text
-                          style={[
-                            theme.typography.bodySm,
-                            { color: HOME_MUTED },
-                          ]}
-                        >
-                          {drawer.entryCount} entries
-                        </Text>
-                      </View>
+                        {drawer.name}
+                      </Text>
+                      <Text
+                        style={[
+                          theme.typography.bodySm,
+                          { color: HOME_MUTED },
+                        ]}
+                      >
+                        {drawer.entryCount} entries
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => {}}
+                      style={styles.drawerMore}
+                      accessible
+                      accessibilityLabel={`More options for ${drawer.name}`}
+                    >
+                      <MaterialCommunityIcons
+                        name="dots-vertical"
+                        size={22}
+                        color={theme.colors.textDisabled}
+                      />
                     </TouchableOpacity>
-                  )}
-                />
-              )}
+                  </TouchableOpacity>
+                )}
+              />
 
-              {drawers.length === 0 && (
-                <View
-                  style={[
-                    styles.infoBox,
-                    {
-                      backgroundColor: HOME_SURFACE,
-                      shadowColor: HOME_TEXT,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: HOME_MUTED },
-                    ]}
-                  >
-                    You can create custom drawers anytime to organize your
-                    entries by theme or topic
-                  </Text>
-                </View>
-              )}
+              <Text
+                style={[
+                  styles.drawerHelperText,
+                  {
+                    color: HOME_MUTED,
+                    fontFamily: theme.fonts.serif,
+                  },
+                ]}
+              >
+                You can create custom drawers anytime to organize your thoughts.
+              </Text>
+
             </View>
           </ScrollView>
         )}
@@ -556,63 +497,69 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 20,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  menuButton: {
-    fontSize: 32,
-    lineHeight: 34,
-    fontWeight: "500",
-    minWidth: 36,
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 1,
   },
-  headerTitle: {
-    fontSize: 42,
-    lineHeight: 48,
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lifePhaseLink: {
+    marginLeft: 12,
+    fontSize: 18,
+    lineHeight: 22,
   },
   content: {
     paddingHorizontal: 24,
+    paddingTop: 6,
     paddingBottom: 230,
+  },
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 42,
+    marginTop: 6,
+    marginBottom: 28,
+    fontWeight: "300",
   },
   loaderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  actionsContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 32,
-    marginTop: 4,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5,
-  },
-  newEntryButton: {},
-  searchButton: {
-    borderWidth: 1.5,
-  },
   section: {
     marginBottom: 32,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  sectionHeaderText: {
+    textTransform: "uppercase",
+    letterSpacing: 2.6,
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 14,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    opacity: 0.7,
   },
   emptyState: {
     alignItems: "center",
     paddingVertical: 40,
     paddingHorizontal: 24,
     borderRadius: 24,
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 5,
+    borderWidth: 1,
+    borderStyle: "solid",
   },
   emptyIcon: {
     width: 80,
@@ -623,16 +570,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyIconText: {
-    fontSize: 40,
+    fontSize: 42,
+    lineHeight: 42,
+    fontWeight: "400",
+    opacity: 0.4,
   },
   emptyTitle: {
     fontSize: 28,
     lineHeight: 34,
+    fontWeight: "200",
   },
   inlineCta: {
-    minHeight: 64,
+    minHeight: 58,
     borderRadius: 999,
     paddingHorizontal: 24,
+    borderWidth: 1,
   },
   dateGroup: {
     marginBottom: 20,
@@ -684,15 +636,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 16,
   },
-  drawerIconText: {
-    fontSize: 24,
-  },
   drawerInfo: {
     flex: 1,
   },
   drawerTitle: {
     fontSize: 24,
     lineHeight: 30,
+    fontWeight: "300",
+  },
+  drawerMore: {
+    width: 28,
+    alignItems: "flex-end",
+    marginLeft: 12,
   },
   infoBox: {
     paddingVertical: 16,
@@ -702,5 +657,14 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
+  },
+  drawerHelperText: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    lineHeight: 28,
+    textAlign: "center",
+    fontSize: 18,
+    fontStyle: "italic",
   },
 });

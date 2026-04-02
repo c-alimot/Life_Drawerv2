@@ -38,6 +38,7 @@ const MENU_ITEMS: {
   route: MenuRoute;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
+  { label: "Home", route: "/", icon: "home-outline" },
   { label: "Tags", route: "/tags", icon: "tag-outline" },
   {
     label: "Account & Settings",
@@ -216,8 +217,9 @@ const styles = StyleSheet.create({
   menuPanel: {
     width: "86%",
     maxWidth: 360,
-    paddingHorizontal: 22,
-    paddingTop: 26,
+    paddingLeft: 30,
+    paddingRight: 22,
+    paddingTop: 40,
     paddingBottom: 28,
     borderRightWidth: 1,
   },
