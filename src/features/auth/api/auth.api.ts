@@ -128,7 +128,10 @@ export const authApi = {
   /**
    * Update user profile
    */
-  async updateProfile(userId: string, updates: { displayName?: string }) {
+  async updateProfile(
+    userId: string,
+    updates: { displayName?: string; avatarUrl?: string },
+  ) {
     try {
       const result = await authService.updateProfile(userId, updates);
       return {
@@ -138,6 +141,24 @@ export const authApi = {
       };
     } catch (error) {
       console.error('Auth API update profile error:', error);
+      return {
+        success: false,
+        data: null,
+        error: error as ApiError,
+      };
+    }
+  },
+
+  async uploadProfilePhoto(userId: string, uri: string) {
+    try {
+      const result = await authService.uploadProfilePhoto(userId, uri);
+      return {
+        success: true,
+        data: result,
+        error: null,
+      };
+    } catch (error) {
+      console.error("Auth API upload profile photo error:", error);
       return {
         success: false,
         data: null,

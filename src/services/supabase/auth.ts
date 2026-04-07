@@ -2,6 +2,8 @@ import { API_ERRORS } from "@constants/errors";
 import { ApiError, LoginRequest, SignupRequest } from "@types";
 import { supabase } from "./client";
 
+const PROFILE_MEDIA_BUCKET = "entry-media";
+
 type ProfileRow = {
   id: string;
   display_name: string | null;
@@ -153,14 +155,30 @@ export const authService = {
     }
   },
 
-  async updateProfile(userId: string, updates: { displayName?: string }) {
+  async updateProfile(
+    userId: string,
+    updates: { displayName?: string; avatarUrl?: string },
+  ) {
     try {
+      const payload: {
+        id: string;
+        display_name?: string;
+        avatar_url?: string;
+      } = {
+        id: userId,
+      };
+
+      if (updates.displayName !== undefined) {
+        payload.display_name = updates.displayName;
+      }
+
+      if (updates.avatarUrl !== undefined) {
+        payload.avatar_url = updates.avatarUrl;
+      }
+
       const { data, error } = await supabase
         .from("profiles")
-        .update({
-          display_name: updates.displayName,
-        })
-        .eq("id", userId)
+        .upsert(payload, { onConflict: "id" })
         .select("*")
         .single();
 
@@ -175,6 +193,32 @@ export const authService = {
       return this.mapProfile(user?.email || "", data as ProfileRow);
     } catch (error) {
       console.error("Update profile error:", error);
+      throw this.handleError(error);
+    }
+  },
+
+  async uploadProfilePhoto(userId: string, uri: string) {
+    try {
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const extension = this.getExtension(uri);
+      const path = `${userId}/profile/avatar-${Date.now()}${extension}`;
+
+      const { error } = await supabase.storage
+        .from(PROFILE_MEDIA_BUCKET)
+        .upload(path, blob, { upsert: true });
+
+      if (error) {
+        throw error;
+      }
+
+      const { data } = supabase.storage
+        .from(PROFILE_MEDIA_BUCKET)
+        .getPublicUrl(path);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error("Upload profile photo error:", error);
       throw this.handleError(error);
     }
   },
@@ -202,6 +246,11 @@ export const authService = {
       createdAt: profile.created_at,
       updatedAt: profile.updated_at ?? profile.created_at,
     };
+  },
+
+  getExtension(uri: string) {
+    const match = uri.match(/\.[a-zA-Z0-9]+$/);
+    return match ? match[0] : "";
   },
 
   handleError(error: any): ApiError {

@@ -319,6 +319,7 @@ export function OnboardingScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSkip}
+              style={styles.skipButton}
               accessible
               accessibilityLabel="Skip onboarding"
               accessibilityRole="button"
@@ -343,17 +344,21 @@ export function OnboardingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+    overflow: "hidden",
   },
   container: {
     flex: 1,
+    overflow: "hidden",
   },
   scrollView: {
     flex: 1,
+    width: "100%",
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "space-between",
     paddingBottom: 18,
+    minHeight: "100%",
   },
   glowTop: {
     position: "absolute",
@@ -378,16 +383,16 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 28,
-    paddingTop: 16,
+    paddingTop: 40,
   },
   topActionButton: {
     minWidth: 76,
-    minHeight: 28,
+    minHeight: 0,
     justifyContent: "center",
   },
   topActionPlaceholder: {
     minWidth: 76,
-    minHeight: 28,
+    minHeight: 0,
   },
   topActionText: {
     fontWeight: "600",
@@ -465,7 +470,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   ctaButton: {
-    minHeight: 72,
+    minHeight: 78,
     borderRadius: 999,
     alignItems: "center",
     justifyContent: "center",
@@ -479,6 +484,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 2.2,
     fontWeight: "700",
+  },
+  skipButton: {
+    minHeight: 44,
+    justifyContent: "center",
   },
   skipText: {
     textAlign: "center",

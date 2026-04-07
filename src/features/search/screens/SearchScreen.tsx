@@ -1,4 +1,5 @@
-import { SafeArea, Screen } from "@components/layout";
+import { AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
@@ -16,11 +17,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
+const PAGE_SOFT_SURFACE = "#F8F6F2";
 const PAGE_TEXT = "#2F2924";
 const PAGE_MUTED = "#6F6860";
+const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
 
@@ -36,9 +40,11 @@ interface SearchFilters {
 export function SearchScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
+  const { activePhase, fetchActivePhase } = useLifePhase();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     mood: null,
     drawer: null,
@@ -49,62 +55,45 @@ export function SearchScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchEntries();
-    }, [fetchEntries]),
+      fetchActivePhase();
+    }, [fetchEntries, fetchActivePhase]),
   );
 
-  // Filter entries based on search term and filters
   const filteredEntries = useMemo(() => {
     if (!entries) return [];
 
-    let results = entries.filter((entry) => {
-      // Search term filter (title + content)
+    return entries.filter((entry) => {
       const matchesSearchTerm =
         searchTerm === "" ||
         entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         entry.content.toLowerCase().includes(searchTerm.toLowerCase());
 
       if (!matchesSearchTerm) return false;
-
-      // Mood filter
       if (filters.mood && entry.mood !== filters.mood) return false;
 
-      // Drawer filter
-      if (
-        filters.drawer &&
-        !entry.drawers?.some((d) => d.id === filters.drawer)
-      ) {
+      if (filters.drawer && !entry.drawers?.some((d) => d.id === filters.drawer)) {
         return false;
       }
 
-      // Tag filter
       if (filters.tag && !entry.tags?.some((t) => t.id === filters.tag)) {
         return false;
       }
 
-      // Date range filter
       const entryDate = new Date(entry.createdAt);
       const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const startOfWeek = new Date(
-        today.setDate(today.getDate() - today.getDay()),
-      );
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      startOfWeek.setHours(0, 0, 0, 0);
       const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
-      if (filters.dateRange === "today" && entryDate < startOfDay) {
-        return false;
-      }
-      if (filters.dateRange === "week" && entryDate < startOfWeek) {
-        return false;
-      }
-      if (filters.dateRange === "month" && entryDate < startOfMonth) {
-        return false;
-      }
+      if (filters.dateRange === "today" && entryDate < startOfDay) return false;
+      if (filters.dateRange === "week" && entryDate < startOfWeek) return false;
+      if (filters.dateRange === "month" && entryDate < startOfMonth) return false;
 
       return true;
     });
-
-    return results;
-  }, [entries, searchTerm, filters]);
+  }, [entries, filters, searchTerm]);
 
   const handleEntryPress = useCallback((entryId: string) => {
     router.push(`/entry/${entryId}`);
@@ -137,9 +126,10 @@ export function SearchScreen() {
       dateRange: "all",
     });
     setSearchTerm("");
+    setActiveFilter("all");
   }, []);
 
-  const getUniqueDrawers = useMemo(() => {
+  const uniqueDrawers = useMemo(() => {
     const drawerMap = new Map();
     entries?.forEach((entry) => {
       entry.drawers?.forEach((drawer) => {
@@ -149,7 +139,7 @@ export function SearchScreen() {
     return Array.from(drawerMap.values());
   }, [entries]);
 
-  const getUniqueTags = useMemo(() => {
+  const uniqueTags = useMemo(() => {
     const tagMap = new Map();
     entries?.forEach((entry) => {
       entry.tags?.forEach((tag) => {
@@ -160,18 +150,61 @@ export function SearchScreen() {
   }, [entries]);
 
   const hasActiveFilters =
-    filters.mood ||
-    filters.drawer ||
-    filters.tag ||
+    Boolean(filters.mood) ||
+    Boolean(filters.drawer) ||
+    Boolean(filters.tag) ||
     filters.dateRange !== "all" ||
     searchTerm !== "";
+
+  const renderFilterChip = (
+    key: FilterType,
+    label: string,
+    accessibilityLabel: string,
+  ) => (
+    <TouchableOpacity
+      key={key}
+      onPress={() => setActiveFilter(key)}
+      style={[
+        styles.filterTab,
+        {
+          backgroundColor: activeFilter === key ? PAGE_SECONDARY : PAGE_SURFACE,
+          borderColor: PAGE_BORDER,
+          shadowColor: PAGE_TEXT,
+        },
+      ]}
+      accessible
+      accessibilityLabel={accessibilityLabel}
+    >
+      <Text
+        style={[
+          theme.typography.labelSm,
+          styles.filterTabText,
+          { color: activeFilter === key ? PAGE_BACKGROUND : PAGE_TEXT },
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  const renderFilterSectionTitle = (title: string) => (
+    <Text
+      style={[
+        theme.typography.labelSm,
+        styles.filterSectionTitle,
+        { color: PAGE_MUTED },
+      ]}
+    >
+      {title}
+    </Text>
+  );
 
   if (isLoading) {
     return (
       <SafeArea>
         <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={PAGE_SECONDARY} />
+            <ActivityIndicator size="large" color={PAGE_PRIMARY} />
           </View>
         </Screen>
       </SafeArea>
@@ -181,672 +214,501 @@ export function SearchScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        {/* Header */}
+        <AppSideMenu
+          visible={isMenuOpen}
+          onClose={() => setIsMenuOpen(false)}
+          currentRoute="/search"
+        />
+
         <View style={styles.header}>
-          <Text
-            style={[
-              styles.pageTitle,
-              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-            ]}
-          >
-            Search Entries
-          </Text>
-          {hasActiveFilters && (
+          <View style={styles.headerLeft}>
             <TouchableOpacity
-              onPress={clearFilters}
+              onPress={() => setIsMenuOpen(true)}
+              style={styles.headerIconButton}
               accessible
-              accessibilityLabel="Clear filters"
+              accessibilityLabel="Open menu"
+              accessibilityRole="button"
             >
-              <Text
-                style={[
-                  theme.typography.bodySm,
-                  { color: PAGE_SECONDARY, fontWeight: "700" },
-                ]}
-              >
-                Clear All
+              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push("/life-phases")}
+              accessible
+              accessibilityLabel={
+                activePhase
+                  ? `Current life phase: ${activePhase.name}`
+                  : "Set life phase"
+              }
+              accessibilityHint="Tap to set or change your current life phase"
+            >
+              <Text style={[styles.pageTitle, { color: PAGE_MUTED, fontWeight: "300" }]}>
+                {activePhase ? activePhase.name : "Set Life Phase"}
               </Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Search Bar */}
-        <View
-          style={[
-            styles.searchBar,
-            {
-              borderColor: PAGE_BORDER,
-              backgroundColor: PAGE_SURFACE,
-              shadowColor: PAGE_TEXT,
-            },
-          ]}
-        >
-          <Text style={{ fontSize: 18, marginRight: 8 }}>🔍</Text>
-          <TextInput
-            style={[styles.searchInput, { color: PAGE_TEXT }]}
-            placeholder="Search by title or content..."
-            placeholderTextColor={PAGE_MUTED}
-            value={searchTerm}
-            onChangeText={setSearchTerm}
-            accessibilityLabel="Search entries"
-          />
-        </View>
-
-        {/* Filter Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterTabs}
-        >
-          <TouchableOpacity
-            onPress={() => setActiveFilter("all")}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                    activeFilter === "all"
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-            accessible
-            accessibilityLabel="All entries filter"
-          >
-            <Text
-              style={[
-                theme.typography.labelSm,
-                {
-                  color:
-                    activeFilter === "all"
-                      ? PAGE_BACKGROUND
-                      : PAGE_TEXT,
-                },
-              ]}
-            >
-              All
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveFilter("mood")}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                    activeFilter === "mood"
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-            accessible
-            accessibilityLabel="Filter by mood"
-          >
-            <Text
-              style={[
-                theme.typography.labelSm,
-                {
-                  color:
-                    activeFilter === "mood"
-                      ? PAGE_BACKGROUND
-                      : PAGE_TEXT,
-                },
-              ]}
-            >
-              Mood
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveFilter("drawer")}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                    activeFilter === "drawer"
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-            accessible
-            accessibilityLabel="Filter by drawer"
-          >
-            <Text
-              style={[
-                theme.typography.labelSm,
-                {
-                  color:
-                    activeFilter === "drawer"
-                      ? PAGE_BACKGROUND
-                      : PAGE_TEXT,
-                },
-              ]}
-            >
-              Drawer
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveFilter("tag")}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                    activeFilter === "tag"
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-            accessible
-            accessibilityLabel="Filter by tag"
-          >
-            <Text
-              style={[
-                theme.typography.labelSm,
-                {
-                  color:
-                    activeFilter === "tag"
-                      ? PAGE_BACKGROUND
-                      : PAGE_TEXT,
-                },
-              ]}
-            >
-              Tag
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={() => setActiveFilter("date")}
-            style={[
-              styles.filterTab,
-              {
-                backgroundColor:
-                    activeFilter === "date"
-                      ? PAGE_SECONDARY
-                      : PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-            accessible
-            accessibilityLabel="Filter by date"
-          >
-            <Text
-              style={[
-                theme.typography.labelSm,
-                {
-                  color:
-                    activeFilter === "date"
-                      ? PAGE_BACKGROUND
-                      : PAGE_TEXT,
-                },
-              ]}
-            >
-              Date
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Filter Options */}
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.filterContent}
-        >
-          {activeFilter === "mood" && (
-            <View>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                  },
-                ]}
-              >
-                Filter by Mood
-              </Text>
-              <TouchableOpacity
-                onPress={() => handleMoodFilterChange(null)}
-                style={[
-                  styles.filterOption,
-                  {
-                    backgroundColor:
-                      filters.mood === null
-                        ? theme.colors.primary + "20"
-                        : theme.colors.surface,
-                    borderColor:
-                      filters.mood === null
-                        ? theme.colors.primary
-                        : theme.colors.border,
-                  },
-                ]}
-                accessible
-                accessibilityLabel="Clear mood filter"
-              >
-                <Text
-                  style={[theme.typography.body, { color: theme.colors.text }]}
-                >
-                  All Moods
-                </Text>
-              </TouchableOpacity>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {Object.entries(MOOD_MAP).map(([moodKey, moodData]) => (
-                  <TouchableOpacity
-                    key={moodKey}
-                    onPress={() =>
-                      handleMoodFilterChange(
-                        filters.mood === (moodKey as MoodValue)
-                          ? null
-                          : (moodKey as MoodValue),
-                      )
-                    }
-                    style={[
-                      styles.moodFilterOption,
-                      {
-                        backgroundColor:
-                          filters.mood === moodKey
-                            ? theme.colors.primary + "30"
-                            : theme.colors.surface,
-                        borderColor:
-                          filters.mood === moodKey
-                            ? theme.colors.primary
-                            : theme.colors.border,
-                      },
-                    ]}
-                    accessible
-                    accessibilityLabel={`Filter by ${moodData.label}`}
-                  >
-                    <Text style={{ fontSize: 24 }}>{moodData.emoji}</Text>
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        { color: theme.colors.text, marginTop: 4 },
-                      ]}
-                    >
-                      {moodData.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {activeFilter === "drawer" && (
-            <View>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                  },
-                ]}
-              >
-                Filter by Drawer
-              </Text>
-              <TouchableOpacity
-                onPress={() => handleDrawerFilterChange(null)}
-                style={[
-                  styles.filterOption,
-                  {
-                    backgroundColor:
-                      filters.drawer === null
-                        ? theme.colors.primary + "20"
-                        : theme.colors.surface,
-                    borderColor:
-                      filters.drawer === null
-                        ? theme.colors.primary
-                        : theme.colors.border,
-                  },
-                ]}
-                accessible
-                accessibilityLabel="Clear drawer filter"
-              >
-                <Text
-                  style={[theme.typography.body, { color: theme.colors.text }]}
-                >
-                  All Drawers
-                </Text>
-              </TouchableOpacity>
-              {getUniqueDrawers.map((drawer) => (
-                <TouchableOpacity
-                  key={drawer.id}
-                  onPress={() =>
-                    handleDrawerFilterChange(
-                      filters.drawer === drawer.id ? null : drawer.id,
-                    )
-                  }
-                  style={[
-                    styles.filterOption,
-                    {
-                      backgroundColor:
-                        filters.drawer === drawer.id
-                          ? theme.colors.primary + "20"
-                          : theme.colors.surface,
-                      borderColor:
-                        filters.drawer === drawer.id
-                          ? theme.colors.primary
-                          : theme.colors.border,
-                    },
-                  ]}
-                  accessible
-                  accessibilityLabel={`Filter by ${drawer.name}`}
-                >
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    📁 {drawer.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-              {getUniqueDrawers.length === 0 && (
-                <Text
-                  style={[
-                    theme.typography.body,
-                    {
-                      color: theme.colors.textSecondary,
-                      marginTop: theme.spacing.md,
-                    },
-                  ]}
-                >
-                  No drawers found
-                </Text>
-              )}
-            </View>
-          )}
-
-          {activeFilter === "tag" && (
-            <View>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                  },
-                ]}
-              >
-                Filter by Tag
-              </Text>
-              <TouchableOpacity
-                onPress={() => handleTagFilterChange(null)}
-                style={[
-                  styles.filterOption,
-                  {
-                    backgroundColor:
-                      filters.tag === null
-                        ? theme.colors.primary + "20"
-                        : theme.colors.surface,
-                    borderColor:
-                      filters.tag === null
-                        ? theme.colors.primary
-                        : theme.colors.border,
-                  },
-                ]}
-                accessible
-                accessibilityLabel="Clear tag filter"
-              >
-                <Text
-                  style={[theme.typography.body, { color: theme.colors.text }]}
-                >
-                  All Tags
-                </Text>
-              </TouchableOpacity>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                {getUniqueTags.map((tag) => (
-                  <TouchableOpacity
-                    key={tag.id}
-                    onPress={() =>
-                      handleTagFilterChange(
-                        filters.tag === tag.id ? null : tag.id,
-                      )
-                    }
-                    style={[
-                      styles.tagFilterOption,
-                      {
-                        backgroundColor:
-                          filters.tag === tag.id
-                            ? theme.colors.primary + "30"
-                            : tag.color + "20",
-                        borderColor:
-                          filters.tag === tag.id
-                            ? theme.colors.primary
-                            : tag.color,
-                      },
-                    ]}
-                    accessible
-                    accessibilityLabel={`Filter by ${tag.name}`}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color:
-                            filters.tag === tag.id
-                              ? theme.colors.primary
-                              : tag.color,
-                        },
-                      ]}
-                    >
-                      {tag.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {getUniqueTags.length === 0 && (
-                <Text
-                  style={[
-                    theme.typography.body,
-                    {
-                      color: theme.colors.textSecondary,
-                      marginTop: theme.spacing.md,
-                    },
-                  ]}
-                >
-                  No tags found
-                </Text>
-              )}
-            </View>
-          )}
-
-          {activeFilter === "date" && (
-            <View>
-              <Text
-                style={[
-                  theme.typography.labelSm,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginBottom: theme.spacing.md,
-                    textTransform: "uppercase",
-                  },
-                ]}
-              >
-                Filter by Date
-              </Text>
-              {(["all", "today", "week", "month"] as const).map((range) => (
-                <TouchableOpacity
-                  key={range}
-                  onPress={() => handleDateRangeChange(range)}
-                  style={[
-                    styles.filterOption,
-                    {
-                      backgroundColor:
-                        filters.dateRange === range
-                          ? theme.colors.primary + "20"
-                          : theme.colors.surface,
-                      borderColor:
-                        filters.dateRange === range
-                          ? theme.colors.primary
-                          : theme.colors.border,
-                    },
-                  ]}
-                  accessible
-                  accessibilityLabel={`Filter by ${range}`}
-                >
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    {range === "all" && "📅 All Time"}
-                    {range === "today" && "📅 Today"}
-                    {range === "week" && "📅 This Week"}
-                    {range === "month" && "📅 This Month"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </ScrollView>
-
-        {/* Results */}
-        <View style={styles.resultsHeader}>
-          <Text
-            style={[
-              theme.typography.labelSm,
-              { color: theme.colors.textSecondary },
-            ]}
-          >
-            {filteredEntries.length}{" "}
-            {filteredEntries.length === 1 ? "Result" : "Results"}
-          </Text>
-        </View>
-
-        {filteredEntries.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text
-              style={[
-                theme.typography.h3,
-                { color: theme.colors.textSecondary },
-              ]}
-            >
-              No entries found
-            </Text>
-            <Text
-              style={[
-                theme.typography.body,
-                {
-                  color: theme.colors.textSecondary,
-                  marginTop: theme.spacing.md,
-                  textAlign: "center",
-                },
-              ]}
-            >
-              {hasActiveFilters
-                ? "Try adjusting your search or filters"
-                : "Start creating entries to see them here"}
-            </Text>
           </View>
-        ) : (
-          <FlatList
-            data={filteredEntries}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
+          <View style={styles.headerIconButton}>
+            <MaterialCommunityIcons name="magnify" size={30} color={PAGE_PRIMARY} />
+          </View>
+        </View>
+
+        <FlatList
+          data={filteredEntries}
+          keyExtractor={(item) => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.pageContent}
+          ListHeaderComponent={
+            <>
+              <View style={styles.heroBlock}>
+                <Text
+                  style={[
+                    styles.heroTitlePrimary,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                  ]}
+                >
+                  Search your{" "}
+                  <Text style={[styles.heroTitleSecondary, { color: PAGE_PRIMARY }]}>
+                    archive
+                  </Text>
+                </Text>
+                <Text style={[styles.heroDescription, { color: PAGE_MUTED }]}>
+                  Revisit moments by memory, mood, drawer, tag, or time.
+                </Text>
+              </View>
+
+              <View
                 style={[
-                  styles.entryCard,
+                  styles.searchCard,
                   {
-                    backgroundColor: theme.colors.surface,
-                    borderColor: PAGE_BORDER,
+                    backgroundColor: PAGE_SURFACE,
                     shadowColor: PAGE_TEXT,
+                    borderColor: PAGE_BORDER,
                   },
                 ]}
-                onPress={() => handleEntryPress(item.id)}
-                accessible
-                accessibilityLabel={`Entry: ${item.title}`}
               >
-                <View style={styles.entryHeader}>
-                  <Text
-                    numberOfLines={1}
-                    style={[
-                      styles.entryTitle,
-                      { color: PAGE_TEXT, flex: 1, fontFamily: theme.fonts.serif },
-                    ]}
-                  >
-                    {item.title}
-                  </Text>
-                  {item.mood && (
-                    <Text style={{ fontSize: 18, marginLeft: 8 }}>
-                      {MOOD_MAP[item.mood as MoodValue]?.emoji}
-                    </Text>
-                  )}
+                <View
+                  style={[
+                    styles.searchBar,
+                    {
+                      backgroundColor: PAGE_SOFT_SURFACE,
+                      borderColor: theme.colors.accent1,
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="magnify"
+                    size={22}
+                    color={PAGE_PRIMARY}
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={[styles.searchInput, { color: PAGE_TEXT }]}
+                    placeholder="Search by title or content"
+                    placeholderTextColor={PAGE_MUTED}
+                    value={searchTerm}
+                    onChangeText={setSearchTerm}
+                    accessibilityLabel="Search entries"
+                  />
                 </View>
 
+                <View style={styles.searchMetaRow}>
+                  <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
+                    {filteredEntries.length}{" "}
+                    {filteredEntries.length === 1 ? "entry" : "entries"} found
+                  </Text>
+                  {hasActiveFilters ? (
+                    <TouchableOpacity
+                      onPress={clearFilters}
+                      accessible
+                      accessibilityLabel="Clear filters"
+                    >
+                      <Text style={[styles.clearText, { color: PAGE_SECONDARY }]}>
+                        Clear all
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              <View style={styles.sectionHeaderRow}>
                 <Text
-                  numberOfLines={2}
                   style={[
                     theme.typography.bodySm,
-                    {
-                      color: PAGE_MUTED,
-                      marginVertical: theme.spacing.sm,
-                    },
+                    styles.sectionHeaderText,
+                    { color: PAGE_MUTED },
                   ]}
                 >
-                  {item.content}
+                  Filters
                 </Text>
-
-                <Text
+                <View
                   style={[
-                    theme.typography.labelXs,
-                    {
-                      color: PAGE_MUTED,
-                      marginBottom: theme.spacing.sm,
-                    },
+                    styles.sectionDivider,
+                    { backgroundColor: theme.colors.accent1 },
                   ]}
-                >
-                  {new Date(item.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
+                />
+              </View>
 
-                {(item.tags?.length || 0) > 0 && (
-                  <View
-                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 4 }}
-                  >
-                    {item.tags?.map((tag) => (
-                      <View
-                        key={tag.id}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterTabs}
+              >
+                {renderFilterChip("all", "All", "All entries filter")}
+                {renderFilterChip("mood", "Mood", "Filter by mood")}
+                {renderFilterChip("drawer", "Drawer", "Filter by drawer")}
+                {renderFilterChip("tag", "Tag", "Filter by tag")}
+                {renderFilterChip("date", "Date", "Filter by date")}
+              </ScrollView>
+
+              <View
+                style={[
+                  styles.filterPanel,
+                  {
+                    backgroundColor: PAGE_SURFACE,
+                    shadowColor: PAGE_TEXT,
+                    borderColor: PAGE_BORDER,
+                  },
+                ]}
+              >
+                {activeFilter === "all" && (
+                  <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
+                    Search across every entry, or choose a filter to narrow the view.
+                  </Text>
+                )}
+
+                {activeFilter === "mood" && (
+                  <View>
+                    {renderFilterSectionTitle("Filter by Mood")}
+                    <TouchableOpacity
+                      onPress={() => handleMoodFilterChange(null)}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor:
+                            filters.mood === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                          borderColor:
+                            filters.mood === null ? PAGE_PRIMARY : theme.colors.accent1,
+                        },
+                      ]}
+                      accessible
+                      accessibilityLabel="Clear mood filter"
+                    >
+                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                        All moods
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={styles.moodGrid}>
+                      {Object.entries(MOOD_MAP).map(([moodKey, moodData]) => (
+                        <TouchableOpacity
+                          key={moodKey}
+                          onPress={() =>
+                            handleMoodFilterChange(
+                              filters.mood === (moodKey as MoodValue)
+                                ? null
+                                : (moodKey as MoodValue),
+                            )
+                          }
+                          style={[
+                            styles.moodFilterOption,
+                            {
+                              backgroundColor:
+                                filters.mood === moodKey ? PAGE_PRIMARY + "26" : PAGE_SOFT_SURFACE,
+                              borderColor:
+                                filters.mood === moodKey ? PAGE_PRIMARY : theme.colors.accent1,
+                            },
+                          ]}
+                          accessible
+                          accessibilityLabel={`Filter by ${moodData.label}`}
+                        >
+                          <Text style={styles.moodEmoji}>{moodData.emoji}</Text>
+                          <Text
+                            style={[
+                              theme.typography.bodySm,
+                              styles.moodLabel,
+                              { color: PAGE_TEXT },
+                            ]}
+                          >
+                            {moodData.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {activeFilter === "drawer" && (
+                  <View>
+                    {renderFilterSectionTitle("Filter by Drawer")}
+                    <TouchableOpacity
+                      onPress={() => handleDrawerFilterChange(null)}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor:
+                            filters.drawer === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                          borderColor:
+                            filters.drawer === null ? PAGE_PRIMARY : theme.colors.accent1,
+                        },
+                      ]}
+                      accessible
+                      accessibilityLabel="Clear drawer filter"
+                    >
+                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                        All drawers
+                      </Text>
+                    </TouchableOpacity>
+                    {uniqueDrawers.map((drawer) => (
+                      <TouchableOpacity
+                        key={drawer.id}
+                        onPress={() =>
+                          handleDrawerFilterChange(
+                            filters.drawer === drawer.id ? null : drawer.id,
+                          )
+                        }
                         style={[
-                          styles.tagBadge,
+                          styles.filterOption,
                           {
-                            backgroundColor: tag.color + "30",
-                            borderColor: tag.color,
+                            backgroundColor:
+                              filters.drawer === drawer.id ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                            borderColor:
+                              filters.drawer === drawer.id ? PAGE_PRIMARY : theme.colors.accent1,
                           },
                         ]}
+                        accessible
+                        accessibilityLabel={`Filter by ${drawer.name}`}
                       >
-                        <Text
-                          style={[
-                            theme.typography.labelXs,
-                            { color: tag.color },
-                          ]}
-                        >
-                          {tag.name}
+                        <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                          {drawer.name}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
+                    ))}
+                    {uniqueDrawers.length === 0 ? (
+                      <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
+                        No drawers found yet.
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+
+                {activeFilter === "tag" && (
+                  <View>
+                    {renderFilterSectionTitle("Filter by Tag")}
+                    <TouchableOpacity
+                      onPress={() => handleTagFilterChange(null)}
+                      style={[
+                        styles.filterOption,
+                        {
+                          backgroundColor:
+                            filters.tag === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                          borderColor:
+                            filters.tag === null ? PAGE_PRIMARY : theme.colors.accent1,
+                        },
+                      ]}
+                      accessible
+                      accessibilityLabel="Clear tag filter"
+                    >
+                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                        All tags
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={styles.tagWrap}>
+                      {uniqueTags.map((tag) => (
+                        <TouchableOpacity
+                          key={tag.id}
+                          onPress={() =>
+                            handleTagFilterChange(filters.tag === tag.id ? null : tag.id)
+                          }
+                          style={[
+                            styles.tagFilterOption,
+                            {
+                              backgroundColor:
+                                filters.tag === tag.id ? PAGE_PRIMARY + "1F" : tag.color + "22",
+                              borderColor:
+                                filters.tag === tag.id ? PAGE_PRIMARY : tag.color,
+                            },
+                          ]}
+                          accessible
+                          accessibilityLabel={`Filter by ${tag.name}`}
+                        >
+                          <Text
+                            style={[
+                              theme.typography.bodySm,
+                              {
+                                color: filters.tag === tag.id ? PAGE_SECONDARY : tag.color,
+                                fontWeight: "600",
+                              },
+                            ]}
+                          >
+                            {tag.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    {uniqueTags.length === 0 ? (
+                      <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
+                        No tags found yet.
+                      </Text>
+                    ) : null}
+                  </View>
+                )}
+
+                {activeFilter === "date" && (
+                  <View>
+                    {renderFilterSectionTitle("Filter by Date")}
+                    {(["all", "today", "week", "month"] as const).map((range) => (
+                      <TouchableOpacity
+                        key={range}
+                        onPress={() => handleDateRangeChange(range)}
+                        style={[
+                          styles.filterOption,
+                          {
+                            backgroundColor:
+                              filters.dateRange === range ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                            borderColor:
+                              filters.dateRange === range ? PAGE_PRIMARY : theme.colors.accent1,
+                          },
+                        ]}
+                        accessible
+                        accessibilityLabel={`Filter by ${range}`}
+                      >
+                        <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                          {range === "all" && "All time"}
+                          {range === "today" && "Today"}
+                          {range === "week" && "This week"}
+                          {range === "month" && "This month"}
+                        </Text>
+                      </TouchableOpacity>
                     ))}
                   </View>
                 )}
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.entriesList}
-          />
-        )}
+              </View>
+
+              <View style={styles.sectionHeaderRow}>
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    styles.sectionHeaderText,
+                    { color: PAGE_MUTED },
+                  ]}
+                >
+                  Results
+                </Text>
+                <View
+                  style={[
+                    styles.sectionDivider,
+                    { backgroundColor: theme.colors.accent1 },
+                  ]}
+                />
+              </View>
+            </>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.entryCard,
+                {
+                  backgroundColor: PAGE_SURFACE,
+                  shadowColor: PAGE_TEXT,
+                },
+              ]}
+              onPress={() => handleEntryPress(item.id)}
+              accessible
+              accessibilityLabel={`Entry: ${item.title}`}
+            >
+              <View style={styles.entryHeader}>
+                <Text
+                  numberOfLines={2}
+                  style={[
+                    styles.entryTitle,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif, flex: 1 },
+                  ]}
+                >
+                  {item.title}
+                </Text>
+                {item.mood ? (
+                  <View
+                    style={[
+                      styles.entryMoodBadge,
+                      { backgroundColor: theme.colors.accent1 + "55" },
+                    ]}
+                  >
+                    <Text style={styles.entryMoodEmoji}>
+                      {MOOD_MAP[item.mood as MoodValue]?.emoji}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text
+                numberOfLines={2}
+                style={[styles.entryBody, { color: PAGE_MUTED }]}
+              >
+                {item.content}
+              </Text>
+
+              <Text style={[styles.entryDate, { color: PAGE_MUTED }]}>
+                {new Date(item.createdAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </Text>
+
+              {(item.tags?.length || 0) > 0 ? (
+                <View style={styles.entryTagRow}>
+                  {item.tags?.map((tag) => (
+                    <View
+                      key={tag.id}
+                      style={[
+                        styles.tagBadge,
+                        {
+                          backgroundColor: tag.color + "22",
+                          borderColor: tag.color,
+                        },
+                      ]}
+                    >
+                      <Text style={[theme.typography.labelXs, { color: tag.color }]}>
+                        {tag.name}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View
+              style={[
+                styles.emptyState,
+                {
+                  backgroundColor: PAGE_SURFACE,
+                  borderColor: theme.colors.accent1 + "99",
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.emptyIcon,
+                  { backgroundColor: theme.colors.accent1 + "40" },
+                ]}
+              >
+                <MaterialCommunityIcons name="magnify" size={28} color={PAGE_PRIMARY} />
+              </View>
+              <Text
+                style={[
+                  styles.emptyTitle,
+                  { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                ]}
+              >
+                No entries found
+              </Text>
+              <Text style={[styles.emptyDescription, { color: PAGE_MUTED }]}>
+                {hasActiveFilters
+                  ? "Try adjusting your search terms or clearing a few filters."
+                  : "Once you start writing, your searchable archive will appear here."}
+              </Text>
+            </View>
+          }
+        />
       </Screen>
     </SafeArea>
   );
@@ -858,41 +720,115 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  pageTitle: {
-    fontSize: 40,
-    lineHeight: 46,
-  },
-  searchBar: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    marginHorizontal: 20,
-    marginBottom: 16,
+    flexShrink: 1,
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pageTitle: {
+    marginLeft: 12,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: "300",
+  },
+  pageContent: {
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 40,
+  },
+  heroBlock: {
+    marginBottom: 26,
+  },
+  heroTitlePrimary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+  },
+  heroTitleSecondary: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+  },
+  heroDescription: {
+    fontSize: 16,
+    lineHeight: 26,
+    marginTop: 12,
+    maxWidth: 360,
+  },
+  searchCard: {
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 22,
     borderWidth: 1,
-    borderRadius: 22,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    minHeight: 62,
+  },
+  searchIcon: {
+    marginRight: 10,
+  },
   searchInput: {
     flex: 1,
     fontSize: 16,
+    lineHeight: 22,
+  },
+  searchMetaRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  clearText: {
+    fontSize: 14,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  sectionHeaderText: {
+    textTransform: "uppercase",
+    letterSpacing: 2.6,
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 14,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    opacity: 0.7,
   },
   filterTabs: {
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    gap: 8,
+    paddingBottom: 14,
+    gap: 10,
   },
   filterTab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    minHeight: 42,
+    paddingHorizontal: 18,
+    justifyContent: "center",
     borderRadius: 999,
     borderWidth: 1,
     shadowOpacity: 0.04,
@@ -900,63 +836,117 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 2,
   },
-  filterContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  filterTabText: {
+    letterSpacing: 1.8,
+    textTransform: "uppercase",
+  },
+  filterPanel: {
+    borderRadius: 24,
+    padding: 18,
+    marginBottom: 26,
+    borderWidth: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  filterSectionTitle: {
+    letterSpacing: 2.2,
+    marginBottom: 12,
+    textTransform: "uppercase",
+  },
+  filterHintText: {
+    fontSize: 15,
+    lineHeight: 24,
   },
   filterOption: {
+    minHeight: 54,
     paddingHorizontal: 16,
-    paddingVertical: 12,
     borderWidth: 1,
     borderRadius: 18,
-    marginBottom: 8,
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    marginBottom: 10,
+    justifyContent: "center",
+  },
+  moodGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
   moodFilterOption: {
-    flex: 0,
     width: "23%",
+    minHeight: 96,
     paddingHorizontal: 8,
     paddingVertical: 12,
     borderWidth: 1,
     borderRadius: 18,
     alignItems: "center",
-    shadowOpacity: 0.05,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 3,
+    justifyContent: "center",
+  },
+  moodEmoji: {
+    fontSize: 24,
+  },
+  moodLabel: {
+    marginTop: 6,
+    textAlign: "center",
+  },
+  tagWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
   },
   tagFilterOption: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderWidth: 1,
     borderRadius: 999,
   },
-  resultsHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-  },
-  entriesList: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: 40,
-  },
   entryCard: {
-    padding: 16,
-    borderRadius: 22,
-    marginBottom: 12,
-    borderWidth: 1,
-    shadowOpacity: 0.06,
+    padding: 18,
+    borderRadius: 24,
+    marginBottom: 14,
+    shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
   },
   entryHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10,
+  },
+  entryTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "300",
+  },
+  entryMoodBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
+  entryMoodEmoji: {
+    fontSize: 18,
+  },
+  entryBody: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  entryDate: {
+    fontSize: 11,
+    lineHeight: 16,
+    letterSpacing: 1.3,
+    textTransform: "uppercase",
+    marginBottom: 12,
+    fontWeight: "600",
+  },
+  entryTagRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
   },
   tagBadge: {
     paddingHorizontal: 8,
@@ -964,19 +954,35 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
+  emptyState: {
+    borderRadius: 24,
+    borderWidth: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 30,
+    alignItems: "center",
+  },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    marginBottom: 10,
+  },
+  emptyDescription: {
+    fontSize: 15,
+    lineHeight: 24,
+    textAlign: "center",
+    maxWidth: 290,
+  },
   loaderContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  entryTitle: {
-    fontSize: 28,
-    lineHeight: 32,
   },
 });

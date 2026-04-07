@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-const NAV_BACKGROUND = "#F8F6F2";
+const NAV_BACKGROUND = "#F8F6F299";
 const NAV_TEXT = "#8C9A7F";
 const NAV_TEXT_ACTIVE = "#556950";
 const NAV_CIRCLE = "#EEE8DF";
@@ -31,6 +32,7 @@ export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
   return (
     <View style={styles.wrap} pointerEvents="box-none">
       <View style={styles.container}>
+        <BlurView intensity={36} tint="light" style={styles.blurLayer} />
         <View style={styles.row}>
           {ITEMS.slice(0, 2).map((item) => {
             const isActive = currentRoute === item.route;
@@ -106,19 +108,23 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 20,
     right: 20,
-    bottom: 12,
+    bottom: 24,
   },
   container: {
-    backgroundColor: NAV_BACKGROUND,
     borderRadius: 22,
+    backgroundColor: NAV_BACKGROUND,
+    overflow: "hidden",
     paddingHorizontal: 12,
     paddingTop: 12,
-    paddingBottom: 10,
+    paddingBottom: 14,
     shadowColor: NAV_SHADOW,
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.08,
     shadowRadius: 30,
     elevation: 8,
+  },
+  blurLayer: {
+    ...StyleSheet.absoluteFillObject,
   },
   row: {
     flexDirection: "row",
