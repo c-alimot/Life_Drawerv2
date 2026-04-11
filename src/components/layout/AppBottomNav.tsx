@@ -11,7 +11,13 @@ const NAV_PLUS = "#556950";
 const NAV_PLUS_TEXT = "#FFFFFF";
 const NAV_SHADOW = "#2F2924";
 
-type NavRoute = "/" | "/life-phases" | "/drawers" | "/insights";
+type NavRoute =
+  | "/"
+  | "/life-phases"
+  | "/drawers"
+  | "/insights"
+  | "/settings"
+  | "/tags";
 
 interface AppBottomNavProps {
   currentRoute: NavRoute;

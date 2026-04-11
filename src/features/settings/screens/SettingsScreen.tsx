@@ -415,10 +415,10 @@ export function SettingsScreen() {
           onClose={closeEditProfile}
           animationType="fade"
           backdropStyle={styles.editModalBackdrop}
-          contentStyle={[
-            styles.editModalContent,
-            { backgroundColor: PAGE_SURFACE },
-          ]}
+          contentStyle={{
+            ...styles.editModalContent,
+            backgroundColor: PAGE_SURFACE,
+          }}
         >
           <View style={styles.editModalHeader}>
             <Text

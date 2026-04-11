@@ -14,6 +14,7 @@ import {
 
 type MenuRoute =
   | "/"
+  | "/search"
   | "/life-phases"
   | "/drawers"
   | "/tags"
