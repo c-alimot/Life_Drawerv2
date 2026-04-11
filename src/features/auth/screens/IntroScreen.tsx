@@ -6,9 +6,11 @@ import { useEffect, useRef } from "react";
 import {
   Animated,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -38,6 +40,8 @@ const FEATURE_ICONS = [
 export function IntroScreen() {
   const theme = useTheme();
   const pulse = useRef(new Animated.Value(1)).current;
+  const { width, height } = useWindowDimensions();
+  const isCompactViewport = width < 430 || height < 780;
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -75,6 +79,15 @@ export function IntroScreen() {
           { backgroundColor: INTRO_BACKGROUND },
         ]}
       >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingTop: isCompactViewport ? 28 : 44 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
         <View style={styles.content}>
           <View style={styles.hero}>
             <View
@@ -230,6 +243,7 @@ export function IntroScreen() {
             </View>
           </View>
         </View>
+        </ScrollView>
       </Screen>
     </SafeAreaView>
   );
@@ -241,13 +255,19 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    overflow: "hidden",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 28,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 18,
-    paddingTop: 44,
     paddingBottom: 6,
+    justifyContent: "center",
+    minHeight: "100%",
   },
   hero: {
     alignItems: "center",

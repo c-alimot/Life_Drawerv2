@@ -68,7 +68,7 @@ interface SelectedMedia {
 
 export function CreateEntryScreen() {
   const theme = useTheme();
-  const { createEntry, isLoading } = useCreateEntryWithMedia();
+  const { createEntry, isLoading, error } = useCreateEntryWithMedia();
   const { drawers, fetchDrawers } = useDrawers();
   const { activePhase, fetchActivePhase } = useLifePhase();
   const { tags, fetchTags } = useTags();
@@ -363,6 +363,8 @@ export function CreateEntryScreen() {
     if (entry) {
       Alert.alert("Success", "Entry created successfully");
       router.back();
+    } else {
+      Alert.alert("Error", error?.message || "Failed to save entry");
     }
   };
 

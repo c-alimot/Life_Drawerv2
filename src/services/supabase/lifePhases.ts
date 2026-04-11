@@ -58,6 +58,10 @@ export const lifePhaseService = {
         .eq("is_active", true)
         .maybeSingle();
 
+      if (error && this.isLifePhasesUnavailableError(error)) {
+        return null;
+      }
+
       if (error && error.code !== "PGRST116") {
         throw error;
       }
@@ -76,6 +80,10 @@ export const lifePhaseService = {
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
+
+      if (error && this.isLifePhasesUnavailableError(error)) {
+        return [];
+      }
 
       if (error) throw error;
 
@@ -143,6 +151,13 @@ export const lifePhaseService = {
   },
 
   handleError(error: any): ApiError {
+    if (this.isLifePhasesUnavailableError(error)) {
+      return {
+        code: "LIFE_PHASES_UNAVAILABLE",
+        message: "Life phases are not available in the current database yet.",
+      };
+    }
+
     if (error?.status === 401) {
       return API_ERRORS.UNAUTHORIZED;
     }
@@ -152,5 +167,12 @@ export const lifePhaseService = {
     }
 
     return API_ERRORS.UNKNOWN_ERROR;
+  },
+
+  isLifePhasesUnavailableError(error: unknown) {
+    const message = String((error as { message?: string })?.message || "").toLowerCase();
+    return (
+      message.includes("could not find the table") && message.includes("life_phases")
+    );
   },
 };

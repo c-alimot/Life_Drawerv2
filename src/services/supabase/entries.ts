@@ -11,6 +11,7 @@ import {
   UpdateEntryRequest,
 } from "@types";
 import { supabase } from "./client";
+import type { Database } from "./types";
 
 type EntryRow = {
   id: string;
@@ -68,36 +69,65 @@ type LifePhaseRow = {
 };
 
 const MEDIA_BUCKET = "entry-media";
+type EntryInsertPayload = Database["public"]["Tables"]["entries"]["Insert"];
+type EntryUpdatePayload = Database["public"]["Tables"]["entries"]["Update"];
 
 export const entriesService = {
   async createEntry(userId: string, request: CreateEntryRequest) {
+    let createdEntry: EntryRow | null = null;
+
     try {
-      const { data: entry, error: entryError } = await supabase
+      const entryInsertPayload: EntryInsertPayload = {
+        user_id: userId,
+        title: request.title,
+        content: request.content || null,
+        mood: request.mood || null,
+        occurred_at: request.occurredAt || null,
+      };
+
+      if (request.lifePhaseId) {
+        entryInsertPayload.life_phase_id = request.lifePhaseId;
+      }
+
+      let { data: entry, error: entryError } = await supabase
         .from("entries")
-        .insert({
-          user_id: userId,
-          title: request.title,
-          content: request.content || null,
-          mood: request.mood || null,
-          life_phase_id: request.lifePhaseId || null,
-          occurred_at: request.occurredAt || null,
-        })
+        .insert(entryInsertPayload)
         .select("*")
         .single();
+
+      if (entryError && this.isMissingLifePhaseColumnError(entryError)) {
+        delete entryInsertPayload.life_phase_id;
+
+        const retryResult = await supabase
+          .from("entries")
+          .insert(entryInsertPayload)
+          .select("*")
+          .single();
+
+        entry = retryResult.data;
+        entryError = retryResult.error;
+      }
 
       if (entryError || !entry) {
         throw entryError || new Error("Failed to create entry");
       }
 
-      let imageUrls: string[] = [];
+      createdEntry = entry as EntryRow;
+
+      let imageUrls = this.getRemoteImageUrls(request.imageUris);
       let audioUrl: string | null = null;
 
       if (request.imageUris?.length) {
-        imageUrls = await Promise.all(
-          request.imageUris.map((uri, index) =>
-            this.uploadFile(uri, `${userId}/${entry.id}/images/${Date.now()}-${index}${this.getExtension(uri)}`),
+        const uploadedImages = await Promise.all(
+          this.getLocalFileUris(request.imageUris).map((uri, index) =>
+            this.uploadFile(
+              uri,
+              `${userId}/${entry.id}/images/${Date.now()}-${index}${this.getExtension(uri)}`,
+            ),
           ),
         );
+
+        imageUrls = [...imageUrls, ...uploadedImages];
       }
 
       if (request.audioUri) {
@@ -152,6 +182,15 @@ export const entriesService = {
       return this.getEntryById(entry.id, userId);
     } catch (error) {
       console.error("Create entry error:", error);
+
+      if (createdEntry) {
+        try {
+          return await this.getEntryById(createdEntry.id, userId);
+        } catch (fallbackError) {
+          console.error("Create entry fallback fetch error:", fallbackError);
+        }
+      }
+
       throw this.handleError(error);
     }
   },
@@ -250,56 +289,96 @@ export const entriesService = {
 
   async updateEntry(entryId: string, userId: string, request: UpdateEntryRequest) {
     try {
-      let imageUrls = request.imageUris;
+      let imageUrls = this.getRemoteImageUrls(request.imageUris);
       if (request.imageUris?.length) {
-        imageUrls = await Promise.all(
-          request.imageUris.map((uri, index) =>
-            this.uploadFile(uri, `${userId}/${entryId}/images/${Date.now()}-${index}${this.getExtension(uri)}`),
+        const uploadedImages = await Promise.all(
+          this.getLocalFileUris(request.imageUris).map((uri, index) =>
+            this.uploadFile(
+              uri,
+              `${userId}/${entryId}/images/${Date.now()}-${index}${this.getExtension(uri)}`,
+            ),
           ),
         );
+
+        imageUrls = [...imageUrls, ...uploadedImages];
       }
 
-      const { error } = await supabase
+      const updatePayload: EntryUpdatePayload = {
+        title: request.title,
+        content: request.content,
+        mood: request.mood,
+        images: imageUrls,
+        audio_url: request.audioUrl,
+        location: request.location as any,
+        occurred_at: request.occurredAt,
+        updated_at: new Date().toISOString(),
+      };
+
+      if ("lifePhaseId" in request) {
+        updatePayload.life_phase_id = request.lifePhaseId;
+      }
+
+      let { error } = await supabase
         .from("entries")
-        .update({
-          title: request.title,
-          content: request.content,
-          mood: request.mood,
-          images: imageUrls,
-          audio_url: request.audioUrl,
-          location: request.location as any,
-          life_phase_id: request.lifePhaseId,
-          occurred_at: request.occurredAt,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", entryId)
         .eq("user_id", userId);
+
+      if (error && this.isMissingLifePhaseColumnError(error)) {
+        delete updatePayload.life_phase_id;
+
+        const retryResult = await supabase
+          .from("entries")
+          .update(updatePayload)
+          .eq("id", entryId)
+          .eq("user_id", userId);
+
+        error = retryResult.error;
+      }
 
       if (error) throw error;
 
       if (request.drawerIds) {
-        await supabase.from("entry_drawers").delete().eq("entry_id", entryId).eq("user_id", userId);
+        const { error: deleteDrawersError } = await supabase
+          .from("entry_drawers")
+          .delete()
+          .eq("entry_id", entryId)
+          .eq("user_id", userId);
+
+        if (deleteDrawersError) throw deleteDrawersError;
+
         if (request.drawerIds.length) {
-          await supabase.from("entry_drawers").insert(
+          const { error: insertDrawersError } = await supabase.from("entry_drawers").insert(
             request.drawerIds.map((drawerId) => ({
               user_id: userId,
               entry_id: entryId,
               drawer_id: drawerId,
             })),
           );
+
+          if (insertDrawersError) throw insertDrawersError;
         }
       }
 
       if (request.tagIds) {
-        await supabase.from("entry_tags").delete().eq("entry_id", entryId).eq("user_id", userId);
+        const { error: deleteTagsError } = await supabase
+          .from("entry_tags")
+          .delete()
+          .eq("entry_id", entryId)
+          .eq("user_id", userId);
+
+        if (deleteTagsError) throw deleteTagsError;
+
         if (request.tagIds.length) {
-          await supabase.from("entry_tags").insert(
+          const { error: insertTagsError } = await supabase.from("entry_tags").insert(
             request.tagIds.map((tagId) => ({
               user_id: userId,
               entry_id: entryId,
               tag_id: tagId,
             })),
           );
+
+          if (insertTagsError) throw insertTagsError;
         }
       }
 
@@ -506,6 +585,23 @@ export const entriesService = {
     return match ? match[0] : "";
   },
 
+  getLocalFileUris(uris?: string[]) {
+    return (uris || []).filter((uri) => !this.isRemoteUri(uri));
+  },
+
+  getRemoteImageUrls(uris?: string[]) {
+    return (uris || []).filter((uri) => this.isRemoteUri(uri));
+  },
+
+  isRemoteUri(uri: string) {
+    return /^https?:\/\//i.test(uri);
+  },
+
+  isMissingLifePhaseColumnError(error: unknown) {
+    const message = String((error as { message?: string })?.message || "").toLowerCase();
+    return message.includes("life_phase_id") && message.includes("schema cache");
+  },
+
   mapEntryRow(row: EntryRow): Entry {
     return {
       id: row.id,
@@ -630,6 +726,10 @@ export const entriesService = {
       return API_ERRORS.FORBIDDEN;
     }
 
-    return API_ERRORS.UNKNOWN_ERROR;
+    return {
+      code: error?.code || API_ERRORS.UNKNOWN_ERROR.code,
+      message: error?.message || API_ERRORS.UNKNOWN_ERROR.message,
+      details: error?.details,
+    };
   },
 };

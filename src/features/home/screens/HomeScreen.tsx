@@ -282,7 +282,7 @@ export function HomeScreen() {
                         style={[
                           theme.typography.bodySm,
                           {
-                            color: theme.colors.textSecondary,
+                            color: HOME_TEXT,
                             marginBottom: theme.spacing.md,
                             fontWeight: "500",
                           },

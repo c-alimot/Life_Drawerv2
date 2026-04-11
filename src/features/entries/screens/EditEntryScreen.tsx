@@ -65,7 +65,7 @@ export function EditEntryScreen() {
     isLoading: entryLoading,
     fetchEntry,
   } = useEntryDetail(resolvedEntryId);
-  const { isLoading: updateLoading, updateEntry } =
+  const { isLoading: updateLoading, updateEntry, error: updateError } =
     useEditEntry(resolvedEntryId);
   const { drawers, fetchDrawers } = useDrawers();
   const { tags, fetchTags } = useTags();
@@ -267,7 +267,7 @@ export function EditEntryScreen() {
       Alert.alert("Success", "Entry updated successfully");
       router.back();
     } else {
-      Alert.alert("Error", "Failed to update entry");
+      Alert.alert("Error", updateError?.message || "Failed to update entry");
     }
   };
 
