@@ -12,6 +12,14 @@ type ProfileRow = {
   updated_at: string;
 };
 
+type AuthUserLike = {
+  id: string;
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export const authService = {
   async signup(request: SignupRequest) {
     try {
@@ -32,7 +40,7 @@ export const authService = {
         throw signupError || new Error("Signup failed");
       }
 
-      const profile = await this.getProfile(authUser.id);
+      const profile = await this.ensureProfile(authUser);
 
       return {
         user: this.mapProfile(authUser.email || request.email, profile),
@@ -62,7 +70,7 @@ export const authService = {
         throw authError || new Error("Login failed");
       }
 
-      const profile = await this.getProfile(authUser.id);
+      const profile = await this.ensureProfile(authUser);
 
       return {
         user: this.mapProfile(authUser.email || request.email, profile),
@@ -93,7 +101,7 @@ export const authService = {
         return null;
       }
 
-      const profile = await this.getProfile(session.user.id);
+      const profile = await this.ensureProfile(session.user);
 
       return {
         user: this.mapProfile(session.user.email || "", profile),
@@ -228,13 +236,61 @@ export const authService = {
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       throw error || new Error("Profile fetch failed");
     }
 
     return data as ProfileRow;
+  },
+
+  async ensureProfile(authUser: AuthUserLike) {
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (existingProfileError) {
+      throw existingProfileError;
+    }
+
+    if (existingProfile) {
+      return existingProfile as ProfileRow;
+    }
+
+    const displayName = this.getMetadataString(authUser, "display_name");
+    const avatarUrl = this.getMetadataString(authUser, "avatar_url");
+    const timestamp = authUser.created_at || new Date().toISOString();
+
+    const { data: createdProfile, error: createProfileError } = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: authUser.id,
+          display_name: displayName,
+          avatar_url: avatarUrl,
+          created_at: timestamp,
+          updated_at: authUser.updated_at || timestamp,
+        },
+        { onConflict: "id" },
+      )
+      .select("*")
+      .single();
+
+    if (createProfileError || !createdProfile) {
+      throw createProfileError || new Error("Profile recovery failed");
+    }
+
+    return {
+      ...(createdProfile as ProfileRow),
+      created_at: createdProfile.created_at || timestamp,
+      updated_at: createdProfile.updated_at || createdProfile.created_at || timestamp,
+      id: createdProfile.id,
+      display_name: createdProfile.display_name,
+      avatar_url: createdProfile.avatar_url,
+    };
   },
 
   mapProfile(email: string, profile: ProfileRow) {
@@ -251,6 +307,11 @@ export const authService = {
   getExtension(uri: string) {
     const match = uri.match(/\.[a-zA-Z0-9]+$/);
     return match ? match[0] : "";
+  },
+
+  getMetadataString(authUser: AuthUserLike, key: string) {
+    const value = authUser.user_metadata?.[key];
+    return typeof value === "string" ? value : null;
   },
 
   handleError(error: any): ApiError {

@@ -93,7 +93,7 @@ export default function RootLayout() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
 
       if (!session) {
@@ -101,7 +101,11 @@ export default function RootLayout() {
         return;
       }
 
-      setUser(mapSessionUserToProfile(session.user));
+      const sessionResult = await authApi.getSession();
+
+      if (!isMounted) return;
+
+      setUser(sessionResult.data?.user || mapSessionUserToProfile(session.user));
     });
 
     return () => {

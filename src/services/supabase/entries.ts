@@ -89,24 +89,11 @@ export const entriesService = {
         entryInsertPayload.life_phase_id = request.lifePhaseId;
       }
 
-      let { data: entry, error: entryError } = await supabase
+      const { data: entry, error: entryError } = await supabase
         .from("entries")
         .insert(entryInsertPayload)
         .select("*")
         .single();
-
-      if (entryError && this.isMissingLifePhaseColumnError(entryError)) {
-        delete entryInsertPayload.life_phase_id;
-
-        const retryResult = await supabase
-          .from("entries")
-          .insert(entryInsertPayload)
-          .select("*")
-          .single();
-
-        entry = retryResult.data;
-        entryError = retryResult.error;
-      }
 
       if (entryError || !entry) {
         throw entryError || new Error("Failed to create entry");
@@ -318,23 +305,11 @@ export const entriesService = {
         updatePayload.life_phase_id = request.lifePhaseId;
       }
 
-      let { error } = await supabase
+      const { error } = await supabase
         .from("entries")
         .update(updatePayload)
         .eq("id", entryId)
         .eq("user_id", userId);
-
-      if (error && this.isMissingLifePhaseColumnError(error)) {
-        delete updatePayload.life_phase_id;
-
-        const retryResult = await supabase
-          .from("entries")
-          .update(updatePayload)
-          .eq("id", entryId)
-          .eq("user_id", userId);
-
-        error = retryResult.error;
-      }
 
       if (error) throw error;
 
@@ -595,11 +570,6 @@ export const entriesService = {
 
   isRemoteUri(uri: string) {
     return /^https?:\/\//i.test(uri);
-  },
-
-  isMissingLifePhaseColumnError(error: unknown) {
-    const message = String((error as { message?: string })?.message || "").toLowerCase();
-    return message.includes("life_phase_id") && message.includes("schema cache");
   },
 
   mapEntryRow(row: EntryRow): Entry {
