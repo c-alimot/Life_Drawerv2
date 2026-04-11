@@ -18,7 +18,7 @@ type EntryRow = {
   user_id: string;
   life_phase_id: string | null;
   title: string;
-  content: string | null;
+  content: string;
   mood: string | null;
   images: unknown;
   audio_url: string | null;
@@ -80,7 +80,7 @@ export const entriesService = {
       const entryInsertPayload: EntryInsertPayload = {
         user_id: userId,
         title: request.title,
-        content: request.content || null,
+        content: request.content,
         mood: request.mood || null,
         occurred_at: request.occurredAt || null,
       };
@@ -577,7 +577,7 @@ export const entriesService = {
       id: row.id,
       userId: row.user_id,
       title: row.title,
-      content: row.content || "",
+      content: row.content,
       mood: this.normalizeMood(row.mood),
       images: this.parseImages(row.images),
       audioUrl: row.audio_url ?? undefined,
