@@ -598,7 +598,11 @@ export function CreateEntryScreen() {
             </TouchableOpacity>
           )}
 
-          <EntryMediaToolbar buttons={toolbarButtons} />
+          <EntryMediaToolbar
+            buttons={toolbarButtons}
+            containerStyle={styles.toolbar}
+            buttonStyle={styles.toolbarButton}
+          />
 
           <EntryImageStrip
             items={selectedMedia.imageUris}

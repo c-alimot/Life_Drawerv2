@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleProp, StyleSheet, TouchableOpacity, View, ViewStyle } from "react-native";
 
 export interface EntryMediaToolbarButton {
   key: string;
@@ -14,16 +14,23 @@ export interface EntryMediaToolbarButton {
 
 interface EntryMediaToolbarProps {
   buttons: EntryMediaToolbarButton[];
+  containerStyle?: StyleProp<ViewStyle>;
+  buttonStyle?: StyleProp<ViewStyle>;
 }
 
-export function EntryMediaToolbar({ buttons }: EntryMediaToolbarProps) {
+export function EntryMediaToolbar({
+  buttons,
+  containerStyle,
+  buttonStyle,
+}: EntryMediaToolbarProps) {
   return (
-    <View style={styles.toolbar}>
+    <View style={[styles.toolbar, containerStyle]}>
       {buttons.map((button) => (
         <TouchableOpacity
           key={button.key}
           style={[
             styles.toolbarButton,
+            buttonStyle,
             {
               borderColor: button.borderColor,
               backgroundColor: button.backgroundColor || "transparent",

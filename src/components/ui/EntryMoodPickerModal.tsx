@@ -90,13 +90,14 @@ export function EntryMoodPickerModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(47, 41, 36, 0.26)",
-    justifyContent: "center",
-    paddingHorizontal: 20,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   moodPicker: {
-    borderRadius: 28,
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   moodGrid: {
     flexDirection: "row",
@@ -104,10 +105,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   moodOption: {
-    width: "18%",
+    width: "22%",
     aspectRatio: 1,
-    borderWidth: 1,
-    borderRadius: 18,
+    borderWidth: 2,
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
   },
