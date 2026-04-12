@@ -1,74 +1,82 @@
-import { useMemo } from 'react';
-import { useEntries } from '@features/entries/hooks/useEntries';
-import type { MoodValue } from '@constants/moods';
+import { useDeferredValue, useMemo } from "react";
+import type { SearchEntriesRequest } from "@types";
+import type { MoodValue } from "@constants/moods";
 
 export interface SearchFilters {
-  mood: MoodValue | null;
-  drawer: string | null;
-  tag: string | null;
-  dateRange: 'all' | 'today' | 'week' | 'month';
+  mood: MoodValue | null
+  drawer: string | null
+  tag: string | null
+  dateRange: "all" | "today" | "week" | "month"
 }
 
-export function useSearch(
-  searchTerm: string,
-  filters: SearchFilters
-) {
-  const { entries } = useEntries();
+const SEARCH_RESULTS_LIMIT = 1000;
 
-  const results = useMemo(() => {
-    if (!entries) return [];
+export function useSearch(searchTerm: string, filters: SearchFilters) {
+  const deferredSearchTerm = useDeferredValue(searchTerm);
 
-    return entries.filter((entry) => {
-      // Search term filter
-      const matchesSearchTerm =
-        searchTerm === '' ||
-        entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.content.toLowerCase().includes(searchTerm.toLowerCase());
+  const searchRequest = useMemo<SearchEntriesRequest>(() => {
+    const trimmedQuery = deferredSearchTerm.trim();
+    const request: SearchEntriesRequest = {
+      limit: SEARCH_RESULTS_LIMIT,
+      offset: 0,
+    };
 
-      if (!matchesSearchTerm) return false;
+    if (trimmedQuery) {
+      request.query = trimmedQuery;
+    }
 
-      // Mood filter
-      if (filters.mood && entry.mood !== filters.mood) return false;
+    if (filters.mood) {
+      request.moodValues = [filters.mood];
+    }
 
-      // Drawer filter
-      if (
-        filters.drawer &&
-        !entry.drawers?.some((d) => d.id === filters.drawer)
-      ) {
-        return false;
-      }
+    if (filters.drawer) {
+      request.drawerIds = [filters.drawer];
+    }
 
-      // Tag filter
-      if (filters.tag && !entry.tags?.some((t) => t.id === filters.tag)) {
-        return false;
-      }
+    if (filters.tag) {
+      request.tagIds = [filters.tag];
+    }
 
-      // Date range filter
-      const entryDate = new Date(entry.createdAt);
-      const today = new Date();
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-      const startOfWeek = new Date(
-        today.setDate(today.getDate() - today.getDay())
-      );
-      const startOfMonth = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        1
-      );
+    const { startDate, endDate } = getDateRange(filters.dateRange);
+    if (startDate) {
+      request.startDate = startDate;
+    }
+    if (endDate) {
+      request.endDate = endDate;
+    }
 
-      if (filters.dateRange === 'today' && entryDate < startOfDay) {
-        return false;
-      }
-      if (filters.dateRange === 'week' && entryDate < startOfWeek) {
-        return false;
-      }
-      if (filters.dateRange === 'month' && entryDate < startOfMonth) {
-        return false;
-      }
+    return request;
+  }, [deferredSearchTerm, filters]);
 
-      return true;
-    });
-  }, [entries, searchTerm, filters]);
+  return {
+    searchRequest,
+    appliedSearchTerm: deferredSearchTerm.trim(),
+  };
+}
 
-  return { results };
+function getDateRange(range: SearchFilters["dateRange"]) {
+  if (range === "all") {
+    return {};
+  }
+
+  const now = new Date();
+  let start: Date;
+
+  if (range === "today") {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (range === "week") {
+    start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    start.setHours(0, 0, 0, 0);
+  } else {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+  };
 }

@@ -2,6 +2,7 @@ import { AppSideMenu, SafeArea, Screen } from "@components/layout";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
+import { useSearch, type SearchFilters } from "@features/search/hooks/useSearch";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
@@ -30,16 +31,9 @@ const PAGE_BORDER = "#B39C87";
 
 type FilterType = "all" | "mood" | "drawer" | "tag" | "date";
 
-interface SearchFilters {
-  mood: MoodValue | null;
-  drawer: string | null;
-  tag: string | null;
-  dateRange: "all" | "today" | "week" | "month";
-}
-
 export function SearchScreen() {
   const theme = useTheme();
-  const { entries, isLoading, fetchEntries } = useEntries();
+  const { entries, isLoading, total, fetchEntries } = useEntries();
   const { activePhase, fetchActivePhase } = useLifePhase();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,49 +45,14 @@ export function SearchScreen() {
     tag: null,
     dateRange: "all",
   });
+  const { searchRequest } = useSearch(searchTerm, filters);
 
   useFocusEffect(
     useCallback(() => {
-      fetchEntries();
+      fetchEntries(searchRequest);
       fetchActivePhase();
-    }, [fetchEntries, fetchActivePhase]),
+    }, [fetchActivePhase, fetchEntries, searchRequest]),
   );
-
-  const filteredEntries = useMemo(() => {
-    if (!entries) return [];
-
-    return entries.filter((entry) => {
-      const matchesSearchTerm =
-        searchTerm === "" ||
-        entry.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        entry.content.toLowerCase().includes(searchTerm.toLowerCase());
-
-      if (!matchesSearchTerm) return false;
-      if (filters.mood && entry.mood !== filters.mood) return false;
-
-      if (filters.drawer && !entry.drawers?.some((d) => d.id === filters.drawer)) {
-        return false;
-      }
-
-      if (filters.tag && !entry.tags?.some((t) => t.id === filters.tag)) {
-        return false;
-      }
-
-      const entryDate = new Date(entry.createdAt);
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const startOfWeek = new Date(today);
-      startOfWeek.setDate(today.getDate() - today.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-      if (filters.dateRange === "today" && entryDate < startOfDay) return false;
-      if (filters.dateRange === "week" && entryDate < startOfWeek) return false;
-      if (filters.dateRange === "month" && entryDate < startOfMonth) return false;
-
-      return true;
-    });
-  }, [entries, filters, searchTerm]);
 
   const handleEntryPress = useCallback((entryId: string) => {
     router.push(`/entry/${entryId}`);
@@ -252,7 +211,7 @@ export function SearchScreen() {
         </View>
 
         <FlatList
-          data={filteredEntries}
+          data={entries}
           keyExtractor={(item) => item.id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.pageContent}
@@ -312,8 +271,7 @@ export function SearchScreen() {
 
                 <View style={styles.searchMetaRow}>
                   <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
-                    {filteredEntries.length}{" "}
-                    {filteredEntries.length === 1 ? "entry" : "entries"} found
+                    {total} {total === 1 ? "entry" : "entries"} found
                   </Text>
                   {hasActiveFilters ? (
                     <TouchableOpacity
@@ -615,15 +573,21 @@ export function SearchScreen() {
               accessibilityLabel={`Entry: ${item.title}`}
             >
               <View style={styles.entryHeader}>
-                <Text
-                  numberOfLines={2}
-                  style={[
-                    styles.entryTitle,
-                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif, flex: 1 },
-                  ]}
-                >
-                  {item.title}
-                </Text>
+                {/** Search results can include older rows with missing titles. */}
+                {(() => {
+                  const title = item.title || "Untitled Entry";
+                  return (
+                    <Text
+                      numberOfLines={2}
+                      style={[
+                        styles.entryTitle,
+                        { color: PAGE_TEXT, fontFamily: theme.fonts.serif, flex: 1 },
+                      ]}
+                    >
+                      {title}
+                    </Text>
+                  );
+                })()}
                 {item.mood ? (
                   <View
                     style={[
@@ -642,7 +606,7 @@ export function SearchScreen() {
                 numberOfLines={2}
                 style={[styles.entryBody, { color: PAGE_MUTED }]}
               >
-                {item.content}
+                {item.content || ""}
               </Text>
 
               <Text style={[styles.entryDate, { color: PAGE_MUTED }]}>

@@ -17,7 +17,7 @@ type EntryRow = {
   id: string;
   user_id: string;
   life_phase_id: string | null;
-  title: string;
+  title: string | null;
   content: string;
   mood: string | null;
   images: unknown;
@@ -217,10 +217,28 @@ export const entriesService = {
 
   async getEntries(userId: string, request?: SearchEntriesRequest) {
     try {
+      const filteredEntryIds = await this.getFilteredEntryIds(
+        userId,
+        request?.drawerIds,
+        request?.tagIds,
+      );
+
+      if (filteredEntryIds && filteredEntryIds.length === 0) {
+        return {
+          entries: [] as EntryWithRelations[],
+          total: 0,
+          hasMore: false,
+        };
+      }
+
       let query = supabase
         .from("entries")
         .select("*", { count: "exact" })
         .eq("user_id", userId);
+
+      if (filteredEntryIds) {
+        query = query.in("id", filteredEntryIds);
+      }
 
       if (request?.query) {
         query = query.or(`title.ilike.%${request.query}%,content.ilike.%${request.query}%`);
@@ -245,18 +263,8 @@ export const entriesService = {
       const { data: entries, error: entriesError, count } = await query;
       if (entriesError) throw entriesError;
 
-      let filteredEntries = (entries || []) as EntryRow[];
-
-      if (request?.drawerIds?.length || request?.tagIds?.length) {
-        filteredEntries = await this.filterByDrawersAndTags(
-          filteredEntries,
-          request?.drawerIds,
-          request?.tagIds,
-        );
-      }
-
       const entriesWithRelations = await Promise.all(
-        filteredEntries.map((entry) => this.getEntryById(entry.id, userId)),
+        ((entries || []) as EntryRow[]).map((entry) => this.getEntryById(entry.id, userId)),
       );
 
       return {
@@ -512,32 +520,46 @@ export const entriesService = {
     return this.mapLifePhaseRow(data as LifePhaseRow);
   },
 
-  async filterByDrawersAndTags(
-    entries: EntryRow[],
+  async getFilteredEntryIds(
+    userId: string,
     drawerIds?: string[],
     tagIds?: string[],
   ) {
     if (!drawerIds?.length && !tagIds?.length) {
-      return entries;
+      return null;
     }
 
-    const filteredEntryIds = new Set<string>();
+    let drawerEntryIds: string[] | null = null;
+    let tagEntryIds: string[] | null = null;
 
     if (drawerIds?.length) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("entry_drawers")
         .select("entry_id")
+        .eq("user_id", userId)
         .in("drawer_id", drawerIds);
 
-      data?.forEach((row) => filteredEntryIds.add(row.entry_id));
+      if (error) throw error;
+      drawerEntryIds = Array.from(new Set((data || []).map((row) => row.entry_id)));
     }
 
     if (tagIds?.length) {
-      const { data } = await supabase.from("entry_tags").select("entry_id").in("tag_id", tagIds);
-      data?.forEach((row) => filteredEntryIds.add(row.entry_id));
+      const { data, error } = await supabase
+        .from("entry_tags")
+        .select("entry_id")
+        .eq("user_id", userId)
+        .in("tag_id", tagIds);
+
+      if (error) throw error;
+      tagEntryIds = Array.from(new Set((data || []).map((row) => row.entry_id)));
     }
 
-    return entries.filter((entry) => filteredEntryIds.has(entry.id));
+    if (drawerEntryIds && tagEntryIds) {
+      const tagEntryIdSet = new Set(tagEntryIds);
+      return drawerEntryIds.filter((entryId) => tagEntryIdSet.has(entryId));
+    }
+
+    return drawerEntryIds || tagEntryIds || [];
   },
 
   async uploadFile(uri: string, path: string) {
@@ -576,7 +598,7 @@ export const entriesService = {
     return {
       id: row.id,
       userId: row.user_id,
-      title: row.title,
+      title: row.title ?? "",
       content: row.content,
       mood: this.normalizeMood(row.mood),
       images: this.parseImages(row.images),
