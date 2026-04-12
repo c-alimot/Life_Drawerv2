@@ -68,13 +68,16 @@ type LifePhaseRow = {
   updated_at: string;
 };
 
-const MEDIA_BUCKET = "entry-media";
+const LEGACY_MEDIA_BUCKET = "entry-media";
+const PRIVATE_MEDIA_BUCKET = "entry-media-private";
+const SIGNED_URL_TTL_SECONDS = 3600;
 type EntryInsertPayload = Database["public"]["Tables"]["entries"]["Insert"];
 type EntryUpdatePayload = Database["public"]["Tables"]["entries"]["Update"];
 
 export const entriesService = {
   async createEntry(userId: string, request: CreateEntryRequest) {
     let createdEntry: EntryRow | null = null;
+    let mediaPersisted = false;
 
     try {
       const entryInsertPayload: EntryInsertPayload = {
@@ -101,12 +104,12 @@ export const entriesService = {
 
       createdEntry = entry as EntryRow;
 
-      let imageUrls = this.getRemoteImageUrls(request.imageUris);
+      let imageUrls = await this.normalizeStoredMediaRefs(userId, request.imageUris);
       let audioUrl: string | null = null;
 
       if (request.imageUris?.length) {
         const uploadedImages = await Promise.all(
-          this.getLocalFileUris(request.imageUris).map((uri, index) =>
+          this.getLocalUploadUris(request.imageUris).map((uri, index) =>
             this.uploadFile(
               uri,
               `${userId}/${entry.id}/images/${Date.now()}-${index}${this.getExtension(uri)}`,
@@ -137,6 +140,8 @@ export const entriesService = {
       if (updateMediaError) {
         throw updateMediaError;
       }
+
+      mediaPersisted = true;
 
       if (request.drawerIds?.length) {
         const { error } = await supabase.from("entry_drawers").insert(
@@ -170,7 +175,23 @@ export const entriesService = {
     } catch (error) {
       console.error("Create entry error:", error);
 
-      if (createdEntry) {
+      if (createdEntry && !mediaPersisted) {
+        try {
+          const { error: cleanupError } = await supabase
+            .from("entries")
+            .delete()
+            .eq("id", createdEntry.id)
+            .eq("user_id", userId);
+
+          if (cleanupError) {
+            console.error("Create entry cleanup error:", cleanupError);
+          }
+        } catch (cleanupError) {
+          console.error("Create entry cleanup exception:", cleanupError);
+        }
+      }
+
+      if (createdEntry && mediaPersisted) {
         try {
           return await this.getEntryById(createdEntry.id, userId);
         } catch (fallbackError) {
@@ -203,7 +224,7 @@ export const entriesService = {
       ]);
 
       return {
-        ...this.mapEntryRow(entry as EntryRow),
+        ...(await this.mapEntryRow(entry as EntryRow)),
         drawers,
         tags,
         author,
@@ -284,10 +305,10 @@ export const entriesService = {
 
   async updateEntry(entryId: string, userId: string, request: UpdateEntryRequest) {
     try {
-      let imageUrls = this.getRemoteImageUrls(request.imageUris);
+      let imageUrls = await this.normalizeStoredMediaRefs(userId, request.imageUris);
       if (request.imageUris?.length) {
         const uploadedImages = await Promise.all(
-          this.getLocalFileUris(request.imageUris).map((uri, index) =>
+          this.getLocalUploadUris(request.imageUris).map((uri, index) =>
             this.uploadFile(
               uri,
               `${userId}/${entryId}/images/${Date.now()}-${index}${this.getExtension(uri)}`,
@@ -298,12 +319,17 @@ export const entriesService = {
         imageUrls = [...imageUrls, ...uploadedImages];
       }
 
+      const normalizedAudioUrl = await this.normalizeStoredMediaRef(
+        userId,
+        request.audioUrl ?? null,
+      );
+
       const updatePayload: EntryUpdatePayload = {
         title: request.title,
         content: request.content,
         mood: request.mood,
         images: imageUrls,
-        audio_url: request.audioUrl,
+        audio_url: normalizedAudioUrl,
         location: request.location as any,
         occurred_at: request.occurredAt,
         updated_at: new Date().toISOString(),
@@ -565,7 +591,7 @@ export const entriesService = {
   async uploadFile(uri: string, path: string) {
     const response = await fetch(uri);
     const blob = await response.blob();
-    const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, blob, {
+    const { error } = await supabase.storage.from(PRIVATE_MEDIA_BUCKET).upload(path, blob, {
       upsert: true,
     });
 
@@ -573,8 +599,7 @@ export const entriesService = {
       throw error;
     }
 
-    const { data } = supabase.storage.from(MEDIA_BUCKET).getPublicUrl(path);
-    return data.publicUrl;
+    return path;
   },
 
   getExtension(uri: string) {
@@ -582,27 +607,171 @@ export const entriesService = {
     return match ? match[0] : "";
   },
 
-  getLocalFileUris(uris?: string[]) {
-    return (uris || []).filter((uri) => !this.isRemoteUri(uri));
+  getLocalUploadUris(uris?: string[]) {
+    return (uris || []).filter((uri) => this.isLocalUploadUri(uri));
   },
 
-  getRemoteImageUrls(uris?: string[]) {
-    return (uris || []).filter((uri) => this.isRemoteUri(uri));
+  async normalizeStoredMediaRefs(userId: string, refs?: string[]) {
+    const normalizedRefs = await Promise.all(
+      (refs || [])
+        .filter((ref) => !this.isLocalUploadUri(ref))
+        .map((ref) => this.normalizeStoredMediaRef(userId, ref)),
+    );
+
+    return normalizedRefs.filter((ref): ref is string => typeof ref === "string" && ref.length > 0);
   },
 
   isRemoteUri(uri: string) {
     return /^https?:\/\//i.test(uri);
   },
 
-  mapEntryRow(row: EntryRow): Entry {
+  isLocalUploadUri(uri: string) {
+    return /^(blob|data|file|content|ph|assets-library):/i.test(uri);
+  },
+
+  isCanonicalPrivateMediaPath(value: string) {
+    if (!value || this.isRemoteUri(value) || this.isLocalUploadUri(value)) {
+      return false;
+    }
+
+    if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
+      return false;
+    }
+
+    const normalizedValue = value.trim().replace(/^\/+/, "");
+    const segments = normalizedValue.split("/").filter(Boolean);
+
+    if (segments.length < 4) {
+      return false;
+    }
+
+    const [userId, entryId, mediaKind] = segments;
+    if (!userId || !entryId) {
+      return false;
+    }
+
+    if (mediaKind !== "images" && mediaKind !== "audio") {
+      return false;
+    }
+
+    return segments.slice(3).every((segment) => segment.length > 0);
+  },
+
+  async normalizeStoredMediaRef(userId: string, value?: string | null) {
+    if (!value) {
+      return null;
+    }
+
+    if (this.isLocalUploadUri(value)) {
+      return null;
+    }
+
+    const privatePath = this.extractStoragePathFromUrl(value, PRIVATE_MEDIA_BUCKET);
+    if (privatePath) {
+      return privatePath;
+    }
+
+    if (this.isCanonicalPrivateMediaPath(value)) {
+      return value;
+    }
+
+    const legacyPath = this.extractStoragePathFromUrl(value, LEGACY_MEDIA_BUCKET);
+    if (legacyPath) {
+      return this.copyLegacyMediaToPrivateBucket(userId, legacyPath, value);
+    }
+
+    return value;
+  },
+
+  extractStoragePathFromUrl(value: string, bucketId: string) {
+    if (!this.isRemoteUri(value)) {
+      return null;
+    }
+
+    try {
+      const url = new URL(value);
+      const prefixes = [
+        `/storage/v1/object/public/${bucketId}/`,
+        `/storage/v1/object/sign/${bucketId}/`,
+        `/storage/v1/object/authenticated/${bucketId}/`,
+      ];
+
+      const prefix = prefixes.find((candidate) => url.pathname.startsWith(candidate));
+      if (!prefix) {
+        return null;
+      }
+
+      return decodeURIComponent(url.pathname.slice(prefix.length));
+    } catch {
+      return null;
+    }
+  },
+
+  async copyLegacyMediaToPrivateBucket(userId: string, path: string, sourceUrl: string) {
+    if (!path.startsWith(`${userId}/`)) {
+      return sourceUrl;
+    }
+
+    const response = await fetch(sourceUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch legacy media: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const { error } = await supabase.storage.from(PRIVATE_MEDIA_BUCKET).upload(path, blob, {
+      upsert: true,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return path;
+  },
+
+  async resolveMediaUrl(value?: string | null) {
+    if (!value) {
+      return undefined;
+    }
+
+    if (this.isLocalUploadUri(value)) {
+      return undefined;
+    }
+
+    const path = this.isCanonicalPrivateMediaPath(value)
+      ? value
+      : this.extractStoragePathFromUrl(value, PRIVATE_MEDIA_BUCKET);
+
+    if (!path) {
+      return this.isRemoteUri(value) ? value : undefined;
+    }
+
+    const { data, error } = await supabase.storage
+      .from(PRIVATE_MEDIA_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+
+    if (error || !data?.signedUrl) {
+      console.error("Resolve media URL error:", error);
+      return undefined;
+    }
+
+    return data.signedUrl;
+  },
+
+  async mapEntryRow(row: EntryRow): Promise<Entry> {
+    const [images, audioUrl] = await Promise.all([
+      this.resolveImageUrls(row.images),
+      this.resolveMediaUrl(row.audio_url),
+    ]);
+
     return {
       id: row.id,
       userId: row.user_id,
       title: row.title ?? "",
       content: row.content,
       mood: this.normalizeMood(row.mood),
-      images: this.parseImages(row.images),
-      audioUrl: row.audio_url ?? undefined,
+      images,
+      audioUrl,
       location: this.parseLocation(row.location),
       lifePhaseId: row.life_phase_id ?? undefined,
       occurredAt: row.occurred_at ?? undefined,
@@ -660,8 +829,13 @@ export const entriesService = {
     };
   },
 
-  parseImages(value: unknown) {
-    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  async resolveImageUrls(value: unknown) {
+    const refs = Array.isArray(value)
+      ? value.filter((item): item is string => typeof item === "string")
+      : [];
+
+    const urls = await Promise.all(refs.map((ref) => this.resolveMediaUrl(ref)));
+    return urls.filter((url): url is string => typeof url === "string" && url.length > 0);
   },
 
   parseLocation(value: unknown): EntryLocation | undefined {
