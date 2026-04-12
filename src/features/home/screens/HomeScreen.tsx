@@ -1,5 +1,5 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { Button } from "@components/ui";
+import { Button, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -193,23 +193,11 @@ export function HomeScreen() {
 
             {/* Recent Entries Section */}
             <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    styles.sectionHeaderText,
-                    { color: HOME_MUTED },
-                  ]}
-                >
-                  Recent Entries
-                </Text>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { backgroundColor: theme.colors.accent1 },
-                  ]}
-                />
-              </View>
+              <SectionHeader
+                label="Recent Entries"
+                textColor={HOME_MUTED}
+                dividerColor={theme.colors.accent1}
+              />
 
               {entries.length === 0 ? (
                 // Empty State
@@ -374,23 +362,11 @@ export function HomeScreen() {
 
             {/* Recently Opened Drawers Section */}
             <View style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    styles.sectionHeaderText,
-                    { color: HOME_MUTED },
-                  ]}
-                >
-                  Recently Opened Drawers
-                </Text>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { backgroundColor: theme.colors.accent1 },
-                  ]}
-                />
-              </View>
+              <SectionHeader
+                label="Recently Opened Drawers"
+                textColor={HOME_MUTED}
+                dividerColor={theme.colors.accent1}
+              />
 
               <FlatList
                 data={recentDrawers}

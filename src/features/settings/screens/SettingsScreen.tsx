@@ -1,5 +1,5 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { Button, Modal } from "@components/ui";
+import { Button, Modal, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { authApi } from "@features/auth/api/auth.api";
 import { useLogout } from "@features/auth/hooks/useLogout";
@@ -209,23 +209,11 @@ export function SettingsScreen() {
             </Text>
           </View>
 
-          <View style={styles.sectionHeaderRow}>
-            <Text
-              style={[
-                theme.typography.bodySm,
-                styles.sectionHeaderText,
-                { color: PAGE_MUTED },
-              ]}
-            >
-              Account
-            </Text>
-            <View
-              style={[
-                styles.sectionDivider,
-                { backgroundColor: theme.colors.accent1 },
-              ]}
-            />
-          </View>
+          <SectionHeader
+            label="Account"
+            textColor={PAGE_MUTED}
+            dividerColor={theme.colors.accent1}
+          />
 
           <View
             style={[
@@ -315,23 +303,11 @@ export function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.sectionHeaderRow}>
-            <Text
-              style={[
-                theme.typography.bodySm,
-                styles.sectionHeaderText,
-                { color: PAGE_MUTED },
-              ]}
-            >
-              App Settings
-            </Text>
-            <View
-              style={[
-                styles.sectionDivider,
-                { backgroundColor: theme.colors.accent1 },
-              ]}
-            />
-          </View>
+          <SectionHeader
+            label="App Settings"
+            textColor={PAGE_MUTED}
+            dividerColor={theme.colors.accent1}
+          />
 
           <View style={styles.optionList}>
             {[

@@ -1,5 +1,12 @@
 import { SafeArea, Screen } from "@components/layout";
-import { Button } from "@components/ui";
+import {
+  Button,
+  EntryImageStrip,
+  EntryMediaToolbar,
+  type EntryMediaToolbarButton,
+  EntryMoodPickerModal,
+  EntrySelectionModal,
+} from "@components/ui";
 import { MOOD_MAP, MOOD_VALUES } from "@constants/mood";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
@@ -17,9 +24,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Alert,
-  FlatList,
-  Image,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -382,6 +386,91 @@ export function CreateEntryScreen() {
     month: "long",
     day: "numeric",
   });
+  const entryPalette = {
+    background: ENTRY_BACKGROUND,
+    surface: ENTRY_SURFACE,
+    text: ENTRY_TEXT,
+    muted: ENTRY_MUTED,
+    primary: ENTRY_PRIMARY,
+    border: ENTRY_ACCENT,
+    inverseText: "#F8F6F2",
+  };
+  const toolbarButtons: EntryMediaToolbarButton[] = [
+    {
+      key: "tags",
+      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: () => setShowTagModal(true),
+      accessibilityLabel: "Add tags",
+      accessibilityHint: `${selectedTags.length} tags selected`,
+      content: (
+        <MaterialCommunityIcons
+          name="tag-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
+    },
+    {
+      key: "drawers",
+      borderColor: selectedDrawers.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: () => setShowDrawerModal(true),
+      accessibilityLabel: "Add to drawers",
+      accessibilityHint: `${selectedDrawers.length} drawers selected`,
+      content: (
+        <MaterialCommunityIcons
+          name="archive-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
+    },
+    {
+      key: "images",
+      borderColor:
+        selectedMedia.imageUris.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: pickImages,
+      accessibilityLabel: "Add images",
+      accessibilityHint: `${selectedMedia.imageUris.length}/${MAX_IMAGES} images`,
+      content: (
+        <MaterialCommunityIcons
+          name="image-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
+    },
+    {
+      key: "audio",
+      borderColor:
+        selectedMedia.audioUri || isRecording ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      backgroundColor: isRecording ? `${theme.colors.error}20` : "transparent",
+      onPress: isRecording ? stopRecording : startRecording,
+      accessibilityLabel: isRecording ? "Stop recording" : "Start voice memo",
+      content: (
+        <MaterialCommunityIcons
+          name={isRecording ? "stop-circle-outline" : "microphone-outline"}
+          size={34}
+          color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
+        />
+      ),
+    },
+    {
+      key: "mood",
+      borderColor: mood ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: () => setShowMoodPicker(true),
+      accessibilityLabel: "Add mood",
+      accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
+      content: mood ? (
+        <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
+      ) : (
+        <MaterialCommunityIcons
+          name="emoticon-happy-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
+    },
+  ];
 
   return (
     <SafeArea>
@@ -509,160 +598,14 @@ export function CreateEntryScreen() {
             </TouchableOpacity>
           )}
 
-          <View style={styles.toolbar}>
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor:
-                    selectedTags.length > 0
-                      ? ENTRY_PRIMARY
-                      : `${ENTRY_ACCENT}AA`,
-                },
-              ]}
-              onPress={() => setShowTagModal(true)}
-              accessible
-              accessibilityLabel="Add tags"
-              accessibilityHint={`${selectedTags.length} tags selected`}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name="tag-outline"
-                size={34}
-                color={ENTRY_PRIMARY}
-              />
-            </TouchableOpacity>
+          <EntryMediaToolbar buttons={toolbarButtons} />
 
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor:
-                    selectedDrawers.length > 0
-                      ? ENTRY_PRIMARY
-                      : `${ENTRY_ACCENT}AA`,
-                },
-              ]}
-              onPress={() => setShowDrawerModal(true)}
-              accessible
-              accessibilityLabel="Add to drawers"
-              accessibilityHint={`${selectedDrawers.length} drawers selected`}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name="archive-outline"
-                size={34}
-                color={ENTRY_PRIMARY}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor:
-                    selectedMedia.imageUris.length > 0
-                      ? ENTRY_PRIMARY
-                      : `${ENTRY_ACCENT}AA`,
-                },
-              ]}
-              onPress={pickImages}
-              accessible
-              accessibilityLabel="Add images"
-              accessibilityHint={`${selectedMedia.imageUris.length}/${MAX_IMAGES} images`}
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name="image-outline"
-                size={34}
-                color={ENTRY_PRIMARY}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor:
-                    selectedMedia.audioUri || isRecording
-                      ? ENTRY_PRIMARY
-                      : `${ENTRY_ACCENT}AA`,
-                  backgroundColor: isRecording
-                    ? `${theme.colors.error}20`
-                    : "transparent",
-                },
-              ]}
-              onPress={isRecording ? stopRecording : startRecording}
-              accessible
-              accessibilityLabel={
-                isRecording ? "Stop recording" : "Start voice memo"
-              }
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons
-                name={isRecording ? "stop-circle-outline" : "microphone-outline"}
-                size={34}
-                color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
-              />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toolbarButton,
-                {
-                  borderColor: mood
-                    ? ENTRY_PRIMARY
-                    : `${ENTRY_ACCENT}AA`,
-                },
-              ]}
-              onPress={() => setShowMoodPicker(true)}
-              accessible
-              accessibilityLabel="Add mood"
-              accessibilityHint={
-                mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood"
-              }
-              accessibilityRole="button"
-            >
-              {mood ? (
-                <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
-              ) : (
-                <MaterialCommunityIcons
-                  name="emoticon-happy-outline"
-                  size={34}
-                  color={ENTRY_PRIMARY}
-                />
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {selectedMedia.imageUris.length > 0 && (
-            <View style={{ marginBottom: theme.spacing.lg }}>
-              <FlatList
-                data={selectedMedia.imageUris}
-                keyExtractor={(_, index) => `image-${index}`}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                renderItem={({ item: imageUri, index }) => (
-                  <View style={styles.imageWrapper}>
-                    <Image
-                      source={{ uri: imageUri }}
-                      style={styles.image}
-                      accessible
-                      accessibilityLabel={`Selected image ${index + 1}`}
-                    />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => removeImage(index)}
-                      accessible
-                      accessibilityLabel="Remove image"
-                    >
-                      <Text style={styles.removeImageText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-            </View>
-          )}
+          <EntryImageStrip
+            items={selectedMedia.imageUris}
+            titleColor={theme.colors.textSecondary}
+            onRemove={(_, index) => removeImage(index)}
+            getItemAccessibilityLabel={(index) => `Selected image ${index + 1}`}
+          />
 
           {selectedMedia.audioUri && (
             <View
@@ -739,315 +682,61 @@ export function CreateEntryScreen() {
           )}
         </ScrollView>
 
-        <Modal
+        <EntryMoodPickerModal
           visible={showMoodPicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowMoodPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            onPress={() => setShowMoodPicker(false)}
-            activeOpacity={1}
-          >
-            <View
-              style={[
-                styles.moodPicker,
-                { backgroundColor: ENTRY_BACKGROUND },
-              ]}
-            >
-              <Text
-                style={[
-                  theme.typography.h3,
-                  { color: theme.colors.text, marginBottom: theme.spacing.md },
-                ]}
-              >
-                How are you feeling?
-              </Text>
+          selectedMood={mood}
+          onSelectMood={(moodValue) => setValue("mood", moodValue)}
+          onClose={() => setShowMoodPicker(false)}
+          backgroundColor={entryPalette.background}
+          textColor={entryPalette.text}
+          borderColor={entryPalette.border}
+          surfaceColor={entryPalette.surface}
+          primaryColor={entryPalette.primary}
+        />
 
-              <View style={styles.moodGrid}>
-                {MOOD_VALUES.map((moodValue) => {
-                  const moodData = MOOD_MAP[moodValue];
-                  return (
-                    <TouchableOpacity
-                      key={moodValue}
-                  style={[
-                    styles.moodOption,
-                    {
-                      backgroundColor:
-                            mood === moodValue
-                              ? `${ENTRY_PRIMARY}20`
-                              : ENTRY_SURFACE,
-                          borderColor:
-                            mood === moodValue
-                              ? ENTRY_PRIMARY
-                              : ENTRY_ACCENT,
-                        },
-                      ]}
-                      onPress={() => {
-                        setValue("mood", moodValue);
-                        setShowMoodPicker(false);
-                      }}
-                      accessible
-                      accessibilityLabel={`Select mood: ${moodData.label}`}
-                      accessibilityRole="button"
-                    >
-                      <Text style={styles.moodText}>{moodData.emoji}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          </TouchableOpacity>
-        </Modal>
-
-        <Modal
+        <EntrySelectionModal
           visible={showDrawerModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowDrawerModal(false)}
-        >
-          <SafeArea>
-            <Screen
-              style={[
-                styles.modalContainer,
-                { backgroundColor: ENTRY_BACKGROUND },
-              ]}
-            >
-              <View style={styles.modalHeader}>
-                <Text
-                  style={[theme.typography.h2, { color: theme.colors.text }]}
-                >
-                  Select Drawers
-                </Text>
+          title="Select Drawers"
+          items={drawers.map((drawer) => ({ id: drawer.id, name: drawer.name }))}
+          selectedIds={selectedDrawers}
+          onToggle={toggleDrawer}
+          onClose={() => setShowDrawerModal(false)}
+          createValue={newDrawerName}
+          onCreateValueChange={setNewDrawerName}
+          onCreate={handleAddDrawer}
+          createPlaceholder="New drawer name"
+          createAccessibilityLabel="New drawer name"
+          createButtonAccessibilityLabel="Create drawer"
+          placeholderTextColor={entryPalette.muted}
+          textColor={entryPalette.text}
+          backgroundColor={entryPalette.background}
+          surfaceColor={entryPalette.surface}
+          borderColor={entryPalette.border}
+          primaryColor={entryPalette.primary}
+          inverseTextColor={entryPalette.inverseText}
+        />
 
-                <TouchableOpacity
-                  onPress={() => setShowDrawerModal(false)}
-                  accessible
-                  accessibilityLabel="Close"
-                >
-                  <Text
-                    style={[theme.typography.h3, { color: theme.colors.text }]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.modalContent}
-              >
-                <View style={{ marginBottom: theme.spacing.lg }}>
-                  <View style={styles.inputRow}>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          borderColor: theme.colors.border,
-                          color: ENTRY_TEXT,
-                          backgroundColor: ENTRY_SURFACE,
-                          flex: 1,
-                        },
-                      ]}
-                      placeholder="New drawer name"
-                      placeholderTextColor={ENTRY_MUTED}
-                      value={newDrawerName}
-                      onChangeText={setNewDrawerName}
-                      accessibilityLabel="New drawer name"
-                    />
-                    <Button
-                      label="Add"
-                      onPress={handleAddDrawer}
-                      size="sm"
-                      disabled={!newDrawerName.trim()}
-                      accessibilityLabel="Create drawer"
-                    />
-                  </View>
-                </View>
-
-                {drawers.map((drawer) => (
-                  <TouchableOpacity
-                    key={drawer.id}
-                    style={[
-                      styles.modalItem,
-                      {
-                        borderColor: selectedDrawers.includes(drawer.id)
-                          ? theme.colors.primary
-                          : ENTRY_ACCENT,
-                        backgroundColor: selectedDrawers.includes(drawer.id)
-                          ? `${theme.colors.primary}10`
-                          : ENTRY_SURFACE,
-                      },
-                    ]}
-                    onPress={() => toggleDrawer(drawer.id)}
-                    accessible
-                    accessibilityLabel={`Drawer: ${drawer.name}`}
-                    accessibilityHint={
-                      selectedDrawers.includes(drawer.id)
-                        ? "Selected"
-                        : "Not selected"
-                    }
-                    accessibilityRole="checkbox"
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        {
-                          backgroundColor: selectedDrawers.includes(drawer.id)
-                            ? theme.colors.primary
-                            : "transparent",
-                          borderColor: selectedDrawers.includes(drawer.id)
-                            ? theme.colors.primary
-                            : ENTRY_ACCENT,
-                        },
-                      ]}
-                    >
-                      {selectedDrawers.includes(drawer.id) && (
-                        <Text style={{ color: theme.colors.background }}>
-                          ✓
-                        </Text>
-                      )}
-                    </View>
-
-                    <Text
-                      style={[
-                        theme.typography.body,
-                        { color: theme.colors.text },
-                      ]}
-                    >
-                      {drawer.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Screen>
-          </SafeArea>
-        </Modal>
-
-        <Modal
+        <EntrySelectionModal
           visible={showTagModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowTagModal(false)}
-        >
-          <SafeArea>
-            <Screen
-              style={[
-                styles.modalContainer,
-                { backgroundColor: ENTRY_BACKGROUND },
-              ]}
-            >
-              <View style={styles.modalHeader}>
-                <Text
-                  style={[theme.typography.h2, { color: theme.colors.text }]}
-                >
-                  Select Tags
-                </Text>
-
-                <TouchableOpacity
-                  onPress={() => setShowTagModal(false)}
-                  accessible
-                  accessibilityLabel="Close"
-                >
-                  <Text
-                    style={[theme.typography.h3, { color: theme.colors.text }]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.modalContent}
-              >
-                <View style={{ marginBottom: theme.spacing.lg }}>
-                  <View style={styles.inputRow}>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          borderColor: theme.colors.border,
-                          color: ENTRY_TEXT,
-                          backgroundColor: ENTRY_SURFACE,
-                          flex: 1,
-                        },
-                      ]}
-                      placeholder="New tag name"
-                      placeholderTextColor={ENTRY_MUTED}
-                      value={newTagName}
-                      onChangeText={setNewTagName}
-                      accessibilityLabel="New tag name"
-                    />
-                    <Button
-                      label="Add"
-                      onPress={handleAddTag}
-                      size="sm"
-                      disabled={!newTagName.trim()}
-                      accessibilityLabel="Create tag"
-                    />
-                  </View>
-                </View>
-
-                {tags.map((tag) => (
-                  <TouchableOpacity
-                    key={tag.id}
-                    style={[
-                      styles.modalItem,
-                      {
-                        borderColor: selectedTags.includes(tag.id)
-                          ? theme.colors.primary
-                          : ENTRY_ACCENT,
-                        backgroundColor: selectedTags.includes(tag.id)
-                          ? `${theme.colors.primary}10`
-                          : ENTRY_SURFACE,
-                      },
-                    ]}
-                    onPress={() => toggleTag(tag.id)}
-                    accessible
-                    accessibilityLabel={`Tag: ${tag.name}`}
-                    accessibilityHint={
-                      selectedTags.includes(tag.id)
-                        ? "Selected"
-                        : "Not selected"
-                    }
-                    accessibilityRole="checkbox"
-                  >
-                    <View
-                      style={[
-                        styles.checkbox,
-                        {
-                          backgroundColor: selectedTags.includes(tag.id)
-                            ? theme.colors.primary
-                            : "transparent",
-                          borderColor: selectedTags.includes(tag.id)
-                            ? theme.colors.primary
-                            : ENTRY_ACCENT,
-                        },
-                      ]}
-                    >
-                      {selectedTags.includes(tag.id) && (
-                        <Text style={{ color: theme.colors.background }}>
-                          ✓
-                        </Text>
-                      )}
-                    </View>
-
-                    <Text
-                      style={[
-                        theme.typography.body,
-                        { color: theme.colors.text },
-                      ]}
-                    >
-                      {tag.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </Screen>
-          </SafeArea>
-        </Modal>
+          title="Select Tags"
+          items={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
+          selectedIds={selectedTags}
+          onToggle={toggleTag}
+          onClose={() => setShowTagModal(false)}
+          createValue={newTagName}
+          onCreateValueChange={setNewTagName}
+          onCreate={handleAddTag}
+          createPlaceholder="New tag name"
+          createAccessibilityLabel="New tag name"
+          createButtonAccessibilityLabel="Create tag"
+          placeholderTextColor={entryPalette.muted}
+          textColor={entryPalette.text}
+          backgroundColor={entryPalette.background}
+          surfaceColor={entryPalette.surface}
+          borderColor={entryPalette.border}
+          primaryColor={entryPalette.primary}
+          inverseTextColor={entryPalette.inverseText}
+        />
       </Screen>
     </SafeArea>
   );

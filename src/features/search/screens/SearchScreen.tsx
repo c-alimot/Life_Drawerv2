@@ -1,4 +1,5 @@
 import { AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -287,23 +288,11 @@ export function SearchScreen() {
                 </View>
               </View>
 
-              <View style={styles.sectionHeaderRow}>
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    styles.sectionHeaderText,
-                    { color: PAGE_MUTED },
-                  ]}
-                >
-                  Filters
-                </Text>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { backgroundColor: theme.colors.accent1 },
-                  ]}
-                />
-              </View>
+              <SectionHeader
+                label="Filters"
+                textColor={PAGE_MUTED}
+                dividerColor={theme.colors.accent1}
+              />
 
               <ScrollView
                 horizontal
@@ -540,23 +529,11 @@ export function SearchScreen() {
                 )}
               </View>
 
-              <View style={styles.sectionHeaderRow}>
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    styles.sectionHeaderText,
-                    { color: PAGE_MUTED },
-                  ]}
-                >
-                  Results
-                </Text>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { backgroundColor: theme.colors.accent1 },
-                  ]}
-                />
-              </View>
+              <SectionHeader
+                label="Results"
+                textColor={PAGE_MUTED}
+                dividerColor={theme.colors.accent1}
+              />
             </>
           }
           renderItem={({ item }) => (
