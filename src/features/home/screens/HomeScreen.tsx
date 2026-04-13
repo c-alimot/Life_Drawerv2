@@ -1,15 +1,19 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { Button, SectionHeader } from "@components/ui";
+import { Button, Modal, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
+import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
+import { useDeleteEntry } from "@features/entries/hooks/useDeleteEntry";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@store";
 import { useTheme } from "@styles/theme";
+import type { EntryWithRelations } from "@types";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -20,8 +24,14 @@ import {
 import { useLifePhase } from "../hooks/useLifePhase";
 
 interface GroupedEntries {
-  [date: string]: any[];
+  [date: string]: EntryWithRelations[];
 }
+
+type DrawerMenuTarget = {
+  id: string;
+  name: string;
+  isStarter: boolean;
+};
 
 const STARTER_DRAWER = {
   id: "starter-drawer",
@@ -34,6 +44,7 @@ const HOME_BACKGROUND = "#EDEAE4";
 const HOME_TEXT = "#2F2924";
 const HOME_MUTED = "#6F6860";
 const HOME_PRIMARY = "#8C9A7F";
+const HOME_SECONDARY = "#556950";
 const HOME_SURFACE = "#FFFFFF";
 
 export function HomeScreen() {
@@ -44,6 +55,8 @@ export function HomeScreen() {
     isLoading: entriesLoading,
     fetchRecentEntries,
   } = useEntries();
+  const { deleteEntry } = useDeleteEntry();
+  const { deleteDrawer } = useDeleteDrawer();
   const { drawers, isLoading: drawersLoading, fetchDrawers } = useDrawers();
   const {
     activePhase,
@@ -53,6 +66,10 @@ export function HomeScreen() {
 
   const [groupedEntries, setGroupedEntries] = useState<GroupedEntries>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [entryMenuTarget, setEntryMenuTarget] = useState<EntryWithRelations | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EntryWithRelations | null>(null);
+  const [drawerMenuTarget, setDrawerMenuTarget] = useState<DrawerMenuTarget | null>(null);
+  const [deleteDrawerTarget, setDeleteDrawerTarget] = useState<DrawerMenuTarget | null>(null);
 
   // Fetch data on screen focus
   useFocusEffect(
@@ -99,9 +116,112 @@ export function HomeScreen() {
     router.push(`/entry/${entryId}`);
   }, []);
 
+  const handleEditEntry = useCallback((entryId: string) => {
+    router.push(`/edit-entry/${entryId}`);
+  }, []);
+
+  const closeEntryMenu = useCallback(() => {
+    setEntryMenuTarget(null);
+  }, []);
+
+  const openEntryMenu = useCallback((entry: EntryWithRelations) => {
+    setEntryMenuTarget(entry);
+  }, []);
+
+  const handleEditFromMenu = useCallback(() => {
+    if (!entryMenuTarget) {
+      return;
+    }
+    const targetId = entryMenuTarget.id;
+    setEntryMenuTarget(null);
+    handleEditEntry(targetId);
+  }, [entryMenuTarget, handleEditEntry]);
+
+  const handleDeletePrompt = useCallback(() => {
+    if (!entryMenuTarget) {
+      return;
+    }
+    setDeleteTarget(entryMenuTarget);
+    setEntryMenuTarget(null);
+  }, [entryMenuTarget]);
+
+  const handleDeleteEntry = useCallback(async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const success = await deleteEntry(deleteTarget.id);
+    setDeleteTarget(null);
+
+    if (success) {
+      await fetchRecentEntries();
+    } else {
+      Alert.alert("Error", "Failed to delete entry");
+    }
+  }, [deleteEntry, deleteTarget, fetchRecentEntries]);
+
   const handleDrawerPress = useCallback((drawerId: string) => {
     router.push(`/drawers/${drawerId}`);
   }, []);
+
+  const openDrawerMenu = useCallback((drawer: { id: string; name: string }) => {
+    setDrawerMenuTarget({
+      id: drawer.id,
+      name: drawer.name,
+      isStarter: drawer.id === STARTER_DRAWER.id,
+    });
+  }, []);
+
+  const closeDrawerMenu = useCallback(() => {
+    setDrawerMenuTarget(null);
+  }, []);
+
+  const handleEditDrawerFromMenu = useCallback(() => {
+    if (!drawerMenuTarget) {
+      return;
+    }
+
+    if (drawerMenuTarget.isStarter) {
+      setDrawerMenuTarget(null);
+      Alert.alert("Not available yet", "Create a custom drawer first to edit options.");
+      return;
+    }
+
+    const targetId = drawerMenuTarget.id;
+    setDrawerMenuTarget(null);
+    router.push(`/drawers/${targetId}`);
+  }, [drawerMenuTarget]);
+
+  const handleDeleteDrawerPrompt = useCallback(() => {
+    if (!drawerMenuTarget) {
+      return;
+    }
+
+    if (drawerMenuTarget.isStarter) {
+      setDrawerMenuTarget(null);
+      Alert.alert("Not available yet", "The starter drawer can't be deleted.");
+      return;
+    }
+
+    setDeleteDrawerTarget(drawerMenuTarget);
+    setDrawerMenuTarget(null);
+  }, [drawerMenuTarget]);
+
+  const handleDeleteDrawer = useCallback(async () => {
+    if (!deleteDrawerTarget) {
+      return;
+    }
+
+    const success = await deleteDrawer(deleteDrawerTarget.id);
+    setDeleteDrawerTarget(null);
+
+    if (success) {
+      await fetchDrawers();
+      await fetchRecentEntries();
+    } else {
+      Alert.alert("Error", "Failed to delete drawer");
+    }
+  }, [deleteDrawer, deleteDrawerTarget, fetchDrawers, fetchRecentEntries]);
 
   const closeMenu = useCallback(() => {
     setIsMenuOpen(false);
@@ -278,8 +398,8 @@ export function HomeScreen() {
                       >
                         {date}
                       </Text>
-                      {(dateEntries as any[]).map((entry) => (
-                        <TouchableOpacity
+                      {dateEntries.map((entry) => (
+                        <View
                           key={entry.id}
                           style={[
                             styles.entryCard,
@@ -288,71 +408,82 @@ export function HomeScreen() {
                               shadowColor: HOME_TEXT,
                             },
                           ]}
-                          onPress={() => handleEntryPress(entry.id)}
-                          accessible
-                          accessibilityLabel={`Entry: ${entry.title || "Untitled"}`}
-                          accessibilityHint={`Created on ${new Date(entry.createdAt).toLocaleDateString()}`}
                         >
-                          <View style={styles.entryHeader}>
+                          <TouchableOpacity
+                            style={styles.entryContent}
+                            onPress={() => handleEntryPress(entry.id)}
+                            accessible
+                            accessibilityLabel={`Entry: ${entry.title || "Untitled"}`}
+                            accessibilityHint={`Created on ${new Date(entry.createdAt).toLocaleDateString()}`}
+                          >
+                            <View style={styles.entryHeader}>
+                              <Text
+                                style={[
+                                  theme.typography.h3,
+                                  styles.entryTitle,
+                                  {
+                                    color: HOME_TEXT,
+                                    fontFamily: theme.fonts.serif,
+                                  },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {entry.title || "Untitled Entry"}
+                              </Text>
+                            </View>
                             <Text
                               style={[
-                                theme.typography.h3,
+                                theme.typography.bodySm,
                                 {
-                                  color: HOME_TEXT,
-                                  flex: 1,
-                                  fontFamily: theme.fonts.serif,
+                                  color: HOME_MUTED,
                                 },
                               ]}
-                              numberOfLines={1}
+                              numberOfLines={2}
                             >
-                              {entry.title || "Untitled Entry"}
+                              {entry.content}
                             </Text>
-                            {entry.mood && (
-                              <Text
-                                style={[theme.typography.body]}
-                                accessible
-                                accessibilityLabel={`Mood: ${entry.mood}`}
-                              >
-                                {entry.mood}
-                              </Text>
-                            )}
-                          </View>
-                          <Text
-                            style={[
-                              theme.typography.bodySm,
-                              {
-                                color: HOME_MUTED,
-                              },
-                            ]}
-                            numberOfLines={2}
-                          >
-                            {entry.content}
-                          </Text>
-                          {entry.drawers && entry.drawers.length > 0 && (
-                            <View style={styles.entryTags}>
-                              {entry.drawers.map((drawer: any) => (
-                                <View
-                                  key={drawer.id}
-                                  style={[
-                                    styles.tag,
-                                    {
-                                      backgroundColor: drawer.color + "20",
-                                    },
-                                  ]}
-                                >
-                                  <Text
+                            {entry.drawers && entry.drawers.length > 0 && (
+                              <View style={styles.entryTags}>
+                                {entry.drawers.map((drawer) => (
+                                  <View
+                                    key={drawer.id}
                                     style={[
-                                      theme.typography.labelXs,
-                                      { color: drawer.color },
+                                      styles.tag,
+                                      {
+                                        backgroundColor: drawer.color + "20",
+                                      },
                                     ]}
                                   >
-                                    {drawer.name}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-                        </TouchableOpacity>
+                                    <Text
+                                      style={[
+                                        theme.typography.labelXs,
+                                        { color: drawer.color },
+                                      ]}
+                                    >
+                                      {drawer.name}
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                          <View style={styles.entryActions}>
+                            <TouchableOpacity
+                              onPress={() => openEntryMenu(entry)}
+                              style={styles.entryMore}
+                              accessible
+                              accessibilityLabel={`More options for ${entry.title || "Untitled Entry"}`}
+                              accessibilityRole="button"
+                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                              <MaterialCommunityIcons
+                                name="dots-vertical"
+                                size={22}
+                                color={theme.colors.textDisabled}
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        </View>
                       ))}
                     </View>
                   ))}
@@ -427,7 +558,7 @@ export function HomeScreen() {
                       </Text>
                     </View>
                     <TouchableOpacity
-                      onPress={() => {}}
+                      onPress={() => openDrawerMenu(drawer)}
                       style={styles.drawerMore}
                       accessible
                       accessibilityLabel={`More options for ${drawer.name}`}
@@ -459,6 +590,140 @@ export function HomeScreen() {
         )}
 
         <AppBottomNav currentRoute="/" />
+
+        <Modal
+          visible={!!entryMenuTarget}
+          onClose={closeEntryMenu}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: HOME_TEXT, fontFamily: theme.fonts.serif }]}>
+            {entryMenuTarget?.title || "Untitled Entry"}
+          </Text>
+          <Text style={[theme.typography.bodySm, styles.menuSubtitle, { color: HOME_MUTED }]}>
+            Choose an action for this journal entry.
+          </Text>
+          <Button
+            label="Edit"
+            onPress={handleEditFromMenu}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuEditButton]}
+            textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Delete"
+            onPress={handleDeletePrompt}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuDeleteButton]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={closeEntryMenu}
+            variant="primary"
+            style={[styles.menuActionButton, { backgroundColor: HOME_SECONDARY }]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+        </Modal>
+
+        <Modal
+          visible={!!drawerMenuTarget}
+          onClose={closeDrawerMenu}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: HOME_TEXT, fontFamily: theme.fonts.serif }]}>
+            {drawerMenuTarget?.name || "Drawer"}
+          </Text>
+          <Text style={[theme.typography.bodySm, styles.menuSubtitle, { color: HOME_MUTED }]}>
+            Choose an action for this drawer.
+          </Text>
+          <Button
+            label="Edit"
+            onPress={handleEditDrawerFromMenu}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuEditButton]}
+            textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Delete"
+            onPress={handleDeleteDrawerPrompt}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuDeleteButton]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={closeDrawerMenu}
+            variant="primary"
+            style={[styles.menuActionButton, { backgroundColor: HOME_SECONDARY }]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+        </Modal>
+
+        <Modal
+          visible={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: HOME_TEXT, fontFamily: theme.fonts.serif }]}>
+            Delete Entry
+          </Text>
+          <Text style={[theme.typography.body, styles.menuSubtitle, { color: HOME_MUTED }]}>
+            Are you sure you want to delete this journal entry?
+          </Text>
+          <View style={styles.confirmActions}>
+            <Button
+              label="Cancel"
+              onPress={() => setDeleteTarget(null)}
+              variant="outline"
+              style={[styles.confirmButton, { borderColor: theme.colors.accent2 }]}
+              textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={handleDeleteEntry}
+              variant="primary"
+              style={[styles.confirmButton, styles.menuDeleteButton]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!deleteDrawerTarget}
+          onClose={() => setDeleteDrawerTarget(null)}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: HOME_TEXT, fontFamily: theme.fonts.serif }]}>
+            Delete Drawer
+          </Text>
+          <Text style={[theme.typography.body, styles.menuSubtitle, { color: HOME_MUTED }]}>
+            Are you sure you want to delete this drawer?
+          </Text>
+          <View style={styles.confirmActions}>
+            <Button
+              label="Cancel"
+              onPress={() => setDeleteDrawerTarget(null)}
+              variant="outline"
+              style={[styles.confirmButton, { borderColor: theme.colors.accent2 }]}
+              textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={handleDeleteDrawer}
+              variant="primary"
+              style={[styles.confirmButton, styles.menuDeleteButton]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -566,20 +831,36 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   entryCard: {
-    paddingVertical: 18,
-    paddingHorizontal: 18,
     borderRadius: 22,
     marginBottom: 14,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: 18,
+    paddingLeft: 18,
+    paddingRight: 10,
+  },
+  entryContent: {
+    flex: 1,
+    paddingRight: 12,
   },
   entryHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 8,
+  },
+  entryTitle: {
+    flex: 1,
+    fontWeight: "400",
+  },
+  entryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    marginLeft: 8,
   },
   entryTags: {
     flexDirection: "row",
@@ -591,6 +872,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
+  },
+  entryMore: {
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
   },
   drawerCard: {
     flexDirection: "row",
@@ -642,5 +931,48 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontStyle: "italic",
+  },
+  menuBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  menuModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: HOME_SURFACE,
+  },
+  menuTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  menuSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  menuActionButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  menuEditButton: {
+    backgroundColor: "#DFE8D9",
+    borderColor: "#C9D8C0",
+  },
+  menuDeleteButton: {
+    backgroundColor: "#A6544E",
+    borderColor: "#A6544E",
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
   },
 });
