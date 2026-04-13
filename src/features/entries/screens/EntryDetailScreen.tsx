@@ -498,9 +498,7 @@ export function EntryDetailScreen() {
                       { color: theme.colors.text },
                     ]}
                   >
-                    📍{" "}
-                    {entry.location.address ||
-                      `${entry.location.latitude.toFixed(4)}, ${entry.location.longitude.toFixed(4)}`}
+                    📍 {entry.location.address || "Location unavailable"}
                   </Text>
                 </View>
               )}

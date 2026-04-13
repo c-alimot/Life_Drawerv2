@@ -5,6 +5,7 @@ import {
   EntryMediaToolbar,
   type EntryMediaToolbarButton,
   EntryMoodPickerModal,
+  Modal,
   EntrySelectionModal,
 } from "@components/ui";
 import { MOOD_MAP, MOOD_VALUES } from "@constants/mood";
@@ -63,11 +64,76 @@ const ENTRY_TEXT = "#2F2924";
 const ENTRY_MUTED = "#6F6860";
 const ENTRY_PRIMARY = "#8C9A7F";
 const ENTRY_ACCENT = "#DAC8B1";
+const ENTRY_DANGER_DARK = "#8B2D2A";
+const ENTRY_DANGER = "#A6544E";
+const ENTRY_CANCEL_BG = "#E3E1DC";
+const ENTRY_CANCEL_BORDER = "#C9C4BB";
+const ENTRY_CANCEL_TEXT = "#5F6368";
 
 interface SelectedMedia {
   imageUris: string[];
   audioUri: string | null;
   location: { latitude: number; longitude: number; address?: string } | null;
+}
+
+function formatLocationLabelFromPlacemark(
+  placemark: Location.LocationGeocodedAddress
+): string {
+  const locality =
+    placemark.city ||
+    placemark.district ||
+    placemark.subregion ||
+    placemark.name ||
+    placemark.street;
+  const area = placemark.region || placemark.country;
+  return [locality, area].filter(Boolean).join(", ");
+}
+
+function formatLocationLabelFromNominatim(address?: Record<string, unknown>): string {
+  if (!address) {
+    return "";
+  }
+
+  const rawLocality = [
+    address.city,
+    address.town,
+    address.village,
+    address.municipality,
+    address.county,
+    address.suburb,
+    address.hamlet,
+  ].find((value) => typeof value === "string" && value.length > 0) as
+    | string
+    | undefined;
+
+  const rawArea = [
+    address.state,
+    address.province,
+    address.region,
+    address.country,
+  ].find((value) => typeof value === "string" && value.length > 0) as
+    | string
+    | undefined;
+
+  return [rawLocality, rawArea].filter(Boolean).join(", ");
+}
+
+async function reverseGeocodeWithNominatim(
+  latitude: number,
+  longitude: number
+): Promise<string> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return "";
+    }
+
+    const json = (await response.json()) as { address?: Record<string, unknown> };
+    return formatLocationLabelFromNominatim(json.address);
+  } catch {
+    return "";
+  }
 }
 
 export function CreateEntryScreen() {
@@ -113,6 +179,7 @@ export function CreateEntryScreen() {
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [locationText, setLocationText] = useState("");
+  const [pendingImageRemoveIndex, setPendingImageRemoveIndex] = useState<number | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
 
@@ -171,6 +238,18 @@ export function CreateEntryScreen() {
       imageUris: prev.imageUris.filter((_, i) => i !== index),
     }));
   }, []);
+
+  const requestRemoveImage = useCallback((index: number) => {
+    setPendingImageRemoveIndex(index);
+  }, []);
+
+  const confirmRemoveImage = useCallback(() => {
+    if (pendingImageRemoveIndex === null) {
+      return;
+    }
+    removeImage(pendingImageRemoveIndex);
+    setPendingImageRemoveIndex(null);
+  }, [pendingImageRemoveIndex, removeImage]);
 
   const startRecording = useCallback(async () => {
     try {
@@ -273,11 +352,22 @@ export function CreateEntryScreen() {
         });
 
         if (geocode.length > 0) {
-          const { city, region } = geocode[0];
-          address = [city, region].filter(Boolean).join(", ");
+          address = formatLocationLabelFromPlacemark(geocode[0]);
         }
       } catch {
         // ignore reverse geocode failure
+      }
+
+      if (!address) {
+        address = await reverseGeocodeWithNominatim(latitude, longitude);
+      }
+
+      if (!address) {
+        Alert.alert(
+          "Location unavailable",
+          "Couldn't find your city/state name. Please try again where GPS is stronger."
+        );
+        return;
       }
 
       setSelectedMedia((prev) => ({
@@ -285,9 +375,7 @@ export function CreateEntryScreen() {
         location: { latitude, longitude, address },
       }));
 
-      setLocationText(
-        address || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
-      );
+      setLocationText(address);
     } catch {
       Alert.alert("Error", "Failed to get location");
     }
@@ -386,6 +474,12 @@ export function CreateEntryScreen() {
     month: "long",
     day: "numeric",
   });
+  const selectedDrawerPreview = drawers
+    .filter((drawer) => selectedDrawers.includes(drawer.id))
+    .map((drawer) => ({ id: drawer.id, name: drawer.name }));
+  const selectedTagPreview = tags
+    .filter((tag) => selectedTags.includes(tag.id))
+    .map((tag) => ({ id: tag.id, name: tag.name }));
   const entryPalette = {
     background: ENTRY_BACKGROUND,
     surface: ENTRY_SURFACE,
@@ -591,7 +685,7 @@ export function CreateEntryScreen() {
               style={{ marginBottom: theme.spacing.lg }}
             >
               <Text
-                style={[theme.typography.bodySm, { color: theme.colors.error }]}
+                style={[theme.typography.bodySm, { color: ENTRY_DANGER_DARK }]}
               >
                 Remove location
               </Text>
@@ -607,7 +701,7 @@ export function CreateEntryScreen() {
           <EntryImageStrip
             items={selectedMedia.imageUris}
             titleColor={theme.colors.textSecondary}
-            onRemove={(_, index) => removeImage(index)}
+            onRemove={(_, index) => requestRemoveImage(index)}
             getItemAccessibilityLabel={(index) => `Selected image ${index + 1}`}
           />
 
@@ -617,7 +711,7 @@ export function CreateEntryScreen() {
             >
               <View style={styles.audioContent}>
                 <Text
-                  style={[theme.typography.body, { color: theme.colors.text }]}
+                  style={[theme.typography.body, { color: ENTRY_TEXT }]}
                 >
                   🎙️ Voice Memo
                 </Text>
@@ -630,7 +724,7 @@ export function CreateEntryScreen() {
                   <Text
                     style={[
                       theme.typography.bodySm,
-                      { color: theme.colors.primary },
+                      { color: ENTRY_TEXT },
                     ]}
                   >
                     Play
@@ -649,6 +743,35 @@ export function CreateEntryScreen() {
                   ✕
                 </Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {(selectedDrawerPreview.length > 0 || selectedTagPreview.length > 0) && (
+            <View style={styles.linkedPreviewSection}>
+              {selectedDrawerPreview.length > 0 && (
+                <>
+                  <Text style={styles.linkedPreviewLabel}>Linked Drawers</Text>
+                  <View style={styles.linkedChipRow}>
+                    {selectedDrawerPreview.map((drawer) => (
+                      <View key={`drawer-${drawer.id}`} style={styles.linkedChip}>
+                        <Text style={styles.linkedChipText}>{drawer.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+              {selectedTagPreview.length > 0 && (
+                <>
+                  <Text style={styles.linkedPreviewLabel}>Linked Tags</Text>
+                  <View style={styles.linkedChipRow}>
+                    {selectedTagPreview.map((tag) => (
+                      <View key={`tag-${tag.id}`} style={styles.linkedChip}>
+                        <Text style={styles.linkedChipText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
             </View>
           )}
 
@@ -741,6 +864,37 @@ export function CreateEntryScreen() {
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
         />
+
+        <Modal
+          visible={pendingImageRemoveIndex !== null}
+          onClose={() => setPendingImageRemoveIndex(null)}
+          animationType="fade"
+          backdropStyle={styles.actionBackdrop}
+          contentStyle={styles.actionModal}
+        >
+          <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
+            Delete Image
+          </Text>
+          <Text style={[theme.typography.body, styles.actionSubtitle, { color: ENTRY_MUTED }]}>
+            Are you sure you want to delete this image?
+          </Text>
+          <View style={styles.actionRow}>
+            <Button
+              label="Cancel"
+              onPress={() => setPendingImageRemoveIndex(null)}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
+              textStyle={{ color: ENTRY_CANCEL_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={confirmRemoveImage}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_DANGER, borderColor: ENTRY_DANGER }]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -898,6 +1052,65 @@ const styles = StyleSheet.create({
   },
   audioContent: {
     flex: 1,
+  },
+  linkedPreviewSection: {
+    marginBottom: 14,
+    gap: 8,
+  },
+  linkedPreviewLabel: {
+    color: ENTRY_MUTED,
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  linkedChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 6,
+  },
+  linkedChip: {
+    borderWidth: 1,
+    borderColor: ENTRY_ACCENT,
+    backgroundColor: ENTRY_SURFACE,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  linkedChipText: {
+    color: ENTRY_TEXT,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  actionBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  actionModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: ENTRY_SURFACE,
+  },
+  actionTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  actionSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
   },
   modalOverlay: {
     flex: 1,

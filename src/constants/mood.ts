@@ -34,7 +34,7 @@ export const MOOD_MAP: Record<MoodValue, MoodData> = {
   },
   meh: {
     value: "meh",
-    label: "Average / Meh",
+    label: "Average",
     emoji: "😐",
   },
   calm: {

@@ -93,6 +93,30 @@ export function useLifePhase() {
     [user]
   );
 
+  const updatePhase = useCallback(
+    async (phaseId: string, data: { name: string; description?: string }) => {
+      if (!user) return null;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const updated = await lifePhaseService.updateLifePhase(phaseId, user.id, data);
+        setPhases((prev) => prev.map((phase) => (phase.id === phaseId ? updated : phase)));
+        setActivePhase((prev) => (prev?.id === phaseId ? updated : prev));
+        return updated;
+      } catch (err) {
+        const apiError = err as ApiError;
+        setError(apiError);
+        console.error("Update phase error:", apiError);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user],
+  );
+
   return {
     activePhase,
     phases,
@@ -102,5 +126,6 @@ export function useLifePhase() {
     fetchAllPhases,
     createPhase,
     setActivePhaseById,
+    updatePhase,
   };
 }

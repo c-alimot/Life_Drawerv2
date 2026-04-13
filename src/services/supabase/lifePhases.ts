@@ -113,6 +113,35 @@ export const lifePhaseService = {
     }
   },
 
+  async updateLifePhase(
+    lifePhaseId: string,
+    userId: string,
+    data: { name: string; description?: string },
+  ): Promise<LifePhase> {
+    try {
+      const { data: updated, error } = await supabase
+        .from("life_phases")
+        .update({
+          name: data.name,
+          description: data.description || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", lifePhaseId)
+        .eq("user_id", userId)
+        .select("*")
+        .single();
+
+      if (error || !updated) {
+        throw error || new Error("Failed to update life phase");
+      }
+
+      return this.mapLifePhaseRow(updated as LifePhaseRow);
+    } catch (error) {
+      console.error("Update life phase error:", error);
+      throw this.handleError(error);
+    }
+  },
+
   async deleteLifePhase(lifePhaseId: string, userId: string): Promise<void> {
     try {
       const { error } = await supabase

@@ -1,5 +1,7 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useCreateTag } from "@features/tags/hooks/useCreateTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
@@ -11,6 +13,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -36,15 +39,41 @@ const PAGE_BORDER = "#B39C87";
 export function TagsScreen() {
   const theme = useTheme();
   const { tags, isLoading, fetchTags } = useTags();
+  const { createTag, isLoading: isCreatingTag } = useCreateTag();
   const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
 
   const handleCreateTag = useCallback(() => {
-    Alert.alert(
-      "Create Tag",
-      "Tag creation will live here next. Right now, you can create tags while writing or editing an entry.",
-    );
+    setNewTagName("");
+    setIsCreateTagOpen(true);
   }, []);
+
+  const closeCreateTagModal = useCallback(() => {
+    setIsCreateTagOpen(false);
+    setNewTagName("");
+  }, []);
+
+  const handleSaveTag = useCallback(async () => {
+    const trimmedName = newTagName.trim();
+
+    if (!trimmedName) {
+      Alert.alert("Name required", "Please enter a name for your tag.");
+      return;
+    }
+
+    const created = await createTag({ name: trimmedName });
+
+    if (!created) {
+      Alert.alert("Unable to create tag", "Please try a different name.");
+      return;
+    }
+
+    setIsCreateTagOpen(false);
+    setNewTagName("");
+    await fetchTags();
+  }, [createTag, fetchTags, newTagName]);
 
   const handleSetLifePhase = useCallback(() => {
     router.push("/life-phases");
@@ -313,6 +342,81 @@ export function TagsScreen() {
         )}
 
         <AppBottomNav currentRoute="/tags" />
+
+        <Modal
+          visible={isCreateTagOpen}
+          onClose={closeCreateTagModal}
+          animationType="fade"
+          backdropStyle={styles.modalBackdrop}
+          contentStyle={styles.modalContent}
+        >
+          <View style={styles.modalHeader}>
+            <Text
+              style={[
+                styles.modalTitle,
+                { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+              ]}
+            >
+              Create Tag
+            </Text>
+            <TouchableOpacity
+              onPress={closeCreateTagModal}
+              style={styles.modalCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close create tag"
+            >
+              <MaterialCommunityIcons name="close" size={28} color={PAGE_BORDER} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[theme.typography.body, styles.modalSubtitle, { color: PAGE_MUTED }]}>
+            Add a short keyword to connect related entries.
+          </Text>
+
+          <Text style={[theme.typography.labelSm, styles.modalFieldLabel, { color: PAGE_TEXT }]}>
+            TAG NAME
+          </Text>
+          <TextInput
+            value={newTagName}
+            onChangeText={setNewTagName}
+            placeholder="e.g. gratitude"
+            placeholderTextColor={PAGE_MUTED}
+            style={[
+              styles.modalInput,
+              {
+                backgroundColor: "#F8F6F2",
+                color: PAGE_TEXT,
+                shadowColor: PAGE_TEXT,
+              },
+            ]}
+            autoCapitalize="none"
+            accessibilityLabel="Tag name input"
+          />
+
+          <View style={styles.modalActions}>
+            <Button
+              label="Cancel"
+              onPress={closeCreateTagModal}
+              variant="outline"
+              style={[
+                styles.modalSecondaryButton,
+                { borderRadius: 999, borderColor: PAGE_BORDER },
+              ]}
+              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label={isCreatingTag ? "Creating..." : "Create"}
+              onPress={handleSaveTag}
+              disabled={isCreatingTag}
+              variant="primary"
+              style={[
+                styles.modalPrimaryButton,
+                { borderRadius: 999, backgroundColor: PAGE_SECONDARY },
+              ]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -470,5 +574,65 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontStyle: "italic",
+  },
+  modalBackdrop: {
+    padding: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  modalContent: {
+    width: "100%",
+    borderRadius: 28,
+    padding: 24,
+    backgroundColor: PAGE_SURFACE,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "400",
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSubtitle: {
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  modalFieldLabel: {
+    letterSpacing: 2.2,
+    marginBottom: 8,
+  },
+  modalInput: {
+    minHeight: 62,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    fontSize: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 3,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    minHeight: 52,
+    backgroundColor: PAGE_SURFACE,
+  },
+  modalPrimaryButton: {
+    flex: 1,
+    minHeight: 52,
   },
 });

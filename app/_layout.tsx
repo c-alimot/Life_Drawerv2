@@ -1,4 +1,3 @@
-import { authApi } from "@features/auth/api/auth.api";
 import {
   clearOnboardingCompleted,
   getOnboardingCompleted,
@@ -8,7 +7,7 @@ import type { Profile } from "@types";
 import { useAuthStore } from "@store";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Platform, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -19,10 +18,6 @@ export default function RootLayout() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboardingState] =
     useState(false);
-  const forceOnboardingOnLocalWeb =
-    Platform.OS === "web" &&
-    typeof window !== "undefined" &&
-    window.location.hostname === "localhost";
 
   const mapSessionUserToProfile = (
     sessionUser: {
@@ -61,32 +56,16 @@ export default function RootLayout() {
     const initialize = async () => {
       setLoading(true);
 
-      if (forceOnboardingOnLocalWeb) {
-        await Promise.all([
-          clearOnboardingCompleted(),
-          supabase.auth.signOut(),
-        ]);
-
-        if (!isMounted) return;
-
-        setHasCompletedOnboardingState(false);
-        setUser(null);
-        setLoading(false);
-        setIsBootstrapping(false);
-        return;
-      }
-
-      const [sessionResult, onboardingCompleted] = await Promise.all([
-        authApi.getSession(),
-        getOnboardingCompleted(),
-      ]);
+      await Promise.all([clearOnboardingCompleted(), supabase.auth.signOut()]);
 
       if (!isMounted) return;
 
-      setHasCompletedOnboardingState(onboardingCompleted);
-      setUser(sessionResult.data?.user || null);
+      setHasCompletedOnboardingState(false);
+      setUser(null);
       setLoading(false);
       setIsBootstrapping(false);
+      return;
+
     };
 
     initialize();
@@ -112,7 +91,7 @@ export default function RootLayout() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [forceOnboardingOnLocalWeb, setLoading, setUser]);
+  }, [setLoading, setUser]);
 
   useEffect(() => {
     if (isBootstrapping) return;

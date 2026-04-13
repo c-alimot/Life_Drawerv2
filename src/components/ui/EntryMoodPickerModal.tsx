@@ -77,6 +77,15 @@ export function EntryMoodPickerModal({
                   accessibilityRole="button"
                 >
                   <Text style={styles.moodText}>{moodData.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.moodLabel,
+                      { color: textColor },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {moodData.label}
+                  </Text>
                 </TouchableOpacity>
               );
             })}
@@ -106,13 +115,22 @@ const styles = StyleSheet.create({
   },
   moodOption: {
     width: "22%",
-    aspectRatio: 1,
+    minHeight: 84,
     borderWidth: 2,
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 8,
   },
   moodText: {
     fontSize: 28,
+  },
+  moodLabel: {
+    marginTop: 6,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });

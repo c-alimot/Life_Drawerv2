@@ -1,5 +1,5 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { Button, Input } from "@components/ui";
+import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useFocusEffect } from "@react-navigation/native";
@@ -10,10 +10,10 @@ import { Controller, useForm } from "react-hook-form";
 import {
   ActivityIndicator,
   FlatList,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,6 +26,10 @@ const PAGE_TEXT = "#2F2924";
 const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
+const PAGE_BORDER = "#B39C87";
+const ACTION_CANCEL_BG = "#E3E1DC";
+const ACTION_CANCEL_BORDER = "#C9C4BB";
+const ACTION_CANCEL_TEXT = "#5F6368";
 
 const lifePhaseSchema = z.object({
   name: z.string().min(2, "Life phase name must be at least 2 characters"),
@@ -57,16 +61,32 @@ export function LifePhasesScreen() {
     isLoading,
     createPhase,
     setActivePhaseById,
+    updatePhase,
     fetchAllPhases,
   } = useLifePhase();
   const [showModal, setShowModal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showCurrentPhaseMenu, setShowCurrentPhaseMenu] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors },
     reset,
+  } = useForm<LifePhaseFormData>({
+    resolver: zodResolver(lifePhaseSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+    },
+  });
+
+  const {
+    control: editControl,
+    handleSubmit: handleEditSubmit,
+    formState: { errors: editErrors },
+    reset: resetEditForm,
   } = useForm<LifePhaseFormData>({
     resolver: zodResolver(lifePhaseSchema),
     defaultValues: {
@@ -95,6 +115,11 @@ export function LifePhasesScreen() {
     }
   };
 
+  const closeCreatePhaseModal = useCallback(() => {
+    setShowModal(false);
+    reset();
+  }, [reset]);
+
   const handleSelectPhase = useCallback(
     async (phaseId: string) => {
       await setActivePhaseById(phaseId);
@@ -108,6 +133,50 @@ export function LifePhasesScreen() {
       reset({ name, description });
     },
     [reset],
+  );
+
+  const openCurrentPhaseMenu = useCallback(() => {
+    if (!activePhase) {
+      return;
+    }
+    setShowCurrentPhaseMenu(true);
+  }, [activePhase]);
+
+  const handleOpenEditCurrentPhase = useCallback(() => {
+    if (!activePhase) {
+      return;
+    }
+
+    resetEditForm({
+      name: activePhase.name,
+      description: activePhase.description || "",
+    });
+    setShowCurrentPhaseMenu(false);
+    setShowEditModal(true);
+  }, [activePhase, resetEditForm]);
+
+  const closeEditPhaseModal = useCallback(() => {
+    setShowEditModal(false);
+    resetEditForm({ name: "", description: "" });
+  }, [resetEditForm]);
+
+  const onSubmitEditPhase = useCallback(
+    async (data: LifePhaseFormData) => {
+      if (!activePhase) {
+        return;
+      }
+
+      const updated = await updatePhase(activePhase.id, {
+        name: data.name,
+        description: data.description,
+      });
+
+      if (updated) {
+        closeEditPhaseModal();
+        fetchAllPhases();
+      }
+    },
+    [activePhase, closeEditPhaseModal, fetchAllPhases, updatePhase],
   );
 
   return (
@@ -261,6 +330,19 @@ export function LifePhasesScreen() {
                         "This is the chapter currently guiding your entries and reflections."}
                     </Text>
                   </View>
+                  <TouchableOpacity
+                    onPress={openCurrentPhaseMenu}
+                    style={styles.currentPhaseMore}
+                    accessible
+                    accessibilityLabel={`More options for ${activePhase.name}`}
+                    accessibilityRole="button"
+                  >
+                    <MaterialCommunityIcons
+                      name="dots-vertical"
+                      size={22}
+                      color={theme.colors.textDisabled}
+                    />
+                  </TouchableOpacity>
                 </View>
               </>
             )}
@@ -446,91 +528,267 @@ export function LifePhasesScreen() {
           </ScrollView>
         )}
 
-        {/* Create Modal */}
+        {/* Create Life Phase Modal */}
         <Modal
           visible={showModal}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowModal(false)}
+          onClose={closeCreatePhaseModal}
+          animationType="fade"
+          backdropStyle={styles.modalBackdrop}
+          contentStyle={styles.modalContent}
         >
-          <SafeArea>
-            <Screen
+          <View style={styles.modalHeader}>
+            <Text
               style={[
-                styles.modalContainer,
-                { backgroundColor: PAGE_BACKGROUND },
+                styles.modalTitle,
+                { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
               ]}
             >
-              {/* Modal Header */}
-              <View style={styles.modalHeader}>
-                <TouchableOpacity
-                  onPress={() => setShowModal(false)}
-                  accessible
-                  accessibilityLabel="Close"
-                >
-                  <Text
-                    style={[theme.typography.h3, { color: PAGE_TEXT }]}
-                  >
-                    ✕
-                  </Text>
-                </TouchableOpacity>
-                <Text
-                  style={[
-                    styles.modalTitle,
-                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-                  ]}
-                >
-                  New Life Phase
+              New Life Phase
+            </Text>
+            <TouchableOpacity
+              onPress={closeCreatePhaseModal}
+              style={styles.modalCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close create life phase"
+            >
+              <MaterialCommunityIcons name="close" size={28} color={PAGE_BORDER} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[theme.typography.body, styles.modalSubtitle, { color: PAGE_MUTED }]}>
+            Capture the chapter you&apos;re currently living in.
+          </Text>
+
+          <Controller
+            control={control}
+            name="name"
+            render={({ field: { onChange, value } }) => (
+              <>
+                <Text style={[theme.typography.labelSm, styles.modalFieldLabel, { color: PAGE_TEXT }]}>
+                  LIFE PHASE NAME
                 </Text>
-                <View style={{ width: 40 }} />
-              </View>
-
-              <ScrollView
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.modalContent}
-              >
-                {/* Form */}
-                <View style={styles.form}>
-                  <Controller
-                    control={control}
-                    name="name"
-                    render={({ field: { onChange, value } }) => (
-                      <Input
-                        label="Life Phase Name"
-                        placeholder="e.g., College Years, New Job"
-                        value={value}
-                        onChangeText={onChange}
-                        error={errors.name?.message}
-                        accessibilityLabel="Life phase name input"
-                      />
-                    )}
-                  />
-
-                  <Controller
-                    control={control}
-                    name="description"
-                    render={({ field: { onChange, value } }) => (
-                      <Input
-                        label="Description (Optional)"
-                        placeholder="Add details about this life phase..."
-                        value={value}
-                        onChangeText={onChange}
-                        multiline
-                        numberOfLines={4}
-                        accessibilityLabel="Life phase description input"
-                      />
-                    )}
-                  />
-                </View>
-
-                <Button
-                  label={isLoading ? "Creating..." : "Create Life Phase"}
-                  onPress={handleSubmit(onSubmit)}
-                  disabled={isLoading}
-                  accessibilityLabel="Create life phase button"
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="e.g. College Years, New Job"
+                  placeholderTextColor={PAGE_MUTED}
+                  style={[
+                    styles.modalInput,
+                    {
+                      backgroundColor: "#F8F6F2",
+                      color: PAGE_TEXT,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  accessibilityLabel="Life phase name input"
                 />
-              </ScrollView>
-            </Screen>
-          </SafeArea>
+              </>
+            )}
+          />
+          {errors.name?.message ? (
+            <Text style={styles.fieldErrorText}>{errors.name.message}</Text>
+          ) : null}
+
+          <Controller
+            control={control}
+            name="description"
+            render={({ field: { onChange, value } }) => (
+              <>
+                <Text style={[theme.typography.labelSm, styles.modalFieldLabel, { color: PAGE_TEXT }]}>
+                  DESCRIPTION (OPTIONAL)
+                </Text>
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Add details about this life phase..."
+                  placeholderTextColor={PAGE_MUTED}
+                  style={[
+                    styles.modalInput,
+                    styles.modalTextArea,
+                    {
+                      backgroundColor: "#F8F6F2",
+                      color: PAGE_TEXT,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  multiline
+                  textAlignVertical="top"
+                  accessibilityLabel="Life phase description input"
+                />
+              </>
+            )}
+          />
+
+          <View style={styles.modalActions}>
+            <Button
+              label="Cancel"
+              onPress={closeCreatePhaseModal}
+              variant="outline"
+              style={[
+                styles.modalSecondaryButton,
+                { borderRadius: 999, borderColor: PAGE_BORDER },
+              ]}
+              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label={isLoading ? "Creating..." : "Create"}
+              onPress={handleSubmit(onSubmit)}
+              disabled={isLoading}
+              variant="primary"
+              style={[
+                styles.modalPrimaryButton,
+                { borderRadius: 999, backgroundColor: PAGE_SECONDARY },
+              ]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showCurrentPhaseMenu}
+          onClose={() => setShowCurrentPhaseMenu(false)}
+          animationType="fade"
+          backdropStyle={styles.modalBackdrop}
+          contentStyle={styles.actionModal}
+        >
+          <Text style={[styles.actionTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
+            {activePhase?.name || "Current Life Phase"}
+          </Text>
+          <Text style={[theme.typography.bodySm, styles.actionSubtitle, { color: PAGE_MUTED }]}>
+            Choose an action for this life phase.
+          </Text>
+          <Button
+            label="Edit"
+            onPress={handleOpenEditCurrentPhase}
+            variant="primary"
+            style={[styles.actionButton, styles.actionEditButton]}
+            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={() => setShowCurrentPhaseMenu(false)}
+            variant="primary"
+            style={[
+              styles.actionButton,
+              { backgroundColor: ACTION_CANCEL_BG, borderColor: ACTION_CANCEL_BORDER },
+            ]}
+            textStyle={{ color: ACTION_CANCEL_TEXT, fontWeight: "700" }}
+          />
+        </Modal>
+
+        <Modal
+          visible={showEditModal}
+          onClose={closeEditPhaseModal}
+          animationType="fade"
+          backdropStyle={styles.modalBackdrop}
+          contentStyle={styles.modalContent}
+        >
+          <View style={styles.modalHeader}>
+            <Text
+              style={[
+                styles.modalTitle,
+                { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+              ]}
+            >
+              Edit Life Phase
+            </Text>
+            <TouchableOpacity
+              onPress={closeEditPhaseModal}
+              style={styles.modalCloseButton}
+              accessibilityRole="button"
+              accessibilityLabel="Close edit life phase"
+            >
+              <MaterialCommunityIcons name="close" size={28} color={PAGE_BORDER} />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[theme.typography.body, styles.modalSubtitle, { color: PAGE_MUTED }]}>
+            Update your current chapter details.
+          </Text>
+
+          <Controller
+            control={editControl}
+            name="name"
+            render={({ field: { onChange, value } }) => (
+              <>
+                <Text style={[theme.typography.labelSm, styles.modalFieldLabel, { color: PAGE_TEXT }]}>
+                  LIFE PHASE NAME
+                </Text>
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="e.g. College Years, New Job"
+                  placeholderTextColor={PAGE_MUTED}
+                  style={[
+                    styles.modalInput,
+                    {
+                      backgroundColor: "#F8F6F2",
+                      color: PAGE_TEXT,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  accessibilityLabel="Edit life phase name input"
+                />
+              </>
+            )}
+          />
+          {editErrors.name?.message ? (
+            <Text style={styles.fieldErrorText}>{editErrors.name.message}</Text>
+          ) : null}
+
+          <Controller
+            control={editControl}
+            name="description"
+            render={({ field: { onChange, value } }) => (
+              <>
+                <Text style={[theme.typography.labelSm, styles.modalFieldLabel, { color: PAGE_TEXT }]}>
+                  DESCRIPTION (OPTIONAL)
+                </Text>
+                <TextInput
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Add details about this life phase..."
+                  placeholderTextColor={PAGE_MUTED}
+                  style={[
+                    styles.modalInput,
+                    styles.modalTextArea,
+                    {
+                      backgroundColor: "#F8F6F2",
+                      color: PAGE_TEXT,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                  multiline
+                  textAlignVertical="top"
+                  accessibilityLabel="Edit life phase description input"
+                />
+              </>
+            )}
+          />
+
+          <View style={styles.modalActions}>
+            <Button
+              label="Cancel"
+              onPress={closeEditPhaseModal}
+              variant="primary"
+              style={[
+                styles.modalSecondaryButton,
+                { borderRadius: 999, backgroundColor: ACTION_CANCEL_BG, borderColor: ACTION_CANCEL_BORDER },
+              ]}
+              textStyle={{ color: ACTION_CANCEL_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label={isLoading ? "Saving..." : "Save"}
+              onPress={handleEditSubmit(onSubmitEditPhase)}
+              disabled={isLoading}
+              variant="primary"
+              style={[
+                styles.modalPrimaryButton,
+                { borderRadius: 999, backgroundColor: PAGE_SECONDARY },
+              ]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
         </Modal>
 
         <AppBottomNav currentRoute="/life-phases" />
@@ -705,27 +963,77 @@ const styles = StyleSheet.create({
   exampleInfo: {
     flex: 1,
   },
-  form: {
-    marginBottom: 20,
+  modalBackdrop: {
+    padding: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
   },
-  modalContainer: {
-    flex: 1,
+  modalContent: {
+    width: "100%",
+    borderRadius: 28,
+    padding: 24,
+    backgroundColor: PAGE_SURFACE,
   },
   modalHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
   modalTitle: {
-    fontSize: 34,
-    lineHeight: 40,
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "400",
   },
-  modalContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
-    paddingBottom: 40,
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalSubtitle: {
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  modalFieldLabel: {
+    letterSpacing: 2.2,
+    marginBottom: 8,
+  },
+  modalInput: {
+    minHeight: 62,
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    fontSize: 16,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 3,
+    marginBottom: 14,
+  },
+  modalTextArea: {
+    minHeight: 112,
+    paddingTop: 14,
+  },
+  fieldErrorText: {
+    color: "#A6544E",
+    marginTop: -6,
+    marginBottom: 10,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  modalActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 6,
+  },
+  modalSecondaryButton: {
+    flex: 1,
+    minHeight: 52,
+    backgroundColor: PAGE_SURFACE,
+  },
+  modalPrimaryButton: {
+    flex: 1,
+    minHeight: 52,
   },
   phaseName: {
     fontSize: 22,
@@ -739,6 +1047,40 @@ const styles = StyleSheet.create({
     width: 28,
     alignItems: "flex-end",
     marginLeft: 12,
+  },
+  currentPhaseMore: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
+  },
+  actionModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: PAGE_SURFACE,
+  },
+  actionTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  actionSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  actionButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  actionEditButton: {
+    backgroundColor: "#DFE8D9",
+    borderColor: "#C9D8C0",
   },
   helperText: {
     marginTop: 12,
