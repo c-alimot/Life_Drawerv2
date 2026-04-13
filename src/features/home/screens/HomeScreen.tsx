@@ -46,6 +46,9 @@ const HOME_MUTED = "#6F6860";
 const HOME_PRIMARY = "#8C9A7F";
 const HOME_SECONDARY = "#556950";
 const HOME_SURFACE = "#FFFFFF";
+const CANCEL_BUTTON_BG = "#E3E1DC";
+const CANCEL_BUTTON_BORDER = "#C9C4BB";
+const CANCEL_BUTTON_TEXT = "#5F6368";
 
 export function HomeScreen() {
   const theme = useTheme();
@@ -113,7 +116,7 @@ export function HomeScreen() {
   }, []);
 
   const handleEntryPress = useCallback((entryId: string) => {
-    router.push(`/entry/${entryId}`);
+    router.push(`/edit-entry/${entryId}`);
   }, []);
 
   const handleEditEntry = useCallback((entryId: string) => {
@@ -442,28 +445,51 @@ export function HomeScreen() {
                             >
                               {entry.content}
                             </Text>
-                            {entry.drawers && entry.drawers.length > 0 && (
+                            {(entry.drawers?.length > 0 || entry.tags?.length > 0) && (
                               <View style={styles.entryTags}>
-                                {entry.drawers.map((drawer) => (
+                                {entry.drawers?.map((drawer) => (
                                   <View
                                     key={drawer.id}
                                     style={[
                                       styles.tag,
                                       {
-                                        backgroundColor: drawer.color + "20",
+                                        backgroundColor: "#ECE6DB",
                                       },
                                     ]}
                                   >
                                     <Text
                                       style={[
                                         theme.typography.labelXs,
-                                        { color: drawer.color },
+                                        { color: HOME_SECONDARY },
                                       ]}
                                     >
                                       {drawer.name}
                                     </Text>
                                   </View>
                                 ))}
+                                {entry.tags?.map((tag) => {
+                                  const tagColor = tag.color || HOME_PRIMARY;
+                                  return (
+                                    <View
+                                      key={tag.id}
+                                      style={[
+                                        styles.tag,
+                                        {
+                                          backgroundColor: `${tagColor}20`,
+                                        },
+                                      ]}
+                                    >
+                                      <Text
+                                        style={[
+                                          theme.typography.labelXs,
+                                          { color: tagColor },
+                                        ]}
+                                      >
+                                        {tag.name}
+                                      </Text>
+                                    </View>
+                                  );
+                                })}
                               </View>
                             )}
                           </TouchableOpacity>
@@ -622,8 +648,11 @@ export function HomeScreen() {
             label="Cancel"
             onPress={closeEntryMenu}
             variant="primary"
-            style={[styles.menuActionButton, { backgroundColor: HOME_SECONDARY }]}
-            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            style={[
+              styles.menuActionButton,
+              { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+            ]}
+            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
           />
         </Modal>
 
@@ -658,8 +687,11 @@ export function HomeScreen() {
             label="Cancel"
             onPress={closeDrawerMenu}
             variant="primary"
-            style={[styles.menuActionButton, { backgroundColor: HOME_SECONDARY }]}
-            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            style={[
+              styles.menuActionButton,
+              { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+            ]}
+            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
           />
         </Modal>
 
@@ -680,9 +712,15 @@ export function HomeScreen() {
             <Button
               label="Cancel"
               onPress={() => setDeleteTarget(null)}
-              variant="outline"
-              style={[styles.confirmButton, { borderColor: theme.colors.accent2 }]}
-              textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+              variant="primary"
+              style={[
+                styles.confirmButton,
+                {
+                  backgroundColor: CANCEL_BUTTON_BG,
+                  borderColor: CANCEL_BUTTON_BORDER,
+                },
+              ]}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
             />
             <Button
               label="Delete"
@@ -711,9 +749,12 @@ export function HomeScreen() {
             <Button
               label="Cancel"
               onPress={() => setDeleteDrawerTarget(null)}
-              variant="outline"
-              style={[styles.confirmButton, { borderColor: theme.colors.accent2 }]}
-              textStyle={{ color: HOME_SECONDARY, fontWeight: "700" }}
+              variant="primary"
+              style={[
+                styles.confirmButton,
+                { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+              ]}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
             />
             <Button
               label="Delete"

@@ -306,6 +306,13 @@ export const entriesService = {
   async updateEntry(entryId: string, userId: string, request: UpdateEntryRequest) {
     try {
       let imageUrls = await this.normalizeStoredMediaRefs(userId, request.imageUris);
+      const entryImagePrefix = `${userId}/${entryId}/images/`;
+      imageUrls = imageUrls.filter(
+        (value) =>
+          !this.isCanonicalPrivateMediaPath(value) ||
+          value.startsWith(entryImagePrefix),
+      );
+
       if (request.imageUris?.length) {
         const uploadedImages = await Promise.all(
           this.getLocalUploadUris(request.imageUris).map((uri, index) =>

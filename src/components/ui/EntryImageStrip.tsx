@@ -54,7 +54,11 @@ export function EntryImageStrip({
             />
             <TouchableOpacity
               style={styles.removeImageButton}
-              onPress={() => onRemove(item, index)}
+              onPress={(event) => {
+                event.stopPropagation();
+                onRemove(item, index);
+              }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessible
               accessibilityLabel="Remove image"
             >
@@ -80,14 +84,15 @@ const styles = StyleSheet.create({
   },
   removeImageButton: {
     position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    top: 6,
+    right: 6,
+    backgroundColor: "#A6544E",
+    borderRadius: 14,
+    width: 28,
+    height: 28,
     justifyContent: "center",
     alignItems: "center",
+    zIndex: 2,
   },
   removeImageText: {
     color: "#FFFFFF",

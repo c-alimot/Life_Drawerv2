@@ -4,6 +4,7 @@ import {
   EntryImageStrip,
   EntryMediaToolbar,
   type EntryMediaToolbarButton,
+  Modal,
   EntryMoodPickerModal,
   EntrySelectionModal,
 } from "@components/ui";
@@ -13,12 +14,14 @@ import { useDrawers } from "@features/drawers/hooks/useDrawers";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
+import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
     ActivityIndicator,
@@ -57,6 +60,17 @@ const editEntrySchema = z.object({
 type EditEntryFormData = z.infer<typeof editEntrySchema>;
 
 const MAX_IMAGES = 10;
+const ENTRY_BACKGROUND = "#EDEAE4";
+const ENTRY_SURFACE = "#FFFFFF";
+const ENTRY_TEXT = "#2F2924";
+const ENTRY_MUTED = "#6F6860";
+const ENTRY_PRIMARY = "#8C9A7F";
+const ENTRY_SECONDARY = "#556950";
+const ENTRY_ACCENT = "#DAC8B1";
+const ENTRY_DANGER = "#A6544E";
+const ENTRY_CANCEL_BG = "#E3E1DC";
+const ENTRY_CANCEL_BORDER = "#C9C4BB";
+const ENTRY_CANCEL_TEXT = "#5F6368";
 
 export function EditEntryScreen() {
   const theme = useTheme();
@@ -97,9 +111,15 @@ export function EditEntryScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
-  const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioUri, setAudioUri] = useState<string | null>(null);
+  const [pendingImageRemoval, setPendingImageRemoval] = useState<
+    { kind: "new"; index: number } | { kind: "existing"; uri: string } | null
+  >(null);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   const mood = watch("mood");
 
@@ -122,8 +142,22 @@ export function EditEntryScreen() {
       }
       setSelectedDrawers(entry.drawers?.map((d) => d.id) || []);
       setSelectedTags(entry.tags?.map((t) => t.id) || []);
+      setAudioUri(entry.audioUrl ?? null);
+      setNewImageUris([]);
+      setRemovedImageUris([]);
     }
-  }, [entry, setValue]);
+  }, [entry?.id, setValue]);
+
+  useEffect(() => {
+    return () => {
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+      }
+    };
+  }, []);
 
   // Image picker
   const pickImages = useCallback(async () => {
@@ -186,16 +220,95 @@ export function EditEntryScreen() {
   }, []);
 
   const removeExistingImage = useCallback((imageUri: string) => {
-    Alert.alert("Remove Image", "This image will be removed when you save.", [
-      { text: "Cancel", onPress: () => {} },
-      {
-        text: "Remove",
-        onPress: () => {
-          setRemovedImageUris((prev) => [...prev, imageUri]);
-        },
-        style: "destructive",
-      },
-    ]);
+    setRemovedImageUris((prev) => [...prev, imageUri]);
+  }, []);
+
+  const requestRemoveNewImage = useCallback((index: number) => {
+    setPendingImageRemoval({ kind: "new", index });
+  }, []);
+
+  const requestRemoveExistingImage = useCallback((uri: string) => {
+    setPendingImageRemoval({ kind: "existing", uri });
+  }, []);
+
+  const confirmRemoveImage = useCallback(() => {
+    if (!pendingImageRemoval) {
+      return;
+    }
+
+    if (pendingImageRemoval.kind === "new") {
+      removeNewImage(pendingImageRemoval.index);
+    } else {
+      removeExistingImage(pendingImageRemoval.uri);
+    }
+
+    setPendingImageRemoval(null);
+  }, [pendingImageRemoval, removeExistingImage, removeNewImage]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          "Permission denied",
+          "Please enable microphone access in settings",
+        );
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const recording = new Audio.Recording();
+      await recording.prepareToRecordAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY,
+      );
+      await recording.startAsync();
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch {
+      Alert.alert("Error", "Failed to start recording");
+    }
+  }, []);
+
+  const stopRecording = useCallback(async () => {
+    try {
+      if (!recordingRef.current) return;
+
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      if (uri) {
+        setAudioUri(uri);
+      }
+      recordingRef.current = null;
+      setIsRecording(false);
+    } catch {
+      Alert.alert("Error", "Failed to stop recording");
+    }
+  }, []);
+
+  const playAudio = useCallback(async () => {
+    try {
+      if (!audioUri) return;
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+      }
+
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: audioUri },
+        { shouldPlay: true },
+      );
+      soundRef.current = sound;
+      await sound.playAsync();
+    } catch {
+      Alert.alert("Error", "Failed to play audio");
+    }
+  }, [audioUri]);
+
+  const removeAudio = useCallback(() => {
+    setAudioUri(null);
   }, []);
 
   // Drawer management
@@ -261,7 +374,7 @@ export function EditEntryScreen() {
       drawerIds: selectedDrawers,
       tagIds: selectedTags,
       imageUris: [...persistedImages, ...newImageUris],
-      audioUrl: entry.audioUrl || null,
+      audioUrl: audioUri || null,
       location: entry.location || null,
       lifePhaseId: entry.lifePhaseId || null,
       occurredAt: entry.occurredAt || null,
@@ -283,65 +396,110 @@ export function EditEntryScreen() {
     entry?.images.filter((imageUri) => !removedImageUris.includes(imageUri)) ||
     [];
   const totalImages = visibleExistingImages.length + newImageUris.length;
+  const formattedDate = entry
+    ? new Date(entry.createdAt).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "";
+  const selectedDrawerPreview = drawers
+    .filter((drawer) => selectedDrawers.includes(drawer.id))
+    .map((drawer) => ({ id: drawer.id, name: drawer.name }));
+  const selectedTagPreview = tags
+    .filter((tag) => selectedTags.includes(tag.id))
+    .map((tag) => ({ id: tag.id, name: tag.name }));
   const entryPalette = {
-    background: theme.colors.background,
-    surface: theme.colors.background,
-    text: theme.colors.text,
-    muted: theme.colors.textSecondary,
-    primary: theme.colors.primary,
-    border: theme.colors.border,
-    inverseText: theme.colors.background,
+    background: ENTRY_BACKGROUND,
+    surface: ENTRY_SURFACE,
+    text: ENTRY_TEXT,
+    muted: ENTRY_MUTED,
+    primary: ENTRY_PRIMARY,
+    border: ENTRY_ACCENT,
+    inverseText: "#F8F6F2",
   };
   const toolbarButtons: EntryMediaToolbarButton[] = [
     {
       key: "tags",
-      borderColor: selectedTags.length > 0 ? theme.colors.primary : theme.colors.border,
+      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
       onPress: () => setShowTagModal(true),
       accessibilityLabel: "Manage tags",
       accessibilityHint: `${selectedTags.length} tags selected`,
-      content: <Text style={styles.toolbarIcon}>🏷️</Text>,
+      content: (
+        <MaterialCommunityIcons
+          name="tag-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
     },
     {
       key: "drawers",
-      borderColor: selectedDrawers.length > 0 ? theme.colors.primary : theme.colors.border,
+      borderColor: selectedDrawers.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Manage drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
-      content: <Text style={styles.toolbarIcon}>📁</Text>,
+      content: (
+        <MaterialCommunityIcons
+          name="archive-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
     },
     {
       key: "images",
-      borderColor: totalImages > 0 ? theme.colors.primary : theme.colors.border,
+      borderColor: totalImages > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
       onPress: pickImages,
       disabled: totalImages >= MAX_IMAGES,
       accessibilityLabel: "Add images",
       accessibilityHint: `${totalImages}/${MAX_IMAGES} images`,
-      content: <Text style={styles.toolbarIcon}>🖼️</Text>,
+      content: (
+        <MaterialCommunityIcons
+          name="image-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
     },
     {
-      key: "camera",
-      borderColor: theme.colors.border,
-      onPress: takePhoto,
-      disabled: totalImages >= MAX_IMAGES,
-      accessibilityLabel: "Take photo",
-      content: <Text style={styles.toolbarIcon}>📷</Text>,
+      key: "audio",
+      borderColor: audioUri ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: playAudio,
+      disabled: !audioUri,
+      accessibilityLabel: "Play audio memo",
+      content: (
+        <MaterialCommunityIcons
+          name="play-circle-outline"
+          size={34}
+          color={ENTRY_PRIMARY}
+        />
+      ),
     },
     {
-      key: "mood",
-      borderColor: mood ? theme.colors.primary : theme.colors.border,
-      onPress: () => setShowMoodPicker(true),
-      accessibilityLabel: "Change mood",
-      accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
-      content: <Text style={styles.toolbarIcon}>{mood ? MOOD_MAP[mood]?.emoji : "😊"}</Text>,
+      key: "record",
+      borderColor:
+        isRecording || audioUri ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      backgroundColor: isRecording ? `${theme.colors.error}20` : "transparent",
+      onPress: isRecording ? stopRecording : startRecording,
+      accessibilityLabel: isRecording ? "Stop recording" : "Record audio memo",
+      content: (
+        <MaterialCommunityIcons
+          name={isRecording ? "stop-circle-outline" : "microphone-outline"}
+          size={34}
+          color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
+        />
+      )
     },
   ];
 
   if (entryLoading) {
     return (
       <SafeArea>
-        <Screen style={styles.container}>
+        <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={ENTRY_PRIMARY} />
           </View>
         </Screen>
       </SafeArea>
@@ -351,9 +509,9 @@ export function EditEntryScreen() {
   if (!entry) {
     return (
       <SafeArea>
-        <Screen style={styles.container}>
+        <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
           <View style={styles.loaderContainer}>
-            <Text style={[theme.typography.body, { color: theme.colors.text }]}>
+            <Text style={[theme.typography.body, { color: ENTRY_TEXT }]}>
               Entry not found
             </Text>
           </View>
@@ -364,16 +522,17 @@ export function EditEntryScreen() {
 
   return (
     <SafeArea>
-      <Screen style={styles.container}>
+      <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
             onPress={handleBack}
+            style={styles.headerBack}
             accessible
             accessibilityLabel="Go back"
           >
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
-              ←
+            <Text style={[theme.typography.body, styles.headerBackText]}>
+              Back
             </Text>
           </TouchableOpacity>
           <Button
@@ -381,6 +540,8 @@ export function EditEntryScreen() {
             onPress={handleSubmit(onSubmit)}
             disabled={updateLoading}
             size="sm"
+            textStyle={{ color: "#FFFFFF", letterSpacing: 1.5 }}
+            style={styles.saveButton}
             accessibilityLabel="Save changes"
           />
         </View>
@@ -396,16 +557,24 @@ export function EditEntryScreen() {
             render={({ field: { onChange, value } }) => (
               <TextInput
                 style={[
-                  theme.typography.h2,
+                  styles.titleInput,
                   {
-                    color: theme.colors.text,
-                    marginBottom: theme.spacing.md,
+                    color: ENTRY_TEXT,
+                    fontFamily: theme.fonts.serif,
                   },
                 ]}
-                placeholder="Entry title"
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholder="Add a title"
+                placeholderTextColor={theme.colors.accent2}
                 value={value}
                 onChangeText={onChange}
+                cursorColor={ENTRY_PRIMARY}
+                selectionColor={ENTRY_PRIMARY}
+                underlineColorAndroid="transparent"
+                autoCorrect={false}
+                autoCapitalize="sentences"
+                returnKeyType="done"
+                spellCheck={false}
+                focusable
                 accessibilityLabel="Entry title"
               />
             )}
@@ -413,37 +582,34 @@ export function EditEntryScreen() {
 
           {errors.title && (
             <Text
-              style={[theme.typography.bodySm, { color: theme.colors.error }]}
+              style={[theme.typography.bodySm, { color: theme.colors.error, marginBottom: 6 }]}
             >
               {errors.title.message}
             </Text>
           )}
 
-          {/* Date (read-only) */}
-          <Text
-            style={[
-              theme.typography.body,
-              {
-                color: theme.colors.textSecondary,
-                marginBottom: theme.spacing.lg,
-              },
-            ]}
-          >
-            {new Date(entry.createdAt).toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </Text>
+          <View style={styles.metaRow}>
+            <View style={styles.inlineMetaItem}>
+              <MaterialCommunityIcons
+                name="calendar-blank-outline"
+                size={24}
+                color={ENTRY_PRIMARY}
+              />
+              <Text style={styles.inlineMetaText}>{formattedDate}</Text>
+            </View>
+          </View>
 
-          <EntryMediaToolbar buttons={toolbarButtons} />
+          <EntryMediaToolbar
+            buttons={toolbarButtons}
+            containerStyle={styles.toolbar}
+            buttonStyle={styles.toolbarButton}
+          />
 
           <EntryImageStrip
             title="Existing Images"
             items={visibleExistingImages}
             titleColor={theme.colors.textSecondary}
-            onRemove={(imageUri) => removeExistingImage(imageUri)}
+            onRemove={(imageUri) => requestRemoveExistingImage(imageUri)}
             getItemAccessibilityLabel={() => "Existing image"}
           />
 
@@ -451,9 +617,77 @@ export function EditEntryScreen() {
             title="New Images"
             items={newImageUris}
             titleColor={theme.colors.textSecondary}
-            onRemove={(_, index) => removeNewImage(index)}
+            onRemove={(_, index) => requestRemoveNewImage(index)}
             getItemAccessibilityLabel={(index) => `New image ${index + 1}`}
           />
+
+          {audioUri && (
+            <View style={[styles.audioBox, { borderColor: ENTRY_ACCENT }]}>
+              <View style={styles.audioContent}>
+                <Text
+                  style={[theme.typography.body, { color: ENTRY_TEXT }]}
+                >
+                  🎙️ Voice Memo
+                </Text>
+                <TouchableOpacity
+                  onPress={playAudio}
+                  accessible
+                  accessibilityLabel="Play voice memo"
+                  accessibilityRole="button"
+                >
+                  <Text
+                    style={[
+                      theme.typography.bodySm,
+                      { color: ENTRY_TEXT },
+                    ]}
+                  >
+                    Play
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={removeAudio}
+                accessible
+                accessibilityLabel="Remove voice memo"
+              >
+                <Text
+                  style={[theme.typography.body, { color: theme.colors.error }]}
+                >
+                  ✕
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {(selectedDrawerPreview.length > 0 || selectedTagPreview.length > 0) && (
+            <View style={styles.linkedPreviewSection}>
+              {selectedDrawerPreview.length > 0 && (
+                <>
+                  <Text style={styles.linkedPreviewLabel}>Linked Drawers</Text>
+                  <View style={styles.linkedChipRow}>
+                    {selectedDrawerPreview.map((drawer) => (
+                      <View key={`drawer-${drawer.id}`} style={styles.linkedChip}>
+                        <Text style={styles.linkedChipText}>{drawer.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+              {selectedTagPreview.length > 0 && (
+                <>
+                  <Text style={styles.linkedPreviewLabel}>Linked Tags</Text>
+                  <View style={styles.linkedChipRow}>
+                    {selectedTagPreview.map((tag) => (
+                      <View key={`tag-${tag.id}`} style={styles.linkedChip}>
+                        <Text style={styles.linkedChipText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+          )}
 
           {/* Content */}
           <Controller
@@ -464,12 +698,13 @@ export function EditEntryScreen() {
                 style={[
                   styles.contentInput,
                   {
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text,
+                    borderColor: ENTRY_ACCENT,
+                    color: ENTRY_TEXT,
+                    backgroundColor: ENTRY_SURFACE,
                   },
                 ]}
-                placeholder="Edit entry content..."
-                placeholderTextColor={theme.colors.textSecondary}
+                placeholder="Start writing..."
+                placeholderTextColor={ENTRY_MUTED}
                 value={value}
                 onChangeText={onChange}
                 multiline
@@ -489,18 +724,6 @@ export function EditEntryScreen() {
           )}
         </ScrollView>
 
-        <EntryMoodPickerModal
-          visible={showMoodPicker}
-          selectedMood={mood}
-          onSelectMood={(moodValue) => setValue("mood", moodValue)}
-          onClose={() => setShowMoodPicker(false)}
-          backgroundColor={entryPalette.background}
-          textColor={entryPalette.text}
-          borderColor={entryPalette.border}
-          surfaceColor="transparent"
-          primaryColor={entryPalette.primary}
-        />
-
         <EntrySelectionModal
           visible={showDrawerModal}
           title="Select Drawers"
@@ -517,7 +740,7 @@ export function EditEntryScreen() {
           placeholderTextColor={entryPalette.muted}
           textColor={entryPalette.text}
           backgroundColor={entryPalette.background}
-          surfaceColor="transparent"
+          surfaceColor={entryPalette.surface}
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
@@ -539,11 +762,42 @@ export function EditEntryScreen() {
           placeholderTextColor={entryPalette.muted}
           textColor={entryPalette.text}
           backgroundColor={entryPalette.background}
-          surfaceColor="transparent"
+          surfaceColor={entryPalette.surface}
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
         />
+
+        <Modal
+          visible={pendingImageRemoval !== null}
+          onClose={() => setPendingImageRemoval(null)}
+          animationType="fade"
+          backdropStyle={styles.actionBackdrop}
+          contentStyle={styles.actionModal}
+        >
+          <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
+            Delete Image
+          </Text>
+          <Text style={[theme.typography.body, styles.actionSubtitle, { color: ENTRY_MUTED }]}>
+            Are you sure you want to delete this image?
+          </Text>
+          <View style={styles.actionRow}>
+            <Button
+              label="Cancel"
+              onPress={() => setPendingImageRemoval(null)}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
+              textStyle={{ color: ENTRY_CANCEL_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={confirmRemoveImage}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_DANGER, borderColor: ENTRY_DANGER }]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -558,7 +812,22 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 40,
+    paddingBottom: 12,
+  },
+  headerBack: {
+    paddingVertical: 8,
+    paddingRight: 12,
+  },
+  headerBackText: {
+    color: ENTRY_MUTED,
+    fontWeight: "500",
+  },
+  saveButton: {
+    minHeight: 38,
+    borderRadius: 999,
+    backgroundColor: ENTRY_SECONDARY,
+    paddingHorizontal: 20,
   },
   content: {
     paddingHorizontal: 20,
@@ -572,125 +841,124 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 24,
-    marginTop: 12,
+    gap: 8,
+    marginBottom: 14,
+    marginTop: 4,
   },
   toolbarButton: {
-    width: "22%",
-    aspectRatio: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  toolbarIcon: {
-    fontSize: 24,
-  },
-  contentInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    minHeight: 200,
-    marginTop: 12,
-  },
-  imageWrapper: {
-    position: "relative",
-    marginRight: 12,
-    marginBottom: 12,
-  },
-  image: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
-  },
-  removeImageButton: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#FF6B6B",
-    borderRadius: 12,
-    width: 24,
-    height: 24,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  removeImageText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  moodPicker: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-  },
-  moodGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  moodOption: {
-    width: "22%",
+    width: "17.6%",
     aspectRatio: 1,
     borderWidth: 2,
-    borderRadius: 12,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
   },
-  moodText: {
-    fontSize: 28,
+  toolbarMoodIcon: {
+    fontSize: 34,
   },
-  modalContainer: {
-    flex: 1,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  modalContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: 40,
-  },
-  inputRow: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "center",
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontFamily: "System",
-    fontSize: 14,
-  },
-  modalItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderRadius: 8,
+  titleInput: {
+    fontSize: 46,
+    lineHeight: 54,
+    fontWeight: "400",
     marginBottom: 8,
   },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderRadius: 4,
-    marginRight: 12,
-    justifyContent: "center",
+  metaRow: {
+    flexDirection: "row",
     alignItems: "center",
+    marginBottom: 12,
+  },
+  inlineMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 20,
+  },
+  inlineMetaText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: ENTRY_MUTED,
+    maxWidth: 220,
+  },
+  contentInput: {
+    borderWidth: 1.5,
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    minHeight: 200,
+    marginTop: 12,
+    fontSize: 19,
+    lineHeight: 30,
+  },
+  audioBox: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FFFFFF",
+  },
+  audioContent: {
+    gap: 4,
+  },
+  linkedPreviewSection: {
+    marginBottom: 14,
+    gap: 8,
+  },
+  linkedPreviewLabel: {
+    color: ENTRY_MUTED,
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  linkedChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 6,
+  },
+  linkedChip: {
+    borderWidth: 1,
+    borderColor: ENTRY_ACCENT,
+    backgroundColor: ENTRY_SURFACE,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  linkedChipText: {
+    color: ENTRY_TEXT,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  actionBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  actionModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: ENTRY_SURFACE,
+  },
+  actionTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  actionSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  actionButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
   },
 });
