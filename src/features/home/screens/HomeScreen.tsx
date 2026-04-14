@@ -413,6 +413,20 @@ export function HomeScreen() {
                           ]}
                         >
                           <TouchableOpacity
+                            onPress={() => openEntryMenu(entry)}
+                            style={styles.entryMore}
+                            accessible
+                            accessibilityLabel={`More options for ${entry.title || "Untitled Entry"}`}
+                            accessibilityRole="button"
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <MaterialCommunityIcons
+                              name="dots-vertical"
+                              size={22}
+                              color={theme.colors.textDisabled}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity
                             style={styles.entryContent}
                             onPress={() => handleEntryPress(entry.id)}
                             accessible
@@ -493,22 +507,6 @@ export function HomeScreen() {
                               </View>
                             )}
                           </TouchableOpacity>
-                          <View style={styles.entryActions}>
-                            <TouchableOpacity
-                              onPress={() => openEntryMenu(entry)}
-                              style={styles.entryMore}
-                              accessible
-                              accessibilityLabel={`More options for ${entry.title || "Untitled Entry"}`}
-                              accessibilityRole="button"
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                              <MaterialCommunityIcons
-                                name="dots-vertical"
-                                size={22}
-                                color={theme.colors.textDisabled}
-                              />
-                            </TouchableOpacity>
-                          </View>
                         </View>
                       ))}
                     </View>
@@ -872,21 +870,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   entryCard: {
+    position: "relative",
     borderRadius: 22,
     marginBottom: 14,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
-    flexDirection: "row",
-    alignItems: "flex-start",
     paddingVertical: 18,
     paddingLeft: 18,
-    paddingRight: 10,
+    paddingRight: 18,
   },
   entryContent: {
     flex: 1,
-    paddingRight: 12,
+    paddingRight: 34,
   },
   entryHeader: {
     flexDirection: "row",
@@ -896,12 +893,6 @@ const styles = StyleSheet.create({
   entryTitle: {
     flex: 1,
     fontWeight: "400",
-  },
-  entryActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "center",
-    marginLeft: 8,
   },
   entryTags: {
     flexDirection: "row",
@@ -915,12 +906,15 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   entryMore: {
+    position: "absolute",
+    top: 12,
+    right: 10,
     width: 32,
     height: 32,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    alignSelf: "center",
+    zIndex: 1,
   },
   drawerCard: {
     flexDirection: "row",

@@ -1,6 +1,10 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
+import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
+import { useUpdateDrawer } from "@features/drawers/hooks/useUpdateDrawer";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { Drawer } from "@types";
@@ -12,6 +16,7 @@ import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -26,6 +31,10 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
+const CANCEL_BUTTON_BG = "#E3E1DC";
+const CANCEL_BUTTON_BORDER = "#C9C4BB";
+const CANCEL_BUTTON_TEXT = "#5F6368";
+const DELETE_BUTTON_BG = "#A6544E";
 
 const STARTER_DRAWER: DrawerListItem = {
   id: "starter-drawer",
@@ -41,24 +50,147 @@ const STARTER_DRAWER: DrawerListItem = {
 export function DrawersScreen() {
   const theme = useTheme();
   const { drawers, isLoading, fetchDrawers } = useDrawers();
+  const { createDrawer, isLoading: isCreatingDrawer } = useCreateDrawer();
+  const { updateDrawer, isLoading: isUpdatingDrawer } = useUpdateDrawer();
+  const { deleteDrawer, isLoading: isDeletingDrawer } = useDeleteDrawer();
   const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
+  const [newDrawerName, setNewDrawerName] = useState("");
+  const [drawerMenuTarget, setDrawerMenuTarget] = useState<DrawerListItem | null>(null);
+  const [deleteDrawerTarget, setDeleteDrawerTarget] = useState<DrawerListItem | null>(null);
+  const [editingDrawer, setEditingDrawer] = useState<DrawerListItem | null>(null);
+  const [editDrawerName, setEditDrawerName] = useState("");
   const hasRealDrawers = drawers.length > 0;
   const displayDrawers: DrawerListItem[] = hasRealDrawers ? drawers : [STARTER_DRAWER];
 
   const handleCreateDrawer = useCallback(() => {
-    Alert.alert(
-      "Create Drawer",
-      "Drawer creation will live here next. For now, you can create drawers while writing a new entry.",
-    );
+    setNewDrawerName("");
+    setIsCreateDrawerOpen(true);
   }, []);
 
-  const handleEditDrawers = useCallback(() => {
-    Alert.alert(
-      "Edit Drawers",
-      "Drawer editing options will live here next. You can already open existing drawers from this page.",
-    );
+  const handleEditDrawers = useCallback((drawer: DrawerListItem) => {
+    if (drawer.id === STARTER_DRAWER.id) {
+      Alert.alert(
+        "Not available yet",
+        "The starter drawer can't be renamed. Create a custom drawer to edit it.",
+      );
+      return;
+    }
+
+    setEditingDrawer(drawer);
+    setEditDrawerName(drawer.name);
   }, []);
+
+  const openDrawerMenu = useCallback((drawer: DrawerListItem) => {
+    setDrawerMenuTarget(drawer);
+  }, []);
+
+  const closeDrawerMenu = useCallback(() => {
+    setDrawerMenuTarget(null);
+  }, []);
+
+  const closeCreateDrawerModal = useCallback(() => {
+    setIsCreateDrawerOpen(false);
+    setNewDrawerName("");
+  }, []);
+
+  const closeEditDrawerModal = useCallback(() => {
+    setEditingDrawer(null);
+    setEditDrawerName("");
+  }, []);
+
+  const handleSaveDrawer = useCallback(async () => {
+    const trimmedName = newDrawerName.trim();
+
+    if (!trimmedName) {
+      Alert.alert("Name required", "Please enter a name for your drawer.");
+      return;
+    }
+
+    const created = await createDrawer({ name: trimmedName, color: PAGE_PRIMARY });
+
+    if (!created) {
+      Alert.alert("Unable to create drawer", "Please try a different name.");
+      return;
+    }
+
+    closeCreateDrawerModal();
+    await fetchDrawers();
+  }, [closeCreateDrawerModal, createDrawer, fetchDrawers, newDrawerName]);
+
+  const handleUpdateDrawer = useCallback(async () => {
+    if (!editingDrawer) {
+      return;
+    }
+
+    const trimmedName = editDrawerName.trim();
+
+    if (!trimmedName) {
+      Alert.alert("Name required", "Please enter a name for your drawer.");
+      return;
+    }
+
+    const updated = await updateDrawer(editingDrawer.id, { name: trimmedName });
+
+    if (!updated) {
+      Alert.alert("Unable to update drawer", "Please try again.");
+      return;
+    }
+
+    closeEditDrawerModal();
+    await fetchDrawers();
+  }, [
+    closeEditDrawerModal,
+    editDrawerName,
+    editingDrawer,
+    fetchDrawers,
+    updateDrawer,
+  ]);
+
+  const handleEditFromMenu = useCallback(() => {
+    if (!drawerMenuTarget) {
+      return;
+    }
+
+    const target = drawerMenuTarget;
+    setDrawerMenuTarget(null);
+    handleEditDrawers(target);
+  }, [drawerMenuTarget, handleEditDrawers]);
+
+  const handleDeletePrompt = useCallback(() => {
+    if (!drawerMenuTarget) {
+      return;
+    }
+
+    if (drawerMenuTarget.id === STARTER_DRAWER.id) {
+      setDrawerMenuTarget(null);
+      Alert.alert(
+        "Not available yet",
+        "The starter drawer can't be deleted.",
+      );
+      return;
+    }
+
+    setDeleteDrawerTarget(drawerMenuTarget);
+    setDrawerMenuTarget(null);
+  }, [drawerMenuTarget]);
+
+  const handleDeleteDrawer = useCallback(async () => {
+    if (!deleteDrawerTarget) {
+      return;
+    }
+
+    const success = await deleteDrawer(deleteDrawerTarget.id);
+
+    if (!success) {
+      Alert.alert("Unable to delete drawer", "Please try again.");
+      return;
+    }
+
+    setDeleteDrawerTarget(null);
+    await fetchDrawers();
+  }, [deleteDrawer, deleteDrawerTarget, fetchDrawers]);
 
   const handleSetLifePhase = useCallback(() => {
     router.push("/life-phases");
@@ -185,33 +317,10 @@ export function DrawersScreen() {
                     ]}
                   />
                 </View>
-
-                <View style={styles.topRow}>
-                  <TouchableOpacity
-                    style={[
-                      styles.secondaryAction,
-                      {
-                        borderColor: PAGE_BORDER,
-                        backgroundColor: PAGE_SURFACE,
-                        shadowColor: PAGE_TEXT,
-                      },
-                    ]}
-                    onPress={handleEditDrawers}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.body,
-                        { color: PAGE_TEXT, fontWeight: "700" },
-                      ]}
-                    >
-                      Edit
-                    </Text>
-                  </TouchableOpacity>
-                </View>
               </>
             }
             renderItem={({ item }) => (
-              <TouchableOpacity
+              <View
                 style={[
                   styles.card,
                   {
@@ -219,52 +328,58 @@ export function DrawersScreen() {
                     shadowColor: PAGE_TEXT,
                   },
                 ]}
-                onPress={() => {
-                  if (item.id === STARTER_DRAWER.id) {
-                    Alert.alert(
-                      "Starter Drawer",
-                      "This is your built-in drawer. Once you start creating entries and custom drawers, they will appear here.",
-                    );
-                    return;
-                  }
-
-                  router.push(`/drawers/${item.id}`);
-                }}
               >
-                <View
-                  style={[
-                    styles.icon,
-                    {
-                      backgroundColor: (item.color || PAGE_PRIMARY) + "22",
-                    },
-                  ]}
+                <TouchableOpacity
+                  style={styles.cardPressable}
+                  onPress={() => {
+                    if (item.id === STARTER_DRAWER.id) {
+                      Alert.alert(
+                        "Starter Drawer",
+                        "This is your built-in drawer. Once you start creating entries and custom drawers, they will appear here.",
+                      );
+                      return;
+                    }
+
+                    router.push(`/drawers/${item.id}`);
+                  }}
+                  accessible
+                  accessibilityLabel={`Open drawer ${item.name}`}
                 >
-                  <MaterialCommunityIcons
-                    name="archive-outline"
-                    size={26}
-                    color={item.color || PAGE_PRIMARY}
-                  />
-                </View>
-                <View style={styles.cardContent}>
-                  <Text
+                  <View
                     style={[
-                      styles.cardTitle,
-                      { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                      styles.icon,
+                      {
+                        backgroundColor: (item.color || PAGE_PRIMARY) + "22",
+                      },
                     ]}
                   >
-                    {item.name}
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: PAGE_MUTED, fontWeight: "600" },
+                    <MaterialCommunityIcons
+                      name="archive-outline"
+                      size={26}
+                      color={item.color || PAGE_PRIMARY}
+                    />
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text
+                      style={[
+                        styles.cardTitle,
+                        { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
                       ]}
                     >
-                    {item.entryCount} entries
-                  </Text>
-                </View>
+                      {item.name}
+                    </Text>
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        { color: PAGE_MUTED, fontWeight: "600" },
+                      ]}
+                    >
+                      {item.entryCount} entries
+                    </Text>
+                  </View>
+                </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={handleEditDrawers}
+                  onPress={() => openDrawerMenu(item)}
                   style={styles.cardMore}
                   accessible
                   accessibilityLabel={`More options for ${item.name}`}
@@ -275,7 +390,7 @@ export function DrawersScreen() {
                     color={theme.colors.textDisabled}
                   />
                 </TouchableOpacity>
-              </TouchableOpacity>
+              </View>
             )}
             ListFooterComponent={
               <View style={styles.helperPanel}>
@@ -297,6 +412,203 @@ export function DrawersScreen() {
         )}
 
         <AppBottomNav currentRoute="/drawers" />
+
+        <Modal
+          visible={!!drawerMenuTarget}
+          onClose={closeDrawerMenu}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text
+            style={[
+              styles.menuTitle,
+              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
+            {drawerMenuTarget?.name || "Drawer"}
+          </Text>
+          <Text style={[theme.typography.body, styles.menuSubtitle, { color: PAGE_MUTED }]}>
+            Choose what you want to do with this drawer.
+          </Text>
+          <Button
+            label="Edit"
+            onPress={handleEditFromMenu}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuEditButton]}
+            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Delete"
+            onPress={handleDeletePrompt}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuDeleteButton]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={closeDrawerMenu}
+            variant="primary"
+            style={[
+              styles.menuActionButton,
+              { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+            ]}
+            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+          />
+        </Modal>
+
+        <Modal
+          visible={!!deleteDrawerTarget}
+          onClose={() => setDeleteDrawerTarget(null)}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text
+            style={[
+              styles.menuTitle,
+              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
+            Delete Drawer
+          </Text>
+          <Text style={[theme.typography.body, styles.menuSubtitle, { color: PAGE_MUTED }]}>
+            Are you sure you want to delete this drawer?
+          </Text>
+          <View style={styles.confirmActions}>
+            <Button
+              label="Cancel"
+              onPress={() => setDeleteDrawerTarget(null)}
+              variant="primary"
+              style={[
+                styles.confirmButton,
+                { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+              ]}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={handleDeleteDrawer}
+              loading={isDeletingDrawer}
+              variant="primary"
+              style={[styles.confirmButton, styles.menuDeleteButton]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={isCreateDrawerOpen}
+          onClose={closeCreateDrawerModal}
+          backdropStyle={styles.drawerModalBackdrop}
+          contentStyle={styles.drawerModal}
+        >
+          <Text
+            style={[
+              styles.drawerModalTitle,
+              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
+            Create Drawer
+          </Text>
+          <Text
+            style={[
+              styles.drawerModalMessage,
+              theme.typography.body,
+              { color: PAGE_MUTED },
+            ]}
+          >
+            Give this drawer a name so you can start organizing entries by theme,
+            season, or topic.
+          </Text>
+          <TextInput
+            value={newDrawerName}
+            onChangeText={setNewDrawerName}
+            placeholder="Drawer name"
+            placeholderTextColor="#8A8178"
+            style={[
+              styles.drawerInput,
+              {
+                color: PAGE_TEXT,
+                borderColor: theme.colors.accent1,
+                backgroundColor: "#F8F6F2",
+              },
+            ]}
+          />
+          <View style={styles.drawerModalActions}>
+            <Button
+              label="Cancel"
+              onPress={closeCreateDrawerModal}
+              variant="outline"
+              style={styles.drawerModalSecondaryButton}
+              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label="Create"
+              onPress={handleSaveDrawer}
+              loading={isCreatingDrawer}
+              variant="primary"
+              style={styles.drawerModalPrimaryButton}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!editingDrawer}
+          onClose={closeEditDrawerModal}
+          backdropStyle={styles.drawerModalBackdrop}
+          contentStyle={styles.drawerModal}
+        >
+          <Text
+            style={[
+              styles.drawerModalTitle,
+              { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
+            Edit Drawer
+          </Text>
+          <Text
+            style={[
+              styles.drawerModalMessage,
+              theme.typography.body,
+              { color: PAGE_MUTED },
+            ]}
+          >
+            Update the drawer name for {editingDrawer?.name}.
+          </Text>
+          <TextInput
+            value={editDrawerName}
+            onChangeText={setEditDrawerName}
+            placeholder="Drawer name"
+            placeholderTextColor="#8A8178"
+            style={[
+              styles.drawerInput,
+              {
+                color: PAGE_TEXT,
+                borderColor: theme.colors.accent1,
+                backgroundColor: "#F8F6F2",
+              },
+            ]}
+          />
+          <View style={styles.drawerModalActions}>
+            <Button
+              label="Cancel"
+              onPress={closeEditDrawerModal}
+              variant="outline"
+              style={styles.drawerModalSecondaryButton}
+              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            />
+            <Button
+              label="Save"
+              onPress={handleUpdateDrawer}
+              loading={isUpdatingDrawer}
+              variant="primary"
+              style={styles.drawerModalPrimaryButton}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -356,11 +668,6 @@ const styles = StyleSheet.create({
     fontWeight: "300",
     marginTop: 2,
   },
-  topRow: {
-    flexDirection: "row",
-    gap: 16,
-    marginBottom: 22,
-  },
   primaryAction: {
     minHeight: 92,
     borderRadius: 999,
@@ -396,9 +703,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: "300",
   },
-  secondaryAction: {
-    display: "none",
-  },
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -422,17 +726,21 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     paddingVertical: 18,
     paddingHorizontal: 18,
-    marginBottom: 18,
+    marginBottom: 14,
     shadowOpacity: 0.08,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4,
-    minHeight: 106,
+  },
+  cardPressable: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   icon: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -441,8 +749,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cardTitle: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: 24,
+    lineHeight: 30,
     fontWeight: "300",
   },
   cardMore: {
@@ -462,5 +770,93 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontStyle: "italic",
+  },
+  menuBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  menuModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: PAGE_SURFACE,
+  },
+  menuTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  menuSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  menuActionButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  menuEditButton: {
+    backgroundColor: "#DFE8D9",
+    borderColor: "#C9D8C0",
+  },
+  menuDeleteButton: {
+    backgroundColor: DELETE_BUTTON_BG,
+    borderColor: DELETE_BUTTON_BG,
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  confirmButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
+  },
+  drawerModalBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  drawerModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: PAGE_SURFACE,
+  },
+  drawerModalTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 8,
+  },
+  drawerModalMessage: {
+    lineHeight: 24,
+    marginBottom: 16,
+  },
+  drawerInput: {
+    minHeight: 54,
+    borderRadius: 18,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  drawerModalActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  drawerModalPrimaryButton: {
+    flex: 1,
+    borderRadius: 999,
+    backgroundColor: PAGE_PRIMARY,
+    borderColor: PAGE_PRIMARY,
+  },
+  drawerModalSecondaryButton: {
+    flex: 1,
+    borderRadius: 999,
+    borderColor: PAGE_BORDER,
+    backgroundColor: "#FFFFFF",
   },
 });

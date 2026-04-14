@@ -37,9 +37,14 @@ const ITEMS: {
 export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
   return (
     <View style={styles.wrap} pointerEvents="box-none">
-      <View style={styles.container}>
-        <BlurView intensity={36} tint="light" style={styles.blurLayer} />
-        <View style={styles.row}>
+      <View style={styles.container} pointerEvents="box-none">
+        <BlurView
+          intensity={36}
+          tint="light"
+          style={styles.blurLayer}
+          pointerEvents="none"
+        />
+        <View style={styles.row} pointerEvents="auto">
           {ITEMS.slice(0, 2).map((item) => {
             const isActive = currentRoute === item.route;
 
@@ -112,15 +117,15 @@ export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    left: 20,
-    right: 20,
-    bottom: 24,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   container: {
-    borderRadius: 22,
+    borderRadius: 0,
     backgroundColor: NAV_BACKGROUND,
     overflow: "hidden",
-    paddingHorizontal: 12,
+    paddingHorizontal: 18,
     paddingTop: 12,
     paddingBottom: 14,
     shadowColor: NAV_SHADOW,

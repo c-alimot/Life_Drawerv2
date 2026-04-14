@@ -1,5 +1,5 @@
+import { authApi } from "@features/auth/api/auth.api";
 import {
-  clearOnboardingCompleted,
   getOnboardingCompleted,
 } from "@features/auth/utils/onboarding";
 import { supabase } from "@services/supabase";
@@ -56,16 +56,19 @@ export default function RootLayout() {
     const initialize = async () => {
       setLoading(true);
 
-      await Promise.all([clearOnboardingCompleted(), supabase.auth.signOut()]);
+      if (!isMounted) return;
+
+      const [onboardingCompleted, sessionResult] = await Promise.all([
+        getOnboardingCompleted(),
+        authApi.getSession(),
+      ]);
 
       if (!isMounted) return;
 
-      setHasCompletedOnboardingState(false);
-      setUser(null);
+      setHasCompletedOnboardingState(onboardingCompleted);
+      setUser(sessionResult.data?.user ?? null);
       setLoading(false);
       setIsBootstrapping(false);
-      return;
-
     };
 
     initialize();

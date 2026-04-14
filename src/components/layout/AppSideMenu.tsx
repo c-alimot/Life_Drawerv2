@@ -56,6 +56,10 @@ export function AppSideMenu({
   const theme = useTheme();
   const { logout } = useLogout();
 
+  if (!visible) {
+    return null;
+  }
+
   const navigateTo = (route: MenuRoute) => {
     onClose();
     if (route === currentRoute) {
