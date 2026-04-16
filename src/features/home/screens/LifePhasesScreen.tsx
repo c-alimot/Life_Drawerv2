@@ -199,14 +199,6 @@ export function LifePhasesScreen() {
             >
               <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
             </TouchableOpacity>
-            <Text
-              style={[
-                styles.pageTitle,
-                { color: PAGE_MUTED },
-              ]}
-            >
-              Life Phases
-            </Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
@@ -820,12 +812,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pageTitle: {
-    marginLeft: 12,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "300",
-  },
   loader: {
     flex: 1,
     alignItems: "center",
@@ -1015,7 +1001,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
   },
   fieldErrorText: {
-    color: "#A6544E",
+    color: "#8B2D2A",
     marginTop: -6,
     marginBottom: 10,
     fontSize: 13,

@@ -7,7 +7,7 @@ import type { Profile } from "@types";
 import { useAuthStore } from "@store";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -167,6 +167,15 @@ export default function RootLayout() {
     );
   }
 
+  const analytics =
+    Platform.OS === "web"
+      ? (() => {
+          const { Analytics } = require("@vercel/analytics/react");
+
+          return <Analytics />;
+        })()
+      : null;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
@@ -181,6 +190,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="signup" />
         </Stack>
+        {analytics}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

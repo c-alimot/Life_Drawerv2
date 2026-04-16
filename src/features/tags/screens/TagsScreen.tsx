@@ -100,25 +100,6 @@ export function TagsScreen() {
             <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
               <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSetLifePhase}
-              accessible
-              accessibilityLabel={
-                activePhase
-                  ? `Current life phase: ${activePhase.name}`
-                  : "Set life phase"
-              }
-              accessibilityHint="Tap to set or change your current life phase"
-            >
-              <Text
-                style={[
-                  styles.pageTitle,
-                  { color: PAGE_MUTED, fontWeight: "300" },
-                ]}
-              >
-                {activePhase ? activePhase.name : "Set Life Phase"}
-              </Text>
-            </TouchableOpacity>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
@@ -444,12 +425,6 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-  },
-  pageTitle: {
-    marginLeft: 12,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "300",
   },
   loader: {
     flex: 1,

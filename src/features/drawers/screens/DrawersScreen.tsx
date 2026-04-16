@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
 import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -9,11 +10,12 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { Drawer } from "@types";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -35,6 +37,7 @@ const CANCEL_BUTTON_BG = "#E3E1DC";
 const CANCEL_BUTTON_BORDER = "#C9C4BB";
 const CANCEL_BUTTON_TEXT = "#5F6368";
 const DELETE_BUTTON_BG = "#A6544E";
+const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
 
 const STARTER_DRAWER: DrawerListItem = {
   id: "starter-drawer",
@@ -46,6 +49,19 @@ const STARTER_DRAWER: DrawerListItem = {
   createdAt: new Date(0).toISOString(),
   updatedAt: new Date(0).toISOString(),
 };
+
+const webStorage = {
+  async getItem(key: string) {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  },
+  async setItem(key: string, value: string) {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  },
+};
+
+const starterDrawerStorage = Platform.OS === "web" ? webStorage : AsyncStorage;
 
 export function DrawersScreen() {
   const theme = useTheme();
@@ -61,8 +77,23 @@ export function DrawersScreen() {
   const [deleteDrawerTarget, setDeleteDrawerTarget] = useState<DrawerListItem | null>(null);
   const [editingDrawer, setEditingDrawer] = useState<DrawerListItem | null>(null);
   const [editDrawerName, setEditDrawerName] = useState("");
-  const hasRealDrawers = drawers.length > 0;
-  const displayDrawers: DrawerListItem[] = hasRealDrawers ? drawers : [STARTER_DRAWER];
+  const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
+  const displayDrawers: DrawerListItem[] = isStarterDrawerHidden
+    ? drawers
+    : [STARTER_DRAWER, ...drawers];
+
+  useEffect(() => {
+    const loadStarterDrawerPreference = async () => {
+      try {
+        const value = await starterDrawerStorage.getItem(STARTER_DRAWER_HIDDEN_KEY);
+        setIsStarterDrawerHidden(value === "true");
+      } catch {
+        setIsStarterDrawerHidden(false);
+      }
+    };
+
+    loadStarterDrawerPreference();
+  }, []);
 
   const handleCreateDrawer = useCallback(() => {
     setNewDrawerName("");
@@ -163,15 +194,6 @@ export function DrawersScreen() {
       return;
     }
 
-    if (drawerMenuTarget.id === STARTER_DRAWER.id) {
-      setDrawerMenuTarget(null);
-      Alert.alert(
-        "Not available yet",
-        "The starter drawer can't be deleted.",
-      );
-      return;
-    }
-
     setDeleteDrawerTarget(drawerMenuTarget);
     setDrawerMenuTarget(null);
   }, [drawerMenuTarget]);
@@ -179,6 +201,18 @@ export function DrawersScreen() {
   const handleDeleteDrawer = useCallback(async () => {
     if (!deleteDrawerTarget) {
       return;
+    }
+
+    if (deleteDrawerTarget.id === STARTER_DRAWER.id) {
+      try {
+        await starterDrawerStorage.setItem(STARTER_DRAWER_HIDDEN_KEY, "true");
+        setIsStarterDrawerHidden(true);
+        setDeleteDrawerTarget(null);
+        return;
+      } catch {
+        Alert.alert("Unable to remove drawer", "Please try again.");
+        return;
+      }
     }
 
     const success = await deleteDrawer(deleteDrawerTarget.id);
@@ -220,25 +254,6 @@ export function DrawersScreen() {
             >
               <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSetLifePhase}
-              accessible
-              accessibilityLabel={
-                activePhase
-                  ? `Current life phase: ${activePhase.name}`
-                  : "Set life phase"
-              }
-              accessibilityHint="Tap to set or change your current life phase"
-            >
-              <Text
-                style={[
-                  styles.pageTitle,
-                  { color: PAGE_MUTED, fontWeight: "300" },
-                ]}
-              >
-                {activePhase ? activePhase.name : "Set Life Phase"}
-              </Text>
-            </TouchableOpacity>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
@@ -274,6 +289,83 @@ export function DrawersScreen() {
                     </Text>
                   </Text>
                 </View>
+
+                {activePhase ? (
+                  <View style={styles.lifePhaseSection}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Text
+                        style={[
+                          theme.typography.bodySm,
+                          styles.sectionHeaderText,
+                          { color: PAGE_MUTED },
+                        ]}
+                      >
+                        Life Phase
+                      </Text>
+                      <View
+                        style={[
+                          styles.sectionDivider,
+                          { backgroundColor: theme.colors.accent1 },
+                        ]}
+                      />
+                    </View>
+
+                    <View
+                      style={[
+                        styles.lifePhaseCard,
+                        {
+                          backgroundColor: PAGE_SURFACE,
+                          borderColor: theme.colors.accent1 + "AA",
+                        },
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.lifePhaseIcon,
+                          { backgroundColor: theme.colors.accent1 + "3D" },
+                        ]}
+                      >
+                        <MaterialCommunityIcons
+                          name="calendar-blank-outline"
+                          size={34}
+                          color={PAGE_PRIMARY}
+                        />
+                      </View>
+                      <Text
+                        style={[
+                          styles.lifePhaseTitle,
+                          { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                        ]}
+                      >
+                        {`Current Life Phase: ${activePhase.name}`}
+                      </Text>
+                      <Text
+                        style={[
+                          theme.typography.body,
+                          styles.lifePhaseBody,
+                          { color: PAGE_MUTED },
+                        ]}
+                      >
+                        {activePhase.description ||
+                          "This is the season of life currently shaping your reflections and helping you look back with more context."}
+                      </Text>
+                      <Button
+                        label="Manage Life Phase"
+                        onPress={handleSetLifePhase}
+                        variant="outline"
+                        textStyle={{ color: PAGE_PRIMARY }}
+                        style={[
+                          styles.lifePhaseButton,
+                          {
+                            backgroundColor: "transparent",
+                            borderColor: theme.colors.accent2,
+                          },
+                        ]}
+                        accessibilityLabel="Manage current life phase button"
+                      />
+                    </View>
+                  </View>
+                ) : null}
 
                 <TouchableOpacity
                   style={[
@@ -629,19 +721,12 @@ const styles = StyleSheet.create({
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    flexShrink: 1,
   },
   headerIconButton: {
     width: 40,
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-  },
-  pageTitle: {
-    marginLeft: 12,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "300",
   },
   loader: {
     flex: 1,
@@ -667,6 +752,44 @@ const styles = StyleSheet.create({
     lineHeight: 42,
     fontWeight: "300",
     marginTop: 2,
+  },
+  lifePhaseSection: {
+    marginBottom: 24,
+  },
+  lifePhaseCard: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderStyle: "solid",
+  },
+  lifePhaseIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  lifePhaseTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "300",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  lifePhaseBody: {
+    textAlign: "center",
+    lineHeight: 30,
+    marginBottom: 24,
+    maxWidth: 540,
+  },
+  lifePhaseButton: {
+    minHeight: 58,
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    borderWidth: 1,
   },
   primaryAction: {
     minHeight: 92,

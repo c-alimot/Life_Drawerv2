@@ -3,6 +3,7 @@ import { ApiError, LoginRequest, SignupRequest } from "@types";
 import { supabase } from "./client";
 
 const PROFILE_MEDIA_BUCKET = "entry-media";
+const SIGNED_URL_TTL_SECONDS = 3600;
 
 type ProfileRow = {
   id: string;
@@ -43,7 +44,7 @@ export const authService = {
       const profile = await this.ensureProfile(authUser);
 
       return {
-        user: this.mapProfile(authUser.email || request.email, profile),
+        user: await this.mapProfile(authUser.email || request.email, profile),
         session: {
           accessToken: session?.access_token || "",
           refreshToken: session?.refresh_token || "",
@@ -73,7 +74,7 @@ export const authService = {
       const profile = await this.ensureProfile(authUser);
 
       return {
-        user: this.mapProfile(authUser.email || request.email, profile),
+        user: await this.mapProfile(authUser.email || request.email, profile),
         session: {
           accessToken: session.access_token,
           refreshToken: session.refresh_token || "",
@@ -104,7 +105,7 @@ export const authService = {
       const profile = await this.ensureProfile(session.user);
 
       return {
-        user: this.mapProfile(session.user.email || "", profile),
+        user: await this.mapProfile(session.user.email || "", profile),
         session: {
           accessToken: session.access_token,
           refreshToken: session.refresh_token || "",
@@ -198,7 +199,7 @@ export const authService = {
         data: { user },
       } = await supabase.auth.getUser();
 
-      return this.mapProfile(user?.email || "", data as ProfileRow);
+      return await this.mapProfile(user?.email || "", data as ProfileRow);
     } catch (error) {
       console.error("Update profile error:", error);
       throw this.handleError(error);
@@ -220,11 +221,7 @@ export const authService = {
         throw error;
       }
 
-      const { data } = supabase.storage
-        .from(PROFILE_MEDIA_BUCKET)
-        .getPublicUrl(path);
-
-      return data.publicUrl;
+      return path;
     } catch (error) {
       console.error("Upload profile photo error:", error);
       throw this.handleError(error);
@@ -293,15 +290,84 @@ export const authService = {
     };
   },
 
-  mapProfile(email: string, profile: ProfileRow) {
+  async mapProfile(email: string, profile: ProfileRow) {
+    const avatarUrl = await this.resolveProfileAvatarUrl(profile.avatar_url);
+
     return {
       id: profile.id,
       email,
       displayName: profile.display_name ?? undefined,
-      avatarUrl: profile.avatar_url ?? undefined,
+      avatarUrl,
       createdAt: profile.created_at,
       updatedAt: profile.updated_at ?? profile.created_at,
     };
+  },
+
+  async resolveProfileAvatarUrl(value?: string | null) {
+    if (!value) {
+      return undefined;
+    }
+
+    if (this.isLocalUploadUri(value)) {
+      return undefined;
+    }
+
+    const path = this.isCanonicalProfileMediaPath(value)
+      ? value
+      : this.extractStoragePathFromUrl(value, PROFILE_MEDIA_BUCKET);
+
+    if (!path) {
+      return this.isRemoteUri(value) ? value : undefined;
+    }
+
+    const { data, error } = await supabase.storage
+      .from(PROFILE_MEDIA_BUCKET)
+      .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+
+    if (error || !data?.signedUrl) {
+      console.error("Resolve profile avatar URL error:", error);
+      return undefined;
+    }
+
+    return data.signedUrl;
+  },
+
+  isRemoteUri(value: string) {
+    return /^https?:\/\//i.test(value);
+  },
+
+  isLocalUploadUri(value: string) {
+    return /^(file|content|ph|assets-library):/i.test(value);
+  },
+
+  isCanonicalProfileMediaPath(value: string) {
+    return value.includes("/profile/");
+  },
+
+  extractStoragePathFromUrl(value: string, bucket: string) {
+    try {
+      const url = new URL(value);
+      const marker = `/storage/v1/object/${bucket}/`;
+      const publicMarker = `/storage/v1/object/public/${bucket}/`;
+      const signMarker = `/storage/v1/object/sign/${bucket}/`;
+      const pathname = url.pathname;
+
+      if (pathname.includes(publicMarker)) {
+        return decodeURIComponent(pathname.split(publicMarker)[1] || "");
+      }
+
+      if (pathname.includes(signMarker)) {
+        return decodeURIComponent(pathname.split(signMarker)[1] || "");
+      }
+
+      if (pathname.includes(marker)) {
+        return decodeURIComponent(pathname.split(marker)[1] || "");
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
   },
 
   getExtension(uri: string) {

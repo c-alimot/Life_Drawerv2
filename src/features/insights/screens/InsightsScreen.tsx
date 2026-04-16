@@ -1,4 +1,5 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { Button } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
@@ -26,12 +28,14 @@ const PAGE_BORDER = "#B39C87";
 export function InsightsScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
+  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      fetchActivePhase();
       fetchEntries();
-    }, [fetchEntries]),
+    }, [fetchActivePhase, fetchEntries]),
   );
 
   const archiveEntries = useMemo(() => entries ?? [], [entries]);
@@ -215,6 +219,10 @@ export function InsightsScreen() {
     },
   ] as const;
 
+  const handleSetLifePhase = useCallback(() => {
+    router.push("/life-phases");
+  }, []);
+
   if (isLoading) {
     return (
       <SafeArea>
@@ -242,14 +250,6 @@ export function InsightsScreen() {
             <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
               <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
             </TouchableOpacity>
-            <Text
-              style={[
-                styles.pageTitle,
-                { color: PAGE_MUTED },
-              ]}
-            >
-              Insights
-            </Text>
           </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
@@ -293,6 +293,73 @@ export function InsightsScreen() {
               {heroBody}
             </Text>
           </View>
+
+          {activePhase ? (
+            <View style={styles.lifePhaseSection}>
+              <View style={styles.sectionHeaderRow}>
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    styles.sectionHeaderText,
+                    { color: PAGE_MUTED },
+                  ]}
+                >
+                  Life Phase
+                </Text>
+                <View
+                  style={[
+                    styles.sectionDivider,
+                    { backgroundColor: theme.colors.accent1 },
+                  ]}
+                />
+              </View>
+
+              <View
+                style={[
+                  styles.lifePhaseCard,
+                  {
+                    backgroundColor: PAGE_SURFACE,
+                    borderColor: `${PAGE_BORDER}88`,
+                    shadowColor: PAGE_TEXT,
+                  },
+                ]}
+              >
+                <View style={styles.lifePhaseIcon}>
+                  <MaterialCommunityIcons
+                    name="calendar-blank-outline"
+                    size={34}
+                    color={PAGE_PRIMARY}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.lifePhaseTitle,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                  ]}
+                >
+                  {`Current Life Phase: ${activePhase.name}`}
+                </Text>
+                <Text style={[styles.lifePhaseBody, { color: PAGE_MUTED }]}>
+                  {activePhase.description ||
+                    "This is the season of life currently shaping your reflections and helping you look back with more context."}
+                </Text>
+                <Button
+                  label="Manage Life Phase"
+                  onPress={handleSetLifePhase}
+                  variant="outline"
+                  textStyle={{ color: PAGE_PRIMARY }}
+                  style={[
+                    styles.lifePhaseButton,
+                    {
+                      backgroundColor: "transparent",
+                      borderColor: PAGE_BORDER,
+                    },
+                  ]}
+                  accessibilityLabel="Manage current life phase button"
+                />
+              </View>
+            </View>
+          ) : null}
 
           <View style={styles.featureStack}>
             <View
@@ -502,12 +569,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pageTitle: {
-    marginLeft: 12,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "300",
-  },
   content: {
     paddingHorizontal: 28,
     paddingTop: 8,
@@ -527,6 +588,66 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 32,
     maxWidth: 560,
+  },
+  lifePhaseSection: {
+    marginBottom: 34,
+  },
+  sectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+  },
+  sectionHeaderText: {
+    textTransform: "uppercase",
+    letterSpacing: 2.6,
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 14,
+  },
+  sectionDivider: {
+    flex: 1,
+    height: 1,
+    opacity: 0.7,
+  },
+  lifePhaseCard: {
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
+  lifePhaseIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#F1ECE4",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  lifePhaseTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "300",
+    textAlign: "center",
+    marginBottom: 12,
+  },
+  lifePhaseBody: {
+    fontSize: 16,
+    lineHeight: 30,
+    textAlign: "center",
+    maxWidth: 540,
+    marginBottom: 24,
+  },
+  lifePhaseButton: {
+    minHeight: 58,
+    borderRadius: 999,
+    paddingHorizontal: 24,
+    borderWidth: 1,
   },
   featureStack: {
     gap: 18,

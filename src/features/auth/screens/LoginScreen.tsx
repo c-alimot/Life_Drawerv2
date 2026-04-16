@@ -1,8 +1,10 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Alert,
@@ -33,6 +35,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginScreen() {
   const theme = useTheme();
   const { login, isLoading, error } = useLogin();
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const {
     control,
@@ -124,7 +127,7 @@ export function LoginScreen() {
                 <Text
                   style={[
                     theme.typography.bodySm,
-                    { color: theme.colors.error },
+                    { color: theme.colors.errorText },
                   ]}
                   accessible
                   accessibilityRole="alert"
@@ -165,7 +168,7 @@ export function LoginScreen() {
                         style={[
                           theme.typography.bodySm,
                           styles.fieldError,
-                          { color: theme.colors.error },
+                          { color: theme.colors.errorText },
                         ]}
                       >
                         {errors.email.message}
@@ -189,22 +192,39 @@ export function LoginScreen() {
                 name="password"
                 render={({ field: { onChange, value } }) => (
                   <View style={styles.fieldBlock}>
-                    <TextInput
-                      style={fieldBaseStyle}
-                      placeholder="Enter your password"
-                      placeholderTextColor={AUTH_MUTED}
-                      value={value}
-                      onChangeText={onChange}
-                      secureTextEntry
-                      autoComplete="current-password"
-                      accessibilityLabel="Password input"
-                    />
+                    <View style={styles.passwordFieldWrap}>
+                      <TextInput
+                        style={[fieldBaseStyle, styles.passwordInput]}
+                        placeholder="Enter your password"
+                        placeholderTextColor={AUTH_MUTED}
+                        value={value}
+                        onChangeText={onChange}
+                        secureTextEntry={!isPasswordVisible}
+                        autoComplete="current-password"
+                        accessibilityLabel="Password input"
+                      />
+                      <TouchableOpacity
+                        onPress={() => setIsPasswordVisible((current) => !current)}
+                        style={styles.passwordToggle}
+                        accessible
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                          isPasswordVisible ? "Hide password" : "Show password"
+                        }
+                      >
+                        <MaterialCommunityIcons
+                          name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+                          size={22}
+                          color={AUTH_MUTED}
+                        />
+                      </TouchableOpacity>
+                    </View>
                     {errors.password?.message ? (
                       <Text
                         style={[
                           theme.typography.bodySm,
                           styles.fieldError,
-                          { color: theme.colors.error },
+                          { color: theme.colors.errorText },
                         ]}
                       >
                         {errors.password.message}
@@ -343,6 +363,19 @@ const styles = StyleSheet.create({
   },
   fieldBlock: {
     marginBottom: 8,
+  },
+  passwordFieldWrap: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 56,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 18,
+    height: 72,
+    justifyContent: "center",
   },
   fieldError: {
     marginTop: 8,

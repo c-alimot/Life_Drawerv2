@@ -1,3 +1,4 @@
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +45,8 @@ export function SignupScreen() {
   const theme = useTheme();
   const { signup, isLoading, error } = useSignup();
   const [isPasswordFocused, setIsPasswordFocused] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] = useState(false);
 
   const {
     control,
@@ -152,7 +155,7 @@ export function SignupScreen() {
               ]}
             >
               <Text
-                style={[theme.typography.bodySm, { color: theme.colors.error }]}
+                style={[theme.typography.bodySm, { color: theme.colors.errorText }]}
                 accessible
                 accessibilityRole="alert"
               >
@@ -190,7 +193,7 @@ export function SignupScreen() {
                       style={[
                         theme.typography.bodySm,
                         styles.fieldError,
-                        { color: theme.colors.error },
+                        { color: theme.colors.errorText },
                       ]}
                     >
                       {errors.fullName.message}
@@ -230,7 +233,7 @@ export function SignupScreen() {
                       style={[
                         theme.typography.bodySm,
                         styles.fieldError,
-                        { color: theme.colors.error },
+                        { color: theme.colors.errorText },
                       ]}
                     >
                       {errors.email.message}
@@ -254,18 +257,35 @@ export function SignupScreen() {
               name="password"
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldBlock}>
-                  <TextInput
-                    style={fieldBaseStyle}
-                    placeholder="Create a password"
-                    placeholderTextColor={AUTH_MUTED}
-                    value={value}
-                    onChangeText={onChange}
-                    onFocus={() => setIsPasswordFocused(true)}
-                    onBlur={() => setIsPasswordFocused(false)}
-                    secureTextEntry
-                    autoComplete="new-password"
-                    accessibilityLabel="Password input"
-                  />
+                  <View style={styles.passwordFieldWrap}>
+                    <TextInput
+                      style={[fieldBaseStyle, styles.passwordInput]}
+                      placeholder="Create a password"
+                      placeholderTextColor={AUTH_MUTED}
+                      value={value}
+                      onChangeText={onChange}
+                      onFocus={() => setIsPasswordFocused(true)}
+                      onBlur={() => setIsPasswordFocused(false)}
+                      secureTextEntry={!isPasswordVisible}
+                      autoComplete="new-password"
+                      accessibilityLabel="Password input"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setIsPasswordVisible((current) => !current)}
+                      style={styles.passwordToggle}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isPasswordVisible ? "Hide password" : "Show password"
+                      }
+                    >
+                      <MaterialCommunityIcons
+                        name={isPasswordVisible ? "eye-off-outline" : "eye-outline"}
+                        size={22}
+                        color={AUTH_MUTED}
+                      />
+                    </TouchableOpacity>
+                  </View>
                   {isPasswordFocused ? (
                     <View
                       style={[
@@ -349,7 +369,7 @@ export function SignupScreen() {
                       style={[
                         theme.typography.bodySm,
                         styles.fieldError,
-                        { color: theme.colors.error },
+                        { color: theme.colors.errorText },
                       ]}
                     >
                       {errors.password.message}
@@ -373,22 +393,47 @@ export function SignupScreen() {
               name="confirmPassword"
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldBlock}>
-                  <TextInput
-                    style={fieldBaseStyle}
-                    placeholder="Confirm your password"
-                    placeholderTextColor={AUTH_MUTED}
-                    value={value}
-                    onChangeText={onChange}
-                    secureTextEntry
-                    autoComplete="new-password"
-                    accessibilityLabel="Confirm password input"
-                  />
+                  <View style={styles.passwordFieldWrap}>
+                    <TextInput
+                      style={[fieldBaseStyle, styles.passwordInput]}
+                      placeholder="Confirm your password"
+                      placeholderTextColor={AUTH_MUTED}
+                      value={value}
+                      onChangeText={onChange}
+                      secureTextEntry={!isConfirmPasswordVisible}
+                      autoComplete="new-password"
+                      accessibilityLabel="Confirm password input"
+                    />
+                    <TouchableOpacity
+                      onPress={() =>
+                        setIsConfirmPasswordVisible((current) => !current)
+                      }
+                      style={styles.passwordToggle}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel={
+                        isConfirmPasswordVisible
+                          ? "Hide confirm password"
+                          : "Show confirm password"
+                      }
+                    >
+                      <MaterialCommunityIcons
+                        name={
+                          isConfirmPasswordVisible
+                            ? "eye-off-outline"
+                            : "eye-outline"
+                        }
+                        size={22}
+                        color={AUTH_MUTED}
+                      />
+                    </TouchableOpacity>
+                  </View>
                   {errors.confirmPassword?.message ? (
                     <Text
                       style={[
                         theme.typography.bodySm,
                         styles.fieldError,
-                        { color: theme.colors.error },
+                        { color: theme.colors.errorText },
                       ]}
                     >
                       {errors.confirmPassword.message}
@@ -448,12 +493,24 @@ export function SignupScreen() {
                 my journal entries are private and will never be shared.
               </Text>
             </TouchableOpacity>
+
+            {errors.agreeToTerms?.message ? (
+              <Text
+                style={[
+                  theme.typography.bodySm,
+                  styles.fieldError,
+                  { color: theme.colors.errorText },
+                ]}
+              >
+                {errors.agreeToTerms.message}
+              </Text>
+            ) : null}
           </View>
 
           <Button
             label={isLoading ? "CREATING ACCOUNT..." : "CREATE ACCOUNT"}
             onPress={handleSubmit(onSubmit)}
-            disabled={isLoading || !agreeToTerms}
+            disabled={isLoading}
             variant="primary"
             textStyle={{ color: "#FFFFFF" }}
             style={[
@@ -529,6 +586,19 @@ const styles = StyleSheet.create({
   },
   fieldBlock: {
     marginBottom: 8,
+  },
+  passwordFieldWrap: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 56,
+  },
+  passwordToggle: {
+    position: "absolute",
+    right: 18,
+    height: 72,
+    justifyContent: "center",
   },
   fieldError: {
     marginTop: 8,

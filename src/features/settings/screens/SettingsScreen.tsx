@@ -87,7 +87,7 @@ export function SettingsScreen() {
     "Life Drawer User";
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const profileImageUri = user?.avatarUrl;
-  const editorImageUri = selectedPhotoUri || user?.avatarUrl;
+  const editorImageUri = selectedPhotoUri ?? user?.avatarUrl;
   const editorAvatarLetter = (editedName.trim() || displayName).charAt(0).toUpperCase();
   const appVersion = Constants.expoConfig?.version || "1.0.0";
   const panelTitle =
@@ -111,15 +111,15 @@ export function SettingsScreen() {
 
   const openEditProfile = useCallback(() => {
     setEditedName(displayName);
-    setSelectedPhotoUri(user?.avatarUrl ?? null);
+    setSelectedPhotoUri(null);
     setIsEditProfileOpen(true);
-  }, [displayName, user?.avatarUrl]);
+  }, [displayName]);
 
   const closeEditProfile = useCallback(() => {
     setIsEditProfileOpen(false);
     setEditedName(displayName);
-    setSelectedPhotoUri(user?.avatarUrl ?? null);
-  }, [displayName, user?.avatarUrl]);
+    setSelectedPhotoUri(null);
+  }, [displayName]);
 
   const handlePickProfilePhoto = useCallback(async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -160,29 +160,28 @@ export function SettingsScreen() {
     setIsSavingProfile(true);
 
     try {
-      let nextAvatarUrl = user.avatarUrl;
+      const profileUpdates: { displayName: string; avatarUrl?: string } = {
+        displayName: trimmedName,
+      };
 
-      if (selectedPhotoUri && selectedPhotoUri !== user.avatarUrl) {
+      if (selectedPhotoUri) {
         const uploadResult = await authApi.uploadProfilePhoto(user.id, selectedPhotoUri);
 
         if (!uploadResult.success || !uploadResult.data) {
           throw uploadResult.error || new Error("Failed to upload profile photo");
         }
 
-        nextAvatarUrl = uploadResult.data;
+        profileUpdates.avatarUrl = uploadResult.data;
       }
 
-      const updateResult = await authApi.updateProfile(user.id, {
-        displayName: trimmedName,
-        avatarUrl: nextAvatarUrl,
-      });
+      const updateResult = await authApi.updateProfile(user.id, profileUpdates);
 
       if (!updateResult.success || !updateResult.data) {
         throw updateResult.error || new Error("Failed to update profile");
       }
 
       setUser(updateResult.data);
-      setSelectedPhotoUri(updateResult.data.avatarUrl ?? null);
+      setSelectedPhotoUri(null);
       setIsEditProfileOpen(false);
     } catch (error: any) {
       Alert.alert(
@@ -545,25 +544,6 @@ export function SettingsScreen() {
               style={styles.headerIconButton}
             >
               <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleSetLifePhase}
-              accessible
-              accessibilityLabel={
-                activePhase
-                  ? `Current life phase: ${activePhase.name}`
-                  : "Set life phase"
-              }
-              accessibilityHint="Tap to set or change your current life phase"
-            >
-              <Text
-                style={[
-                  styles.pageTitle,
-                  { color: PAGE_MUTED, fontWeight: "300" },
-                ]}
-              >
-                {activePhase ? activePhase.name : "Set Life Phase"}
-              </Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity
@@ -947,12 +927,6 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
-  },
-  pageTitle: {
-    marginLeft: 12,
-    fontSize: 18,
-    lineHeight: 22,
-    fontWeight: "300",
   },
   content: {
     paddingHorizontal: 24,

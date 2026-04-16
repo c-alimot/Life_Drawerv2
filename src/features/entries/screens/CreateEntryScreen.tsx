@@ -682,7 +682,7 @@ export function CreateEntryScreen() {
 
           {errors.title && (
             <Text
-              style={[theme.typography.bodySm, { color: theme.colors.error }]}
+              style={[theme.typography.bodySm, { color: theme.colors.errorText }]}
             >
               {errors.title.message}
             </Text>

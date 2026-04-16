@@ -651,7 +651,10 @@ export function EditEntryScreen() {
 
           {errors.title && (
             <Text
-              style={[theme.typography.bodySm, { color: theme.colors.error, marginBottom: 6 }]}
+              style={[
+                theme.typography.bodySm,
+                { color: theme.colors.errorText, marginBottom: 6 },
+              ]}
             >
               {errors.title.message}
             </Text>

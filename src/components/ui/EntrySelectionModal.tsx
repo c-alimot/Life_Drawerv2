@@ -52,6 +52,8 @@ export function EntrySelectionModal({
   inverseTextColor,
 }: EntrySelectionModalProps) {
   const theme = useTheme();
+  const trimmedCreateValue = createValue.trim();
+  const showCreateButton = trimmedCreateValue.length > 0;
 
   return (
     <Modal
@@ -69,19 +71,27 @@ export function EntrySelectionModal({
         >
           <View style={styles.modalHeader}>
             <Text
-              style={[theme.typography.h2, { color: textColor }]}
+              style={[
+                theme.typography.h2,
+                styles.modalTitle,
+                { color: textColor },
+              ]}
             >
               {title}
             </Text>
             <TouchableOpacity
               onPress={onClose}
               accessible
-              accessibilityLabel="Close"
+              accessibilityLabel="Save"
             >
               <Text
-                style={[theme.typography.h3, { color: textColor }]}
+                style={[
+                  theme.typography.body,
+                  styles.saveText,
+                  { color: textColor },
+                ]}
               >
-                ✕
+                Save
               </Text>
             </TouchableOpacity>
           </View>
@@ -108,13 +118,14 @@ export function EntrySelectionModal({
                   onChangeText={onCreateValueChange}
                   accessibilityLabel={createAccessibilityLabel}
                 />
-                <Button
-                  label="Add"
-                  onPress={onCreate}
-                  size="sm"
-                  disabled={!createValue.trim()}
-                  accessibilityLabel={createButtonAccessibilityLabel}
-                />
+                {showCreateButton ? (
+                  <Button
+                    label="Add"
+                    onPress={onCreate}
+                    size="sm"
+                    accessibilityLabel={createButtonAccessibilityLabel}
+                  />
+                ) : null}
               </View>
             </View>
 
@@ -154,6 +165,7 @@ export function EntrySelectionModal({
                   <Text
                     style={[
                       theme.typography.body,
+                      styles.itemText,
                       { color: textColor },
                     ]}
                   >
@@ -178,7 +190,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 32,
+    paddingBottom: 16,
+  },
+  modalTitle: {
+    fontWeight: "400",
+  },
+  saveText: {
+    fontWeight: "400",
   },
   modalContent: {
     paddingHorizontal: 20,
@@ -204,6 +223,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 12,
+  },
+  itemText: {
+    fontWeight: "400",
   },
   checkbox: {
     width: 24,

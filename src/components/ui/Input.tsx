@@ -88,7 +88,7 @@ export function Input({
   const getErrorStyle = (): TextStyle => {
     return {
       ...theme.typography.bodySm,
-      color: theme.colors.error,
+      color: theme.colors.errorText,
       marginTop: theme.spacing.xs,
     };
   };
