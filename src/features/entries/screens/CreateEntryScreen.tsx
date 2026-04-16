@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeArea, Screen } from "@components/layout";
 import {
   Button,
@@ -22,9 +23,11 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,6 +72,21 @@ const ENTRY_DANGER = "#A6544E";
 const ENTRY_CANCEL_BG = "#E3E1DC";
 const ENTRY_CANCEL_BORDER = "#C9C4BB";
 const ENTRY_CANCEL_TEXT = "#5F6368";
+const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
+const STARTER_DRAWER_ID = "starter-drawer";
+const STARTER_DRAWER = {
+  id: STARTER_DRAWER_ID,
+  name: "My Life Drawer",
+};
+
+const webStorage = {
+  async getItem(key: string) {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(key);
+  },
+};
+
+const starterDrawerStorage = Platform.OS === "web" ? webStorage : AsyncStorage;
 
 interface SelectedMedia {
   imageUris: string[];
@@ -176,6 +194,7 @@ export function CreateEntryScreen() {
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [locationText, setLocationText] = useState("");
@@ -186,6 +205,16 @@ export function CreateEntryScreen() {
   const mood = watch("mood");
 
   useEffect(() => {
+    const loadStarterDrawerPreference = async () => {
+      try {
+        const value = await starterDrawerStorage.getItem(STARTER_DRAWER_HIDDEN_KEY);
+        setIsStarterDrawerHidden(value === "true");
+      } catch {
+        setIsStarterDrawerHidden(false);
+      }
+    };
+
+    loadStarterDrawerPreference();
     fetchDrawers();
     fetchTags();
     fetchActivePhase();
@@ -444,7 +473,7 @@ export function CreateEntryScreen() {
       title: data.title,
       content: data.content,
       mood: data.mood,
-      drawerIds: selectedDrawers,
+      drawerIds: selectedDrawers.filter((id) => id !== STARTER_DRAWER_ID),
       tagIds: selectedTags,
       imageUris: selectedMedia.imageUris,
       audioUri: selectedMedia.audioUri || undefined,
@@ -477,6 +506,13 @@ export function CreateEntryScreen() {
   const selectedDrawerPreview = drawers
     .filter((drawer) => selectedDrawers.includes(drawer.id))
     .map((drawer) => ({ id: drawer.id, name: drawer.name }));
+  const starterDrawerPreview = selectedDrawers.includes(STARTER_DRAWER_ID)
+    ? [STARTER_DRAWER]
+    : [];
+  const displayDrawerPreview = [...starterDrawerPreview, ...selectedDrawerPreview];
+  const selectableDrawers = isStarterDrawerHidden
+    ? drawers
+    : [STARTER_DRAWER, ...drawers];
   const selectedTagPreview = tags
     .filter((tag) => selectedTags.includes(tag.id))
     .map((tag) => ({ id: tag.id, name: tag.name }));
@@ -489,33 +525,46 @@ export function CreateEntryScreen() {
     border: ENTRY_ACCENT,
     inverseText: "#F8F6F2",
   };
+
+  const renderToolbarItem = (
+    icon: ReactNode,
+    label: string,
+  ) => (
+    <View style={styles.toolbarItemContent}>
+      {icon}
+      <Text style={styles.toolbarItemLabel}>{label}</Text>
+    </View>
+  );
+
   const toolbarButtons: EntryMediaToolbarButton[] = [
-    {
-      key: "tags",
-      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
-      onPress: () => setShowTagModal(true),
-      accessibilityLabel: "Add tags",
-      accessibilityHint: `${selectedTags.length} tags selected`,
-      content: (
-        <MaterialCommunityIcons
-          name="tag-outline"
-          size={34}
-          color={ENTRY_PRIMARY}
-        />
-      ),
-    },
     {
       key: "drawers",
       borderColor: selectedDrawers.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Add to drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
-      content: (
+      content: renderToolbarItem(
         <MaterialCommunityIcons
           name="archive-outline"
-          size={34}
+          size={28}
           color={ENTRY_PRIMARY}
-        />
+        />,
+        "Drawer",
+      ),
+    },
+    {
+      key: "tags",
+      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      onPress: () => setShowTagModal(true),
+      accessibilityLabel: "Add tags",
+      accessibilityHint: `${selectedTags.length} tags selected`,
+      content: renderToolbarItem(
+        <MaterialCommunityIcons
+          name="tag-outline"
+          size={28}
+          color={ENTRY_PRIMARY}
+        />,
+        "Tags",
       ),
     },
     {
@@ -525,12 +574,13 @@ export function CreateEntryScreen() {
       onPress: pickImages,
       accessibilityLabel: "Add images",
       accessibilityHint: `${selectedMedia.imageUris.length}/${MAX_IMAGES} images`,
-      content: (
+      content: renderToolbarItem(
         <MaterialCommunityIcons
           name="image-outline"
-          size={34}
+          size={28}
           color={ENTRY_PRIMARY}
-        />
+        />,
+        "Image",
       ),
     },
     {
@@ -540,12 +590,13 @@ export function CreateEntryScreen() {
       backgroundColor: isRecording ? `${theme.colors.error}20` : "transparent",
       onPress: isRecording ? stopRecording : startRecording,
       accessibilityLabel: isRecording ? "Stop recording" : "Start voice memo",
-      content: (
+      content: renderToolbarItem(
         <MaterialCommunityIcons
           name={isRecording ? "stop-circle-outline" : "microphone-outline"}
-          size={34}
+          size={28}
           color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
-        />
+        />,
+        "Voice Memo",
       ),
     },
     {
@@ -554,14 +605,17 @@ export function CreateEntryScreen() {
       onPress: () => setShowMoodPicker(true),
       accessibilityLabel: "Add mood",
       accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
-      content: mood ? (
-        <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
-      ) : (
-        <MaterialCommunityIcons
-          name="emoticon-happy-outline"
-          size={34}
-          color={ENTRY_PRIMARY}
-        />
+      content: renderToolbarItem(
+        mood ? (
+          <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
+        ) : (
+          <MaterialCommunityIcons
+            name="emoticon-happy-outline"
+            size={28}
+            color={ENTRY_PRIMARY}
+          />
+        ),
+        "Mood",
       ),
     },
   ];
@@ -746,13 +800,13 @@ export function CreateEntryScreen() {
             </View>
           )}
 
-          {(selectedDrawerPreview.length > 0 || selectedTagPreview.length > 0) && (
+          {(displayDrawerPreview.length > 0 || selectedTagPreview.length > 0) && (
             <View style={styles.linkedPreviewSection}>
-              {selectedDrawerPreview.length > 0 && (
+              {displayDrawerPreview.length > 0 && (
                 <>
                   <Text style={styles.linkedPreviewLabel}>Linked Drawers</Text>
                   <View style={styles.linkedChipRow}>
-                    {selectedDrawerPreview.map((drawer) => (
+                    {displayDrawerPreview.map((drawer) => (
                       <View key={`drawer-${drawer.id}`} style={styles.linkedChip}>
                         <Text style={styles.linkedChipText}>{drawer.name}</Text>
                       </View>
@@ -773,6 +827,14 @@ export function CreateEntryScreen() {
                 </>
               )}
             </View>
+          )}
+
+          {errors.content && (
+            <Text
+              style={[theme.typography.bodySm, { color: ENTRY_DANGER_DARK }]}
+            >
+              {errors.content.message}
+            </Text>
           )}
 
           <Controller
@@ -799,14 +861,6 @@ export function CreateEntryScreen() {
               />
             )}
           />
-
-          {errors.content && (
-            <Text
-              style={[theme.typography.bodySm, { color: theme.colors.error }]}
-            >
-              {errors.content.message}
-            </Text>
-          )}
         </ScrollView>
 
         <EntryMoodPickerModal
@@ -824,7 +878,7 @@ export function CreateEntryScreen() {
         <EntrySelectionModal
           visible={showDrawerModal}
           title="Select Drawers"
-          items={drawers.map((drawer) => ({ id: drawer.id, name: drawer.name }))}
+          items={selectableDrawers.map((drawer) => ({ id: drawer.id, name: drawer.name }))}
           selectedIds={selectedDrawers}
           onToggle={toggleDrawer}
           onClose={() => setShowDrawerModal(false)}
@@ -994,8 +1048,20 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 1,
   },
+  toolbarItemContent: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  toolbarItemLabel: {
+    color: ENTRY_TEXT,
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "500",
+    textAlign: "center",
+  },
   toolbarMoodIcon: {
-    fontSize: 28,
+    fontSize: 24,
   },
   contentInput: {
     borderWidth: 1,

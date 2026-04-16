@@ -31,7 +31,7 @@ const ONBOARDING_SLIDES = [
     image: require("../../../../assets/images/stackedcards.png"),
     title: "Organize reflections your way",
     description:
-      "Use drawers for parts of your life, life phases for different seasons, and tags to group moments across everything.",
+      "Organize entries into drawers, group them by life phases, and use tags to connect themes over time",
   },
   {
     id: 3,

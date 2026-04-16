@@ -147,10 +147,11 @@ export function IntroScreen() {
                 <View style={styles.featureTextBlock}>
                   <Text
                     style={[
+                      theme.typography.body,
                       styles.featureTitle,
                       {
                         color: INTRO_TEXT,
-                        fontFamily: theme.fonts.serif,
+                        fontFamily: theme.fonts.sans,
                       },
                     ]}
                   >
@@ -189,8 +190,12 @@ export function IntroScreen() {
               >
                 <Text
                   style={[
+                    theme.typography.body,
                     styles.primaryButtonText,
-                    { color: theme.colors.text },
+                    {
+                      color: theme.colors.text,
+                      fontFamily: theme.fonts.sans,
+                    },
                   ]}
                 >
                   CREATE ACCOUNT
@@ -213,8 +218,12 @@ export function IntroScreen() {
             >
                 <Text
                 style={[
+                  theme.typography.body,
                   styles.secondaryButtonText,
-                  { color: INTRO_SUPPORTING_BROWN },
+                  {
+                    color: INTRO_SUPPORTING_BROWN,
+                    fontFamily: theme.fonts.sans,
+                  },
                 ]}
               >
                 SIGN IN
@@ -229,7 +238,7 @@ export function IntroScreen() {
                   { color: INTRO_SUPPORTING_BROWN },
                 ]}
               >
-                No pressure no streaks
+                No pressure, no streaks
               </Text>
               <Text
                 style={[
