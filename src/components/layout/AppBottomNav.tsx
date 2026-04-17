@@ -7,7 +7,6 @@ const NAV_BACKGROUND = "#F8F6F299";
 const NAV_TEXT = "#8C9A7F";
 const NAV_TEXT_ACTIVE = "#556950";
 const NAV_CIRCLE = "#E6E2D8";
-const NAV_ACTIVE_ACCENT = "#C8D1BE";
 const NAV_PLUS = "#556950";
 const NAV_PLUS_TEXT = "#FFFFFF";
 const NAV_SHADOW = "#2F2924";
@@ -59,12 +58,6 @@ export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
                 accessibilityLabel={item.label}
               >
                 <View style={[styles.itemInner, isActive && styles.itemInnerActive]}>
-                  <View
-                    style={[
-                      styles.activeIndicator,
-                      isActive && styles.activeIndicatorVisible,
-                    ]}
-                  />
                   <View style={[styles.iconCircle, isActive && styles.iconCircleActive]}>
                     <MaterialCommunityIcons
                       name={item.icon}
@@ -111,12 +104,6 @@ export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
                 accessibilityLabel={item.label}
               >
                 <View style={[styles.itemInner, isActive && styles.itemInnerActive]}>
-                  <View
-                    style={[
-                      styles.activeIndicator,
-                      isActive && styles.activeIndicatorVisible,
-                    ]}
-                  />
                   <View style={[styles.iconCircle, isActive && styles.iconCircleActive]}>
                     <MaterialCommunityIcons
                       name={item.icon}
@@ -186,23 +173,12 @@ const styles = StyleSheet.create({
     minWidth: 64,
   },
   itemInnerActive: {
-    backgroundColor: NAV_CIRCLE,
+    backgroundColor: "transparent",
   },
   plusItem: {
     width: 60,
     alignItems: "center",
     justifyContent: "flex-end",
-  },
-  activeIndicator: {
-    width: 18,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: NAV_ACTIVE_ACCENT,
-    opacity: 0,
-    marginBottom: 5,
-  },
-  activeIndicatorVisible: {
-    opacity: 1,
   },
   iconCircle: {
     width: 54,
@@ -215,16 +191,21 @@ const styles = StyleSheet.create({
   },
   iconCircleActive: {
     backgroundColor: NAV_CIRCLE,
+    shadowColor: NAV_SHADOW,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    elevation: 4,
   },
   label: {
     fontSize: 9,
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    fontWeight: "500",
+    fontWeight: "400",
     textAlign: "center",
   },
   labelActive: {
-    fontWeight: "600",
+    fontWeight: "700",
   },
   plusButton: {
     width: 56,
