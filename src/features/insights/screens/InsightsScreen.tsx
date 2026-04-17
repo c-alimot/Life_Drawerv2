@@ -4,7 +4,6 @@ import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
-import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,7 +13,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
@@ -26,14 +24,12 @@ const PAGE_BORDER = "#B39C87";
 export function InsightsScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
-  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      fetchActivePhase();
       fetchEntries();
-    }, [fetchActivePhase, fetchEntries]),
+    }, [fetchEntries]),
   );
 
   const archiveEntries = useMemo(() => entries ?? [], [entries]);
@@ -217,10 +213,6 @@ export function InsightsScreen() {
     },
   ] as const;
 
-  const handleSetLifePhase = useCallback(() => {
-    router.push("/life-phases");
-  }, []);
-
   if (isLoading) {
     return (
       <SafeArea>
@@ -291,39 +283,6 @@ export function InsightsScreen() {
               {heroBody}
             </Text>
           </View>
-
-          {activePhase ? (
-            <View style={styles.lifePhaseSection}>
-              <TouchableOpacity
-                onPress={handleSetLifePhase}
-                style={[
-                  styles.lifePhaseTab,
-                  {
-                    backgroundColor: PAGE_SURFACE,
-                    borderColor: `${PAGE_BORDER}88`,
-                  },
-                ]}
-                accessible
-                accessibilityLabel={`Current life phase: ${activePhase.name}`}
-                accessibilityRole="button"
-              >
-                <MaterialCommunityIcons
-                  name="book-open-page-variant"
-                  size={20}
-                  color={PAGE_PRIMARY}
-                />
-                <Text
-                  style={[
-                    theme.typography.body,
-                    styles.lifePhaseTabText,
-                    { color: PAGE_TEXT },
-                  ]}
-                >
-                  {`Current Life Phase: ${activePhase.name}`}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
 
           <View style={styles.featureStack}>
             <View
@@ -552,22 +511,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     lineHeight: 32,
     maxWidth: 560,
-  },
-  lifePhaseSection: {
-    marginBottom: 34,
-  },
-  lifePhaseTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  lifePhaseTabText: {
-    fontWeight: "400",
   },
   featureStack: {
     gap: 18,

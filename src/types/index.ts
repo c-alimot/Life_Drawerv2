@@ -59,18 +59,6 @@ export interface Profile {
   updatedAt: string;
 }
 
-export interface LifePhase {
-  id: string;
-  userId: string;
-  name: string;
-  description?: string;
-  startsOn?: string;
-  endsOn?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface Drawer {
   id: string;
   userId: string;
@@ -106,7 +94,6 @@ export interface Entry {
   images: string[];
   audioUrl?: string;
   location?: EntryLocation;
-  lifePhaseId?: string;
   occurredAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -116,7 +103,6 @@ export interface EntryWithRelations extends Entry {
   drawers: Drawer[];
   tags: Tag[];
   author?: Profile;
-  lifePhase?: LifePhase | null;
 }
 
 export interface DrawerWithRelations extends Drawer {
@@ -139,7 +125,6 @@ export interface EntryDraft {
   imageUris?: string[];
   audioUri?: string;
   location?: EntryLocation;
-  lifePhaseId?: string;
 }
 
 export interface CreateEntryRequest {
@@ -151,7 +136,6 @@ export interface CreateEntryRequest {
   imageUris?: string[];
   audioUri?: string;
   location?: EntryLocation;
-  lifePhaseId?: string;
   occurredAt?: string;
 }
 
@@ -164,7 +148,6 @@ export interface UpdateEntryRequest {
   location?: EntryLocation | null;
   drawerIds?: string[];
   tagIds?: string[];
-  lifePhaseId?: string | null;
   occurredAt?: string | null;
 }
 
@@ -195,6 +178,11 @@ export interface UpdateDrawerRequest {
 
 export interface CreateTagRequest {
   name: string;
+  color?: string;
+}
+
+export interface UpdateTagRequest {
+  name?: string;
   color?: string;
 }
 

@@ -22,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 type DrawerListItem = Drawer & { entryCount: number };
 
@@ -69,7 +68,6 @@ export function DrawersScreen() {
   const { createDrawer, isLoading: isCreatingDrawer } = useCreateDrawer();
   const { updateDrawer, isLoading: isUpdatingDrawer } = useUpdateDrawer();
   const { deleteDrawer, isLoading: isDeletingDrawer } = useDeleteDrawer();
-  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
@@ -226,15 +224,10 @@ export function DrawersScreen() {
     await fetchDrawers();
   }, [deleteDrawer, deleteDrawerTarget, fetchDrawers]);
 
-  const handleSetLifePhase = useCallback(() => {
-    router.push("/life-phases");
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      fetchActivePhase();
       fetchDrawers();
-    }, [fetchActivePhase, fetchDrawers]),
+    }, [fetchDrawers]),
   );
 
   return (
@@ -289,40 +282,6 @@ export function DrawersScreen() {
                     </Text>
                   </Text>
                 </View>
-
-                {activePhase ? (
-                  <View style={styles.lifePhaseSection}>
-                    <TouchableOpacity
-                      onPress={handleSetLifePhase}
-                      style={[
-                        styles.lifePhaseTab,
-                        {
-                          backgroundColor: PAGE_SURFACE,
-                          borderColor: theme.colors.accent1 + "AA",
-                        },
-                      ]}
-                      accessible
-                      accessibilityLabel={`Current life phase: ${activePhase.name}`}
-                      accessibilityRole="button"
-                    >
-                      <MaterialCommunityIcons
-                        name="book-open-page-variant"
-                        size={20}
-                        color={PAGE_PRIMARY}
-                      />
-                      <Text
-                        style={[
-                          theme.typography.body,
-                          styles.lifePhaseTabText,
-                          { color: PAGE_TEXT },
-                        ]}
-                      >
-                        {`Current Life Phase: ${activePhase.name}`}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-
                 <TouchableOpacity
                   style={[
                     styles.primaryAction,
@@ -708,22 +667,6 @@ const styles = StyleSheet.create({
     lineHeight: 42,
     fontWeight: "300",
     marginTop: 2,
-  },
-  lifePhaseSection: {
-    marginBottom: 24,
-  },
-  lifePhaseTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  lifePhaseTabText: {
-    fontWeight: "400",
   },
   primaryAction: {
     minHeight: 92,

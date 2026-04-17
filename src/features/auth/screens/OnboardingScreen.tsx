@@ -24,21 +24,21 @@ const ONBOARDING_SLIDES = [
     image: require("../../../../assets/images/featherpen.png"),
     title: "A calmer way to journal",
     description:
-      "Life Drawer is a quiet space to capture thoughts, memories, and everyday moments without pressure.",
+      "Life Drawer is a quiet space to capture thoughts, memories, and everyday moments without pressure",
   },
   {
     id: 2,
     image: require("../../../../assets/images/stackedcards.png"),
     title: "Organize reflections your way",
     description:
-      "Organize entries into drawers, group them by life phases, and use tags to connect themes over time",
+      "Organize entries into drawers and use tags to connect themes over time",
   },
   {
     id: 3,
     image: require("../../../../assets/images/ripple.png"),
     title: "Look back with more meaning",
     description:
-      "Revisit what you have written, notice patterns over time, and keep what matters in a way that feels personal.",
+      "Revisit what you have written, notice patterns over time, and keep what matters in a way that feels personal",
   },
 ];
 

@@ -9,11 +9,15 @@ import {
   EntryMoodPickerModal,
   EntrySelectionModal,
 } from "@components/ui";
-import { MOOD_MAP, MOOD_VALUES } from "@constants/moods";
+import { MOOD_MAP } from "@constants/moods";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
+import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
+import { useUpdateDrawer } from "@features/drawers/hooks/useUpdateDrawer";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
+import { useDeleteTag } from "@features/tags/hooks/useDeleteTag";
 import { useTags } from "@features/tags/hooks/useTags";
+import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -107,7 +111,11 @@ export function EditEntryScreen() {
   const { drawers, fetchDrawers } = useDrawers();
   const { tags, fetchTags } = useTags();
   const { createDrawer } = useCreateDrawer();
+  const { updateDrawer } = useUpdateDrawer();
+  const { deleteDrawer } = useDeleteDrawer();
   const { createTag } = useCreateTag();
+  const { updateTag } = useUpdateTag();
+  const { deleteTag } = useDeleteTag();
 
   const {
     control,
@@ -180,7 +188,7 @@ export function EditEntryScreen() {
       setNewImageUris([]);
       setRemovedImageUris([]);
     }
-  }, [entry?.id, setValue]);
+  }, [entry, setValue]);
 
   useEffect(() => {
     return () => {
@@ -223,31 +231,6 @@ export function EditEntryScreen() {
       Alert.alert("Error", "Failed to pick images");
     }
   }, [entry?.images, newImageUris.length]);
-
-  const takePhoto = useCallback(async () => {
-    try {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert(
-          "Permission denied",
-          "Please enable camera access in settings",
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.8,
-      });
-
-      if (!result.canceled) {
-        const photoUri = result.assets[0].uri;
-        setNewImageUris((prev) => [...prev, photoUri]);
-      }
-    } catch {
-      Alert.alert("Error", "Failed to take photo");
-    }
-  }, []);
 
   const removeNewImage = useCallback((index: number) => {
     setNewImageUris((prev) => prev.filter((_, i) => i !== index));
@@ -375,7 +358,7 @@ export function EditEntryScreen() {
       return;
     }
 
-    const result = await createTag({ name: newTagName });
+    const result = await createTag({ name: newTagName.trim() });
     if (result) {
       setSelectedTags((prev) => [...prev, result.id]);
       setNewTagName("");
@@ -390,6 +373,68 @@ export function EditEntryScreen() {
         : [...prev, tagId],
     );
   }, []);
+
+  const handleEditDrawer = useCallback(
+    async (drawerIdValue: string, name: string) => {
+      if (drawerIdValue === STARTER_DRAWER_ID) {
+        return false;
+      }
+
+      const result = await updateDrawer(drawerIdValue, { name });
+      if (!result) {
+        return false;
+      }
+
+      await fetchDrawers();
+      return true;
+    },
+    [fetchDrawers, updateDrawer],
+  );
+
+  const handleDeleteDrawer = useCallback(
+    async (drawerIdValue: string) => {
+      if (drawerIdValue === STARTER_DRAWER_ID) {
+        return false;
+      }
+
+      const success = await deleteDrawer(drawerIdValue);
+      if (!success) {
+        return false;
+      }
+
+      setSelectedDrawers((prev) => prev.filter((id) => id !== drawerIdValue));
+      await fetchDrawers();
+      return true;
+    },
+    [deleteDrawer, fetchDrawers],
+  );
+
+  const handleEditTag = useCallback(
+    async (tagIdValue: string, name: string) => {
+      const result = await updateTag(tagIdValue, { name });
+      if (!result) {
+        return false;
+      }
+
+      await fetchTags();
+      return true;
+    },
+    [fetchTags, updateTag],
+  );
+
+  const handleDeleteTag = useCallback(
+    async (tagIdValue: string) => {
+      const success = await deleteTag(tagIdValue);
+      if (!success) {
+        return false;
+      }
+
+      setSelectedTags((prev) => prev.filter((id) => id !== tagIdValue));
+      await fetchTags();
+      return true;
+    },
+    [deleteTag, fetchTags],
+  );
 
   // Submit
   const onSubmit = async (data: EditEntryFormData) => {
@@ -410,7 +455,6 @@ export function EditEntryScreen() {
       imageUris: [...persistedImages, ...newImageUris],
       audioUrl: audioUri || null,
       location: entry.location || null,
-      lifePhaseId: entry.lifePhaseId || null,
       occurredAt: entry.occurredAt || null,
     });
 
@@ -447,7 +491,7 @@ export function EditEntryScreen() {
   const displayDrawerPreview = [...starterDrawerPreview, ...selectedDrawerPreview];
   const selectableDrawers = isStarterDrawerHidden
     ? drawers
-    : [STARTER_DRAWER, ...drawers];
+    : [{ ...STARTER_DRAWER, isManageable: false }, ...drawers];
   const selectedTagPreview = tags
     .filter((tag) => selectedTags.includes(tag.id))
     .map((tag) => ({ id: tag.id, name: tag.name }));
@@ -799,7 +843,11 @@ export function EditEntryScreen() {
         <EntrySelectionModal
           visible={showDrawerModal}
           title="Select Drawers"
-          items={selectableDrawers.map((drawer) => ({ id: drawer.id, name: drawer.name }))}
+          items={selectableDrawers.map((drawer) => ({
+            id: drawer.id,
+            name: drawer.name,
+            isManageable: "isManageable" in drawer ? drawer.isManageable : true,
+          }))}
           selectedIds={selectedDrawers}
           onToggle={toggleDrawer}
           onClose={() => setShowDrawerModal(false)}
@@ -816,12 +864,15 @@ export function EditEntryScreen() {
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
+          itemTypeLabel="drawer"
+          onEditItem={handleEditDrawer}
+          onDeleteItem={handleDeleteDrawer}
         />
 
         <EntrySelectionModal
           visible={showTagModal}
           title="Select Tags"
-          items={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
+          items={tags.map((tag) => ({ id: tag.id, name: tag.name, isManageable: true }))}
           selectedIds={selectedTags}
           onToggle={toggleTag}
           onClose={() => setShowTagModal(false)}
@@ -838,6 +889,9 @@ export function EditEntryScreen() {
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
+          itemTypeLabel="tag"
+          onEditItem={handleEditTag}
+          onDeleteItem={handleDeleteTag}
         />
 
         <EntryMoodPickerModal

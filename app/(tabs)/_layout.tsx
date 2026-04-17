@@ -30,19 +30,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="life-phases"
-        options={{
-          title: "Phases",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="calendar-range"
-              color={color}
-              size={size}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="insights"
         options={{
           title: "Insights",

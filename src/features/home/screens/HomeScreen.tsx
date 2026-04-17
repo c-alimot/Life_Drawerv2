@@ -21,7 +21,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../hooks/useLifePhase";
 
 interface GroupedEntries {
   [date: string]: EntryWithRelations[];
@@ -61,11 +60,6 @@ export function HomeScreen() {
   const { deleteEntry } = useDeleteEntry();
   const { deleteDrawer } = useDeleteDrawer();
   const { drawers, isLoading: drawersLoading, fetchDrawers } = useDrawers();
-  const {
-    activePhase,
-    isLoading: phaseLoading,
-    fetchActivePhase,
-  } = useLifePhase();
 
   const [groupedEntries, setGroupedEntries] = useState<GroupedEntries>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -78,11 +72,10 @@ export function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       if (user) {
-        fetchActivePhase();
         fetchRecentEntries();
         fetchDrawers();
       }
-    }, [user, fetchActivePhase, fetchRecentEntries, fetchDrawers]),
+    }, [user, fetchRecentEntries, fetchDrawers]),
   );
 
   // Group entries by date
@@ -105,10 +98,6 @@ export function HomeScreen() {
 
   const handleSearch = useCallback(() => {
     router.push("/search");
-  }, []);
-
-  const handleSetLifePhase = useCallback(() => {
-    router.push("/life-phases");
   }, []);
 
   const handleCreateFirstEntry = useCallback(() => {
@@ -234,7 +223,7 @@ export function HomeScreen() {
     setIsMenuOpen(true);
   }, []);
 
-  const isLoading = entriesLoading || drawersLoading || phaseLoading;
+  const isLoading = entriesLoading || drawersLoading;
   const recentDrawers = drawers.length > 0 ? drawers.slice(0, 5) : [STARTER_DRAWER];
 
   return (
@@ -291,111 +280,6 @@ export function HomeScreen() {
               Document your life,{"\n"}
               <Text style={{ color: HOME_PRIMARY }}>one moment at a time.</Text>
             </Text>
-
-            <View style={styles.section}>
-              {activePhase ? (
-                <TouchableOpacity
-                  onPress={handleSetLifePhase}
-                  style={[
-                    styles.lifePhaseTab,
-                    {
-                      backgroundColor: HOME_SURFACE,
-                      borderColor: theme.colors.accent1 + "B8",
-                    },
-                  ]}
-                  accessible
-                  accessibilityLabel={`Current life phase: ${activePhase.name}`}
-                  accessibilityRole="button"
-                >
-                  <MaterialCommunityIcons
-                    name="book-open-page-variant"
-                    size={20}
-                    color={HOME_PRIMARY}
-                  />
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      styles.lifePhaseTabText,
-                      { color: HOME_TEXT },
-                    ]}
-                  >
-                    {`Current Life Phase: ${activePhase.name}`}
-                  </Text>
-                </TouchableOpacity>
-              ) : (
-                <>
-                  <SectionHeader
-                    label="Life Phase"
-                    textColor={HOME_MUTED}
-                    dividerColor={theme.colors.accent1}
-                  />
-
-                  <View
-                    style={[
-                      styles.emptyState,
-                      {
-                        borderColor: theme.colors.accent1 + "AA",
-                        backgroundColor: HOME_SURFACE,
-                      },
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.emptyIcon,
-                        {
-                          backgroundColor: theme.colors.accent1 + "3D",
-                        },
-                      ]}
-                    >
-                      <MaterialCommunityIcons
-                        name="book-open-page-variant"
-                        size={34}
-                        color={HOME_PRIMARY}
-                      />
-                    </View>
-                    <Text
-                      style={[
-                        styles.emptyTitle,
-                        styles.lifePhaseTitle,
-                        {
-                          color: HOME_TEXT,
-                          fontFamily: theme.fonts.serif,
-                          marginBottom: theme.spacing.md,
-                        },
-                      ]}
-                    >
-                      Define Your Current Chapter
-                    </Text>
-                    <Text
-                      style={[
-                        theme.typography.body,
-                        styles.lifePhaseBody,
-                        {
-                          color: HOME_MUTED,
-                          marginBottom: theme.spacing.lg,
-                        },
-                      ]}
-                    >
-                      Life phases represent different seasons of your life. Setting one helps you reflect and look back with more context.
-                    </Text>
-                    <Button
-                      label="Set Life Phase"
-                      onPress={handleSetLifePhase}
-                      variant="outline"
-                      textStyle={{ color: HOME_PRIMARY }}
-                      style={[
-                        styles.inlineCta,
-                        {
-                          backgroundColor: "transparent",
-                          borderColor: theme.colors.accent2,
-                        },
-                      ]}
-                      accessibilityLabel="Set life phase button"
-                    />
-                  </View>
-                </>
-              )}
-            </View>
 
             {/* Recent Entries Section */}
             <View style={styles.section}>
@@ -941,14 +825,6 @@ const styles = StyleSheet.create({
     lineHeight: 34,
     fontWeight: "200",
   },
-  lifePhaseTitle: {
-    textAlign: "center",
-  },
-  lifePhaseBody: {
-    textAlign: "center",
-    maxWidth: 540,
-    lineHeight: 30,
-  },
   inlineCta: {
     minHeight: 58,
     borderRadius: 999,
@@ -1055,19 +931,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontStyle: "italic",
-  },
-  lifePhaseTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  lifePhaseTabText: {
-    fontWeight: "400",
   },
   menuBackdrop: {
     paddingHorizontal: 24,

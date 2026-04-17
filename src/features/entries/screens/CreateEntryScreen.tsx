@@ -9,12 +9,15 @@ import {
   Modal,
   EntrySelectionModal,
 } from "@components/ui";
-import { MOOD_MAP, MOOD_VALUES } from "@constants/mood";
+import { MOOD_MAP } from "@constants/mood";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
+import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
-import { useLifePhase } from "@features/home/hooks/useLifePhase";
+import { useUpdateDrawer } from "@features/drawers/hooks/useUpdateDrawer";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
+import { useDeleteTag } from "@features/tags/hooks/useDeleteTag";
 import { useTags } from "@features/tags/hooks/useTags";
+import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "@styles/theme";
@@ -158,10 +161,13 @@ export function CreateEntryScreen() {
   const theme = useTheme();
   const { createEntry, isLoading, error } = useCreateEntryWithMedia();
   const { drawers, fetchDrawers } = useDrawers();
-  const { activePhase, fetchActivePhase } = useLifePhase();
   const { tags, fetchTags } = useTags();
   const { createDrawer } = useCreateDrawer();
+  const { updateDrawer } = useUpdateDrawer();
+  const { deleteDrawer } = useDeleteDrawer();
   const { createTag } = useCreateTag();
+  const { updateTag } = useUpdateTag();
+  const { deleteTag } = useDeleteTag();
   const { drawerId } = useLocalSearchParams<{ drawerId?: string }>();
   const initialDrawerId = Array.isArray(drawerId) ? drawerId[0] : drawerId;
 
@@ -217,7 +223,6 @@ export function CreateEntryScreen() {
     loadStarterDrawerPreference();
     fetchDrawers();
     fetchTags();
-    fetchActivePhase();
 
     return () => {
       if (soundRef.current) {
@@ -227,7 +232,7 @@ export function CreateEntryScreen() {
         recordingRef.current.stopAndUnloadAsync().catch(() => {});
       }
     };
-  }, [fetchActivePhase, fetchDrawers, fetchTags]);
+  }, [fetchDrawers, fetchTags]);
 
   const pickImages = useCallback(async () => {
     try {
@@ -468,6 +473,68 @@ export function CreateEntryScreen() {
     );
   }, []);
 
+  const handleEditDrawer = useCallback(
+    async (drawerIdValue: string, name: string) => {
+      if (drawerIdValue === STARTER_DRAWER_ID) {
+        return false;
+      }
+
+      const result = await updateDrawer(drawerIdValue, { name });
+      if (!result) {
+        return false;
+      }
+
+      await fetchDrawers();
+      return true;
+    },
+    [fetchDrawers, updateDrawer],
+  );
+
+  const handleDeleteDrawer = useCallback(
+    async (drawerIdValue: string) => {
+      if (drawerIdValue === STARTER_DRAWER_ID) {
+        return false;
+      }
+
+      const success = await deleteDrawer(drawerIdValue);
+      if (!success) {
+        return false;
+      }
+
+      setSelectedDrawers((prev) => prev.filter((id) => id !== drawerIdValue));
+      await fetchDrawers();
+      return true;
+    },
+    [deleteDrawer, fetchDrawers],
+  );
+
+  const handleEditTag = useCallback(
+    async (tagIdValue: string, name: string) => {
+      const result = await updateTag(tagIdValue, { name });
+      if (!result) {
+        return false;
+      }
+
+      await fetchTags();
+      return true;
+    },
+    [fetchTags, updateTag],
+  );
+
+  const handleDeleteTag = useCallback(
+    async (tagIdValue: string) => {
+      const success = await deleteTag(tagIdValue);
+      if (!success) {
+        return false;
+      }
+
+      setSelectedTags((prev) => prev.filter((id) => id !== tagIdValue));
+      await fetchTags();
+      return true;
+    },
+    [deleteTag, fetchTags],
+  );
+
   const onSubmit = async (data: EntryFormData) => {
     const entry = await createEntry({
       title: data.title,
@@ -478,7 +545,6 @@ export function CreateEntryScreen() {
       imageUris: selectedMedia.imageUris,
       audioUri: selectedMedia.audioUri || undefined,
       location: selectedMedia.location || undefined,
-      lifePhaseId: activePhase?.id,
     });
 
     if (entry) {
@@ -491,10 +557,6 @@ export function CreateEntryScreen() {
 
   const handleBack = useCallback(() => {
     router.back();
-  }, []);
-
-  const handleSetPhasePress = useCallback(() => {
-    router.push("/life-phases");
   }, []);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -512,7 +574,7 @@ export function CreateEntryScreen() {
   const displayDrawerPreview = [...starterDrawerPreview, ...selectedDrawerPreview];
   const selectableDrawers = isStarterDrawerHidden
     ? drawers
-    : [STARTER_DRAWER, ...drawers];
+    : [{ ...STARTER_DRAWER, isManageable: false }, ...drawers];
   const selectedTagPreview = tags
     .filter((tag) => selectedTags.includes(tag.id))
     .map((tag) => ({ id: tag.id, name: tag.name }));
@@ -722,17 +784,6 @@ export function CreateEntryScreen() {
             </TouchableOpacity>
           </View>
 
-          {activePhase && (
-            <TouchableOpacity
-              onPress={handleSetPhasePress}
-              style={styles.phaseLink}
-              accessible
-              accessibilityLabel={`Life phase: ${activePhase.name}`}
-            >
-              <Text style={styles.phaseLinkText}>{activePhase.name}</Text>
-            </TouchableOpacity>
-          )}
-
           {selectedMedia.location && (
             <TouchableOpacity
               onPress={removeLocation}
@@ -878,7 +929,11 @@ export function CreateEntryScreen() {
         <EntrySelectionModal
           visible={showDrawerModal}
           title="Select Drawers"
-          items={selectableDrawers.map((drawer) => ({ id: drawer.id, name: drawer.name }))}
+          items={selectableDrawers.map((drawer) => ({
+            id: drawer.id,
+            name: drawer.name,
+            isManageable: "isManageable" in drawer ? drawer.isManageable : true,
+          }))}
           selectedIds={selectedDrawers}
           onToggle={toggleDrawer}
           onClose={() => setShowDrawerModal(false)}
@@ -895,12 +950,15 @@ export function CreateEntryScreen() {
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
+          itemTypeLabel="drawer"
+          onEditItem={handleEditDrawer}
+          onDeleteItem={handleDeleteDrawer}
         />
 
         <EntrySelectionModal
           visible={showTagModal}
           title="Select Tags"
-          items={tags.map((tag) => ({ id: tag.id, name: tag.name }))}
+          items={tags.map((tag) => ({ id: tag.id, name: tag.name, isManageable: true }))}
           selectedIds={selectedTags}
           onToggle={toggleTag}
           onClose={() => setShowTagModal(false)}
@@ -917,6 +975,9 @@ export function CreateEntryScreen() {
           borderColor={entryPalette.border}
           primaryColor={entryPalette.primary}
           inverseTextColor={entryPalette.inverseText}
+          itemTypeLabel="tag"
+          onEditItem={handleEditTag}
+          onDeleteItem={handleDeleteTag}
         />
 
         <Modal
@@ -1016,16 +1077,6 @@ const styles = StyleSheet.create({
     lineHeight: 52,
     fontWeight: "300",
     marginBottom: 18,
-  },
-  phaseLink: {
-    alignSelf: "flex-start",
-    marginTop: -12,
-    marginBottom: 20,
-  },
-  phaseLinkText: {
-    color: ENTRY_PRIMARY,
-    fontSize: 14,
-    fontWeight: "500",
   },
   toolbar: {
     flexDirection: "row",

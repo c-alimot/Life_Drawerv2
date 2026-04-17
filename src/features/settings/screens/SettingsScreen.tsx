@@ -5,7 +5,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { authApi } from "@features/auth/api/auth.api";
 import { useLogout } from "@features/auth/hooks/useLogout";
-import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@store";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";
@@ -23,7 +22,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
@@ -69,7 +67,6 @@ export function SettingsScreen() {
   const theme = useTheme();
   const { logout, isLoading } = useLogout();
   const { user, setUser } = useAuthStore();
-  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
@@ -104,10 +101,6 @@ export function SettingsScreen() {
               : activePanel === "about"
                 ? "About"
                 : "";
-
-  const handleSetLifePhase = useCallback(() => {
-    router.push("/life-phases");
-  }, []);
 
   const openEditProfile = useCallback(() => {
     setEditedName(displayName);
@@ -450,7 +443,7 @@ export function SettingsScreen() {
             <View style={[styles.storageCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
               <Text style={[styles.preferenceTitle, { color: PAGE_TEXT }]}>Account data</Text>
               <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
-                Profile details, entries, tags, drawers, and life phases stay with your account.
+                Profile details, entries, tags, and drawers stay with your account.
               </Text>
             </View>
             <View style={[styles.storageCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
@@ -503,7 +496,7 @@ export function SettingsScreen() {
           <Text style={[styles.infoValue, { color: PAGE_TEXT }]}>v{appVersion}</Text>
         </View>
         <Text style={[theme.typography.bodySm, styles.bulletText, { color: PAGE_MUTED }]}>
-          Built to help you capture memories, moods, and meaning across every life phase.
+          Built to help you capture memories, moods, and meaning across the moments that matter.
         </Text>
       </View>
     );
@@ -521,12 +514,6 @@ export function SettingsScreen() {
     theme.typography.labelSm,
     user?.email,
   ]);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchActivePhase();
-    }, [fetchActivePhase]),
-  );
 
   return (
     <SafeArea>

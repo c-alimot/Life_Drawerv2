@@ -439,44 +439,6 @@ export function EntryDetailScreen() {
           {/* Details Tab */}
           {activeTab === "details" && (
             <View>
-              {entry.lifePhase && (
-                <View style={{ marginBottom: theme.spacing.lg }}>
-                  <Text
-                    style={[
-                      theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                        textTransform: "uppercase",
-                      },
-                    ]}
-                  >
-                    Life Phase
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      { color: theme.colors.text },
-                    ]}
-                  >
-                    {entry.lifePhase.name}
-                  </Text>
-                  {entry.lifePhase.description && (
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: theme.colors.textSecondary,
-                          marginTop: theme.spacing.xs,
-                        },
-                      ]}
-                    >
-                      {entry.lifePhase.description}
-                    </Text>
-                  )}
-                </View>
-              )}
-
               {/* Location */}
               {entry.location && (
                 <View style={{ marginBottom: theme.spacing.lg }}>

@@ -17,7 +17,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const EXAMPLE_TAGS = [
   "gratitude",
@@ -40,7 +39,6 @@ export function TagsScreen() {
   const theme = useTheme();
   const { tags, isLoading, fetchTags } = useTags();
   const { createTag, isLoading: isCreatingTag } = useCreateTag();
-  const { activePhase, fetchActivePhase } = useLifePhase();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
@@ -75,15 +73,10 @@ export function TagsScreen() {
     await fetchTags();
   }, [createTag, fetchTags, newTagName]);
 
-  const handleSetLifePhase = useCallback(() => {
-    router.push("/life-phases");
-  }, []);
-
   useFocusEffect(
     useCallback(() => {
-      fetchActivePhase();
       fetchTags();
-    }, [fetchActivePhase, fetchTags]),
+    }, [fetchTags]),
   );
 
   return (
@@ -241,7 +234,7 @@ export function TagsScreen() {
                       },
                     ]}
                   >
-                    Tags help you connect moments across drawers and life phases, so related memories stay easy to revisit.
+                    Tags help you connect moments across drawers, so related memories stay easy to revisit
                   </Text>
                 </View>
               </>
@@ -314,7 +307,7 @@ export function TagsScreen() {
                       },
                     ]}
                   >
-                    Tags help you connect moments across drawers and life phases, so related memories stay easy to revisit.
+                    Tags help you connect moments across drawers, so related memories stay easy to revisit.
                   </Text>
                 </View>
               ) : null

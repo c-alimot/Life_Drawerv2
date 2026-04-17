@@ -19,7 +19,6 @@ export function useCreateEntryWithMedia() {
       imageUris?: string[];
       audioUri?: string;
       location?: { latitude: number; longitude: number; address?: string };
-      lifePhaseId?: string;
     }) => {
       if (!user) return null;
 
@@ -37,7 +36,6 @@ export function useCreateEntryWithMedia() {
           imageUris: data.imageUris,
           audioUri: data.audioUri,
           location: data.location,
-          lifePhaseId: data.lifePhaseId,
         });
 
         if (!result.success || !result.data) {

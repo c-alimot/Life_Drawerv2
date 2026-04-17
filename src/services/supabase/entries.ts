@@ -5,7 +5,6 @@ import {
   Entry,
   EntryLocation,
   EntryWithRelations,
-  LifePhase,
   MoodValue,
   SearchEntriesRequest,
   UpdateEntryRequest,
@@ -16,7 +15,6 @@ import type { Database } from "./types";
 type EntryRow = {
   id: string;
   user_id: string;
-  life_phase_id: string | null;
   title: string | null;
   content: string;
   mood: string | null;
@@ -56,18 +54,6 @@ type ProfileRow = {
   updated_at: string;
 };
 
-type LifePhaseRow = {
-  id: string;
-  user_id: string;
-  name: string;
-  description: string | null;
-  starts_on: string | null;
-  ends_on: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
 const LEGACY_MEDIA_BUCKET = "entry-media";
 const PRIVATE_MEDIA_BUCKET = "entry-media-private";
 const SIGNED_URL_TTL_SECONDS = 3600;
@@ -87,10 +73,6 @@ export const entriesService = {
         mood: request.mood || null,
         occurred_at: request.occurredAt || null,
       };
-
-      if (request.lifePhaseId) {
-        entryInsertPayload.life_phase_id = request.lifePhaseId;
-      }
 
       const { data: entry, error: entryError } = await supabase
         .from("entries")
@@ -216,11 +198,10 @@ export const entriesService = {
         throw entryError || new Error("Entry not found");
       }
 
-      const [drawers, tags, author, lifePhase] = await Promise.all([
+      const [drawers, tags, author] = await Promise.all([
         this.getEntryDrawers(entryId),
         this.getEntryTags(entryId),
         this.getAuthorProfile(userId),
-        entry.life_phase_id ? this.getLifePhase(entry.life_phase_id, userId) : Promise.resolve(null),
       ]);
 
       return {
@@ -228,7 +209,6 @@ export const entriesService = {
         drawers,
         tags,
         author,
-        lifePhase,
       };
     } catch (error) {
       console.error("Get entry error:", error);
@@ -341,10 +321,6 @@ export const entriesService = {
         occurred_at: request.occurredAt,
         updated_at: new Date().toISOString(),
       };
-
-      if ("lifePhaseId" in request) {
-        updatePayload.life_phase_id = request.lifePhaseId;
-      }
 
       const { error } = await supabase
         .from("entries")
@@ -536,21 +512,6 @@ export const entriesService = {
     }
 
     return this.mapProfileRow(data as ProfileRow);
-  },
-
-  async getLifePhase(lifePhaseId: string, userId: string): Promise<LifePhase | null> {
-    const { data, error } = await supabase
-      .from("life_phases")
-      .select("*")
-      .eq("id", lifePhaseId)
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error || !data) {
-      return null;
-    }
-
-    return this.mapLifePhaseRow(data as LifePhaseRow);
   },
 
   async getFilteredEntryIds(
@@ -780,7 +741,6 @@ export const entriesService = {
       images,
       audioUrl,
       location: this.parseLocation(row.location),
-      lifePhaseId: row.life_phase_id ?? undefined,
       occurredAt: row.occurred_at ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
@@ -817,20 +777,6 @@ export const entriesService = {
       email: "",
       displayName: row.display_name ?? undefined,
       avatarUrl: row.avatar_url ?? undefined,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
-  },
-
-  mapLifePhaseRow(row: LifePhaseRow): LifePhase {
-    return {
-      id: row.id,
-      userId: row.user_id,
-      name: row.name,
-      description: row.description ?? undefined,
-      startsOn: row.starts_on ?? undefined,
-      endsOn: row.ends_on ?? undefined,
-      isActive: row.is_active,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

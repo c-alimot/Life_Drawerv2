@@ -14,7 +14,6 @@ type TagRow = {
 type EntryRow = {
   id: string;
   user_id: string;
-  life_phase_id: string | null;
   title: string;
   content: string | null;
   mood: string | null;
@@ -248,7 +247,6 @@ export const tagsService = {
       location: typeof row.location === "object" && row.location
         ? (row.location as Entry["location"])
         : undefined,
-      lifePhaseId: row.life_phase_id ?? undefined,
       occurredAt: row.occurred_at ?? undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

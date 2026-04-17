@@ -1,4 +1,4 @@
-import { AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
 import { SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP } from "@constants/moods";
@@ -19,7 +19,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useLifePhase } from "../../home/hooks/useLifePhase";
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
@@ -35,7 +34,6 @@ type FilterType = "all" | "mood" | "drawer" | "tag" | "date";
 export function SearchScreen() {
   const theme = useTheme();
   const { entries, isLoading, total, fetchEntries } = useEntries();
-  const { fetchActivePhase } = useLifePhase();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
@@ -56,9 +54,8 @@ export function SearchScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchActivePhase();
       loadSearchResults();
-    }, [fetchActivePhase, loadSearchResults]),
+    }, [loadSearchResults]),
   );
 
   const handleEntryPress = useCallback((entryId: string) => {
@@ -647,6 +644,8 @@ export function SearchScreen() {
             </View>
           }
         />
+
+        <AppBottomNav currentRoute="/search" />
       </Screen>
     </SafeArea>
   );
@@ -678,7 +677,7 @@ const styles = StyleSheet.create({
   pageContent: {
     paddingHorizontal: 24,
     paddingTop: 6,
-    paddingBottom: 40,
+    paddingBottom: 140,
   },
   heroBlock: {
     marginBottom: 26,
