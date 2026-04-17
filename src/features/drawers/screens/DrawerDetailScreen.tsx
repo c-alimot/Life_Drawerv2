@@ -1,15 +1,20 @@
-import { SafeArea, Screen } from "@components/layout";
-import { Button } from "@components/ui";
+import {
+    AppBottomNav,
+    AppHeaderBrand,
+    SafeArea,
+    Screen,
+} from "@components/layout";
+import { Modal as AppModal, Button, SectionHeader } from "@components/ui";
 import { MOOD_MAP, type MoodValue } from "@constants/moods";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
-import { useTheme } from "@styles/theme";
+import { Fonts, useTheme } from "@styles/theme";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
-    FlatList,
-    Modal,
+    Modal as RNModal,
     ScrollView,
     StyleSheet,
     Text,
@@ -20,6 +25,20 @@ import {
 import { useDrawerDetail } from "../hooks/useDrawerDetail";
 import { useDrawerEntries } from "../hooks/useDrawerEntries";
 import { useEditDrawer } from "../hooks/useEditDrawer";
+
+const PAGE_BACKGROUND = "#EDEAE4";
+const PAGE_SURFACE = "#FFFFFF";
+const PAGE_SOFT_SURFACE = "#F8F6F2";
+const PAGE_TEXT = "#2F2924";
+const PAGE_MUTED = "#6F6860";
+const PAGE_MUTED_LIGHT = "#8A8178";
+const PAGE_PRIMARY = "#8C9A7F";
+const PAGE_SECONDARY = "#556950";
+const PAGE_BORDER = "#D8CCBD";
+const PAGE_CARD_SHADOW = "rgba(85, 105, 80, 0.08)";
+const CANCEL_BUTTON_BG = "#E3E1DC";
+const CANCEL_BUTTON_BORDER = "#C9C4BB";
+const CANCEL_BUTTON_TEXT = "#5F6368";
 
 export function DrawerDetailScreen() {
   const theme = useTheme();
@@ -42,9 +61,13 @@ export function DrawerDetailScreen() {
   } = useDrawerEntries(resolvedDrawerId);
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
-  const [sortBy, setSortBy] = useState<"date" | "title">("date");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const [draftSortOrder, setDraftSortOrder] = useState<"desc" | "asc">("desc");
+  const [draftTagId, setDraftTagId] = useState<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,14 +86,42 @@ export function DrawerDetailScreen() {
     }, [drawer]),
   );
 
-  // Sort entries
-  const sortedEntries = [...drawerEntries].sort((a, b) => {
-    if (sortBy === "date") {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    } else {
-      return a.title.localeCompare(b.title);
-    }
-  });
+  const uniqueTags = useMemo(() => {
+    const tagMap = new Map<
+      string,
+      { id: string; name: string; color: string | null }
+    >();
+
+    drawerEntries.forEach((entry) => {
+      (entry.tags || []).forEach((tag) => {
+        if (!tagMap.has(tag.id)) {
+          tagMap.set(tag.id, {
+            id: tag.id,
+            name: tag.name,
+            color: tag.color ?? null,
+          });
+        }
+      });
+    });
+
+    return Array.from(tagMap.values());
+  }, [drawerEntries]);
+
+  const visibleEntries = useMemo(() => {
+    const filtered = selectedTagId
+      ? drawerEntries.filter((entry) =>
+          (entry.tags || []).some((tag) => tag.id === selectedTagId),
+        )
+      : drawerEntries;
+
+    return [...filtered].sort((a, b) => {
+      const left = new Date(a.createdAt).getTime();
+      const right = new Date(b.createdAt).getTime();
+      return sortOrder === "asc" ? left - right : right - left;
+    });
+  }, [drawerEntries, selectedTagId, sortOrder]);
+
+  const hasActiveFilters = sortOrder !== "desc" || selectedTagId !== null;
 
   const handleEdit = useCallback(async () => {
     if (!editName.trim()) {
@@ -129,6 +180,38 @@ export function DrawerDetailScreen() {
     router.back();
   }, []);
 
+  const handleSearch = useCallback(() => {
+    router.push("/search");
+  }, []);
+
+  const openFilters = useCallback(() => {
+    setDraftSortOrder(sortOrder);
+    setDraftTagId(selectedTagId);
+    setIsFiltersOpen(true);
+  }, [selectedTagId, sortOrder]);
+
+  const closeFilters = useCallback(() => {
+    setIsFiltersOpen(false);
+  }, []);
+
+  const handleSaveFilters = useCallback(() => {
+    setSortOrder(draftSortOrder);
+    setSelectedTagId(draftTagId);
+    setIsFiltersOpen(false);
+  }, [draftSortOrder, draftTagId]);
+
+  const handleClearFilters = useCallback(() => {
+    setSortOrder("desc");
+    setSelectedTagId(null);
+    setDraftSortOrder("desc");
+    setDraftTagId(null);
+  }, []);
+
+  const handleClearDraftFilters = useCallback(() => {
+    setDraftSortOrder("desc");
+    setDraftTagId(null);
+  }, []);
+
   const colorOptions = [
     "#FF6B6B",
     "#4ECDC4",
@@ -140,12 +223,12 @@ export function DrawerDetailScreen() {
     "#85C1E2",
   ];
 
-  if (drawerLoading || entriesLoading) {
+  if (drawerLoading) {
     return (
       <SafeArea>
-        <Screen style={styles.container}>
+        <Screen style={[styles.container, styles.pageBackground]}>
           <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={PAGE_PRIMARY} />
           </View>
         </Screen>
       </SafeArea>
@@ -155,9 +238,9 @@ export function DrawerDetailScreen() {
   if (!drawer) {
     return (
       <SafeArea>
-        <Screen style={styles.container}>
+        <Screen style={[styles.container, styles.pageBackground]}>
           <View style={styles.loaderContainer}>
-            <Text style={[theme.typography.body, { color: theme.colors.text }]}>
+            <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
               Drawer not found
             </Text>
           </View>
@@ -168,69 +251,80 @@ export function DrawerDetailScreen() {
 
   return (
     <SafeArea>
-      <Screen style={styles.container}>
-        {/* Header */}
+      <Screen style={[styles.container, styles.pageBackground]}>
         <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            accessible
-            accessibilityLabel="Go back"
-          >
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
-              ←
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <Button
-              label="Edit"
-              onPress={() => setShowEditModal(true)}
-              size="sm"
-              accessibilityLabel="Edit drawer"
-            />
+          <View style={styles.headerLeft}>
             <TouchableOpacity
-              onPress={handleDelete}
+              onPress={handleBack}
+              style={styles.headerIconButton}
               accessible
-              accessibilityLabel="Delete drawer"
-              style={{ marginLeft: theme.spacing.sm }}
+              accessibilityLabel="Go back"
             >
-              <Text
-                style={[theme.typography.body, { color: theme.colors.error }]}
-              >
-                🗑️
-              </Text>
+              <MaterialCommunityIcons
+                name="arrow-left"
+                size={30}
+                color={PAGE_PRIMARY}
+              />
             </TouchableOpacity>
+            <AppHeaderBrand />
           </View>
+          <TouchableOpacity
+            onPress={handleSearch}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
+          >
+            <MaterialCommunityIcons
+              name="magnify"
+              size={32}
+              color={PAGE_PRIMARY}
+            />
+          </TouchableOpacity>
         </View>
 
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.content}
         >
-          {/* Drawer Info Card */}
+          <View style={styles.heroBlock}>
+            <Text
+              numberOfLines={1}
+              style={[styles.heroTitle, { fontFamily: theme.fonts.serif }]}
+            >
+              <Text style={{ color: PAGE_TEXT }}>{drawer.name}</Text>{" "}
+              <Text style={{ color: PAGE_PRIMARY }}>Entries</Text>
+            </Text>
+            <Text style={[theme.typography.bodySm, styles.heroSubtitle]}>
+              {entriesLoading
+                ? "Loading your archive..."
+                : `${visibleEntries.length} of ${drawerEntries.length} ${drawerEntries.length === 1 ? "entry" : "entries"}`}
+            </Text>
+          </View>
+
           <View
             style={[
               styles.drawerInfoCard,
               {
-                backgroundColor: drawer.color + "20",
-                borderColor: drawer.color,
+                backgroundColor: PAGE_SURFACE,
+                borderColor: drawer.color || PAGE_BORDER,
               },
             ]}
           >
             <View style={styles.drawerIcon}>
-              <Text style={{ fontSize: 40 }}>📁</Text>
+              <MaterialCommunityIcons
+                name="archive-outline"
+                size={34}
+                color={drawer.color || PAGE_PRIMARY}
+              />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[theme.typography.h3, { color: theme.colors.text }]}>
+              <Text style={[theme.typography.h2, styles.drawerName]}>
                 {drawer.name}
               </Text>
-              <Text
-                style={[
-                  theme.typography.bodySm,
-                  { color: theme.colors.textSecondary, marginTop: 4 },
-                ]}
-              >
-                {drawerEntries.length}{" "}
-                {drawerEntries.length === 1 ? "entry" : "entries"}
+              <Text style={[theme.typography.bodySm, styles.drawerCount]}>
+                {entriesLoading
+                  ? "Loading entries..."
+                  : `${drawerEntries.length} ${drawerEntries.length === 1 ? "entry" : "entries"}`}
               </Text>
             </View>
             <View
@@ -238,292 +332,440 @@ export function DrawerDetailScreen() {
             />
           </View>
 
-          {/* Create Entry Button */}
+          <View style={styles.heroActions}>
+            <Button
+              label="Edit Drawer"
+              onPress={() => setShowEditModal(true)}
+              size="sm"
+              style={styles.editButton}
+              textStyle={[theme.typography.body, styles.editButtonText]}
+              accessibilityLabel="Edit drawer"
+            />
+            <Button
+              label="Delete"
+              onPress={handleDelete}
+              size="sm"
+              style={styles.deleteActionButton}
+              textStyle={[theme.typography.body, styles.deleteActionButtonText]}
+              accessibilityLabel="Delete drawer"
+            />
+          </View>
+
           <Button
-            label="+ Add Entry to Drawer"
+            label="Add Entry to Drawer"
             onPress={handleCreateEntry}
-            style={{ marginVertical: theme.spacing.lg }}
+            style={styles.createEntryButton}
+            textStyle={[theme.typography.body, styles.createEntryButtonText]}
             accessibilityLabel="Create entry in this drawer"
           />
 
-          {/* Sort Options */}
-          <View style={styles.sortBar}>
-            <Text
-              style={[
-                theme.typography.labelSm,
-                { color: theme.colors.textSecondary },
-              ]}
+          <View style={styles.archiveHeaderRow}>
+            <View style={styles.archiveHeaderContent}>
+              <SectionHeader
+                label="Archive"
+                textColor={PAGE_MUTED}
+                dividerColor={PAGE_BORDER}
+              />
+            </View>
+            <TouchableOpacity
+              onPress={openFilters}
+              style={styles.archiveFilterButton}
+              accessible
+              accessibilityLabel="Open sort and filter options"
             >
-              Sort by:
+              <MaterialCommunityIcons
+                name="tune-variant"
+                size={24}
+                color={PAGE_PRIMARY}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.sortBar}>
+            <Text style={[theme.typography.bodySm, styles.sortLabel]}>
+              {sortOrder === "desc" ? "Recently Added" : "Oldest First"}
             </Text>
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              <TouchableOpacity
-                onPress={() => setSortBy("date")}
-                style={[
-                  styles.sortButton,
-                  {
-                    backgroundColor:
-                      sortBy === "date"
-                        ? theme.colors.primary
-                        : theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-                accessible
-                accessibilityLabel="Sort by date"
-                accessibilityRole="button"
-              >
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    {
-                      color:
-                        sortBy === "date"
-                          ? theme.colors.background
-                          : theme.colors.text,
-                    },
-                  ]}
-                >
-                  Date
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setSortBy("title")}
-                style={[
-                  styles.sortButton,
-                  {
-                    backgroundColor:
-                      sortBy === "title"
-                        ? theme.colors.primary
-                        : theme.colors.surface,
-                    borderColor: theme.colors.border,
-                  },
-                ]}
-                accessible
-                accessibilityLabel="Sort by title"
-                accessibilityRole="button"
-              >
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    {
-                      color:
-                        sortBy === "title"
-                          ? theme.colors.background
-                          : theme.colors.text,
-                    },
-                  ]}
-                >
-                  Title
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.metaActions}>
+              {hasActiveFilters ? (
+                <TouchableOpacity onPress={handleClearFilters}>
+                  <Text style={[theme.typography.bodySm, styles.clearAllText]}>
+                    Clear all
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+              <Text style={[theme.typography.bodySm, styles.sortCount]}>
+                {visibleEntries.length} shown
+              </Text>
             </View>
           </View>
 
-          {/* Entries List */}
-          {sortedEntries.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text
-                style={[
-                  theme.typography.h3,
-                  { color: theme.colors.textSecondary },
-                ]}
-              >
-                No entries yet
+          {entriesLoading ? (
+            <View style={styles.entriesLoadingContainer}>
+              <ActivityIndicator size="small" color={PAGE_PRIMARY} />
+            </View>
+          ) : visibleEntries.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <View style={styles.emptyIconCircle}>
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={32}
+                  color={PAGE_PRIMARY}
+                />
+              </View>
+              <Text style={[theme.typography.h2, styles.emptyTitle]}>
+                {hasActiveFilters ? "No matching entries" : "No entries yet"}
               </Text>
-              <Text
-                style={[
+              <Text style={[theme.typography.body, styles.emptyBody]}>
+                {hasActiveFilters
+                  ? "Try a different sort or tag filter to explore this drawer."
+                  : "Create your first entry in this drawer when you&apos;re ready"}
+              </Text>
+              <Button
+                label="Create First Entry"
+                onPress={handleCreateEntry}
+                style={styles.emptyButton}
+                textStyle={[
                   theme.typography.body,
-                  {
-                    color: theme.colors.textSecondary,
-                    marginTop: theme.spacing.md,
-                    textAlign: "center",
-                  },
+                  styles.createEntryButtonText,
                 ]}
-              >
-                Create your first entry in this drawer
-              </Text>
+                accessibilityLabel="Create your first entry in this drawer"
+              />
             </View>
           ) : (
-            <FlatList
-              data={sortedEntries}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={[
-                    styles.entryCard,
-                    {
-                      backgroundColor: theme.colors.surface,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  onPress={() => handleEntryPress(item.id)}
-                  accessible
-                  accessibilityLabel={`Entry: ${item.title}`}
-                  accessibilityRole="button"
-                >
-                  <View style={styles.entryHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        numberOfLines={1}
-                        style={[
-                          theme.typography.h4,
-                          { color: theme.colors.text },
-                        ]}
-                      >
-                        {item.title}
-                      </Text>
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          {
-                            color: theme.colors.textSecondary,
-                            marginTop: 4,
-                          },
-                        ]}
-                      >
-                        {new Date(item.createdAt).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                    {item.mood && (
-                      <Text style={{ fontSize: 24, marginLeft: 8 }}>
-                        {MOOD_MAP[item.mood as MoodValue]?.emoji}
-                      </Text>
-                    )}
-                  </View>
+            <View style={styles.entriesList}>
+              {visibleEntries.map((item, index) => {
+                const currentDate = new Date(item.createdAt).toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  },
+                );
+                const previous = visibleEntries[index - 1];
+                const previousDate = previous
+                  ? new Date(previous.createdAt).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : null;
+                const showDateHeader = currentDate !== previousDate;
 
-                  <Text
-                    numberOfLines={2}
-                    style={[
-                      theme.typography.bodySm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginVertical: theme.spacing.sm,
-                      },
-                    ]}
-                  >
-                    {item.content}
-                  </Text>
+                return (
+                  <View key={item.id} style={styles.dateGroup}>
+                    {showDateHeader ? (
+                      <Text
+                        style={[theme.typography.bodySm, styles.dateHeading]}
+                      >
+                        {currentDate}
+                      </Text>
+                    ) : null}
 
-                  {/* Entry Metadata */}
-                  <View style={styles.entryMeta}>
-                    {item.images && item.images.length > 0 && (
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        🖼️ {item.images.length}
-                      </Text>
-                    )}
-                    {item.audioUrl && (
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        🎙️
-                      </Text>
-                    )}
-                    {item.location && (
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          { color: theme.colors.primary },
-                        ]}
-                      >
-                        📍
-                      </Text>
-                    )}
-                  </View>
-
-                  {/* Tags */}
-                  {item.tags && item.tags.length > 0 && (
-                    <View
-                      style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        gap: 4,
-                        marginTop: theme.spacing.sm,
-                      }}
+                    <TouchableOpacity
+                      style={[styles.entryCard, styles.entryCardSurface]}
+                      onPress={() => handleEntryPress(item.id)}
+                      accessible
+                      accessibilityLabel={`Entry: ${item.title}`}
+                      accessibilityRole="button"
                     >
-                      {item.tags.slice(0, 3).map((tag) => (
-                        <View
-                          key={tag.id}
-                          style={[
-                            styles.tagBadge,
-                            {
-                              backgroundColor: tag.color + "30",
-                              borderColor: tag.color,
-                            },
-                          ]}
-                        >
+                      <View style={styles.entryMore}>
+                        <MaterialCommunityIcons
+                          name="dots-vertical"
+                          size={22}
+                          color={PAGE_MUTED_LIGHT}
+                        />
+                      </View>
+                      <View style={styles.entryHeader}>
+                        <View style={styles.entryHeaderContent}>
+                          <Text
+                            numberOfLines={1}
+                            style={[theme.typography.h3, styles.entryTitle]}
+                          >
+                            {item.title}
+                          </Text>
+                        </View>
+                        {item.mood && (
+                          <Text style={styles.moodEmoji}>
+                            {MOOD_MAP[item.mood as MoodValue]?.emoji}
+                          </Text>
+                        )}
+                      </View>
+
+                      <Text
+                        numberOfLines={2}
+                        style={[theme.typography.bodySm, styles.entryBody]}
+                      >
+                        {item.content}
+                      </Text>
+
+                      <View style={styles.entryMeta}>
+                        {item.images && item.images.length > 0 && (
                           <Text
                             style={[
                               theme.typography.labelXs,
-                              { color: tag.color },
+                              styles.entryMetaText,
                             ]}
                           >
-                            {tag.name}
+                            🖼️ {item.images.length}
                           </Text>
+                        )}
+                        {item.audioUrl && (
+                          <Text
+                            style={[
+                              theme.typography.labelXs,
+                              styles.entryMetaText,
+                            ]}
+                          >
+                            🎙️
+                          </Text>
+                        )}
+                        {item.location && (
+                          <Text
+                            style={[
+                              theme.typography.labelXs,
+                              styles.entryMetaText,
+                            ]}
+                          >
+                            📍
+                          </Text>
+                        )}
+                      </View>
+
+                      {item.tags && item.tags.length > 0 && (
+                        <View style={styles.tagsRow}>
+                          {item.tags.slice(0, 3).map((tag) => (
+                            <View
+                              key={tag.id}
+                              style={[
+                                styles.tagBadge,
+                                { backgroundColor: `${tag.color}20` },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  theme.typography.labelXs,
+                                  { color: tag.color, fontWeight: "600" },
+                                ]}
+                              >
+                                {tag.name}
+                              </Text>
+                            </View>
+                          ))}
+                          {item.tags.length > 3 && (
+                            <Text
+                              style={[
+                                theme.typography.labelXs,
+                                styles.entryDate,
+                              ]}
+                            >
+                              +{item.tags.length - 3}
+                            </Text>
+                          )}
                         </View>
-                      ))}
-                      {item.tags.length > 3 && (
-                        <Text
-                          style={[
-                            theme.typography.labelXs,
-                            { color: theme.colors.textSecondary },
-                          ]}
-                        >
-                          +{item.tags.length - 3}
-                        </Text>
                       )}
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={styles.entriesList}
-            />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
           )}
         </ScrollView>
 
+        <AppBottomNav currentRoute="/drawers" />
+
+        <AppModal
+          visible={isFiltersOpen}
+          onClose={closeFilters}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.filtersModal}
+        >
+          <View style={styles.filtersHeader}>
+            <Text style={[styles.menuTitle, { fontFamily: theme.fonts.serif }]}>
+              Sort & Filter
+            </Text>
+            <TouchableOpacity
+              onPress={handleSaveFilters}
+              accessible
+              accessibilityLabel="Save filters"
+            >
+              <Text style={[theme.typography.body, styles.saveText]}>Save</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[theme.typography.bodySm, styles.menuSubtitle]}>
+            Choose how you want to explore this drawer.
+          </Text>
+
+          <View style={styles.metaRow}>
+            <Text style={[theme.typography.bodySm, styles.sortLabel]}>
+              {visibleEntries.length}{" "}
+              {visibleEntries.length === 1 ? "entry" : "entries"}
+            </Text>
+            <View style={styles.metaActions}>
+              {hasActiveFilters ? (
+                <TouchableOpacity onPress={handleClearFilters}>
+                  <Text style={[theme.typography.bodySm, styles.clearAllText]}>
+                    Clear all
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text style={[theme.typography.labelSm, styles.controlsLabel]}>
+              Sort
+            </Text>
+            <View style={styles.chipRow}>
+              {[
+                { label: "Recently Added", value: "desc" as const },
+                { label: "Oldest First", value: "asc" as const },
+              ].map((option) => {
+                const isActive = draftSortOrder === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => setDraftSortOrder(option.value)}
+                    style={[
+                      styles.filterChip,
+                      isActive && styles.filterChipActive,
+                      {
+                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
+                        backgroundColor: isActive
+                          ? `${PAGE_PRIMARY}18`
+                          : PAGE_SURFACE,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        {
+                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
+                          fontWeight: isActive ? "600" : "400",
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={[theme.typography.labelSm, styles.controlsLabel]}>
+              Filter by Tag
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipRow}
+            >
+              <TouchableOpacity
+                onPress={() => setDraftTagId(null)}
+                style={[
+                  styles.filterChip,
+                  {
+                    borderColor:
+                      draftTagId === null ? PAGE_PRIMARY : PAGE_BORDER,
+                    backgroundColor:
+                      draftTagId === null ? `${PAGE_PRIMARY}18` : PAGE_SURFACE,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    {
+                      color: draftTagId === null ? PAGE_SECONDARY : PAGE_TEXT,
+                      fontWeight: draftTagId === null ? "600" : "400",
+                    },
+                  ]}
+                >
+                  All tags
+                </Text>
+              </TouchableOpacity>
+              {uniqueTags.map((tag) => {
+                const tagColor = tag.color || PAGE_PRIMARY;
+                const isActive = draftTagId === tag.id;
+
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    onPress={() => setDraftTagId(isActive ? null : tag.id)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        borderColor: isActive ? tagColor : PAGE_BORDER,
+                        backgroundColor: isActive
+                          ? `${tagColor}18`
+                          : PAGE_SURFACE,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        {
+                          color: isActive ? tagColor : PAGE_TEXT,
+                          fontWeight: isActive ? "600" : "400",
+                        },
+                      ]}
+                    >
+                      {tag.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </ScrollView>
+
+          <View style={styles.filtersFooter}>
+            <Button
+              label="Clear All"
+              onPress={handleClearDraftFilters}
+              variant="primary"
+              style={styles.footerButton}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Cancel"
+              onPress={closeFilters}
+              variant="primary"
+              style={styles.footerButton}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            />
+          </View>
+        </AppModal>
+
         {/* Edit Modal */}
-        <Modal
+        <RNModal
           visible={showEditModal}
           transparent
           animationType="slide"
           onRequestClose={() => setShowEditModal(false)}
         >
           <SafeArea>
-            <Screen
-              style={[
-                styles.modalContainer,
-                { backgroundColor: theme.colors.background } as any,
-              ]}
-            >
+            <Screen style={[styles.modalContainer, styles.pageBackground]}>
               <View style={styles.modalHeader}>
-                <Text
-                  style={[theme.typography.h2, { color: theme.colors.text }]}
-                >
+                <Text style={[theme.typography.h2, styles.modalTitle]}>
                   Edit Drawer
                 </Text>
                 <TouchableOpacity
                   onPress={() => setShowEditModal(false)}
+                  style={styles.headerIconButton}
                   accessible
                   accessibilityLabel="Close"
                 >
-                  <Text
-                    style={[theme.typography.h3, { color: theme.colors.text }]}
-                  >
-                    ✕
-                  </Text>
+                  <MaterialCommunityIcons
+                    name="close"
+                    size={30}
+                    color={PAGE_PRIMARY}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -531,46 +773,22 @@ export function DrawerDetailScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.modalContent}
               >
-                {/* Name Input */}
                 <View style={{ marginBottom: theme.spacing.lg }}>
-                  <Text
-                    style={[
-                      theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                      },
-                    ]}
-                  >
+                  <Text style={[theme.typography.labelSm, styles.modalLabel]}>
                     Drawer Name
                   </Text>
                   <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        borderColor: theme.colors.border,
-                        color: theme.colors.text,
-                      },
-                    ]}
+                    style={[styles.input]}
                     value={editName}
                     onChangeText={setEditName}
                     placeholder="Enter drawer name"
-                    placeholderTextColor={theme.colors.textSecondary}
+                    placeholderTextColor={PAGE_MUTED_LIGHT}
                     accessibilityLabel="Drawer name"
                   />
                 </View>
 
-                {/* Color Picker */}
                 <View>
-                  <Text
-                    style={[
-                      theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.md,
-                      },
-                    ]}
-                  >
+                  <Text style={[theme.typography.labelSm, styles.modalLabel]}>
                     Color
                   </Text>
                   <View
@@ -590,35 +808,41 @@ export function DrawerDetailScreen() {
                           {
                             backgroundColor: color,
                             borderColor:
-                              editColor === color
-                                ? theme.colors.primary
-                                : "transparent",
-                            borderWidth: editColor === color ? 3 : 0,
+                              editColor === color ? PAGE_TEXT : "transparent",
+                            borderWidth: editColor === color ? 2 : 0,
                           },
                         ]}
                         accessible
                         accessibilityLabel={`Color ${color}`}
                         accessibilityRole="button"
                       >
-                        {editColor === color && (
-                          <Text style={{ fontSize: 20 }}>✓</Text>
-                        )}
+                        {editColor === color ? (
+                          <MaterialCommunityIcons
+                            name="check"
+                            size={22}
+                            color="#FFFFFF"
+                          />
+                        ) : null}
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
 
-                {/* Save Button */}
                 <Button
                   label={updateLoading ? "Saving..." : "Save Changes"}
                   onPress={handleEdit}
                   disabled={updateLoading}
+                  style={styles.saveButton}
+                  textStyle={[
+                    theme.typography.body,
+                    styles.createEntryButtonText,
+                  ]}
                   accessibilityLabel="Save drawer changes"
                 />
               </ScrollView>
             </Screen>
           </SafeArea>
-        </Modal>
+        </RNModal>
       </Screen>
     </SafeArea>
   );
@@ -628,38 +852,138 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  pageBackground: {
+    backgroundColor: PAGE_BACKGROUND,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
   },
-  headerActions: {
+  headerLeft: {
     flexDirection: "row",
     alignItems: "center",
   },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroBlock: {
+    marginBottom: 18,
+  },
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+  },
+  heroSubtitle: {
+    color: PAGE_MUTED,
+    marginTop: 6,
+  },
+  editButton: {
+    minHeight: 46,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+    backgroundColor: PAGE_PRIMARY,
+  },
+  editButtonText: {
+    color: PAGE_SURFACE,
+    fontWeight: "600",
+  },
+  deleteActionButton: {
+    minHeight: 46,
+    paddingHorizontal: 22,
+    borderRadius: 999,
+    backgroundColor: "#A6544E",
+    borderColor: "#A6544E",
+  },
+  deleteActionButtonText: {
+    color: PAGE_SURFACE,
+    fontWeight: "600",
+  },
   content: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    paddingBottom: 40,
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 120,
+  },
+  heroActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    marginBottom: 4,
   },
   drawerInfoCard: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 22,
     borderWidth: 1,
-    marginBottom: 20,
+    shadowColor: PAGE_SECONDARY,
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
   },
   drawerIcon: {
-    marginRight: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    backgroundColor: PAGE_SOFT_SURFACE,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+  drawerName: {
+    color: PAGE_TEXT,
+    fontFamily: Fonts.serif,
+    fontWeight: "400",
+  },
+  drawerCount: {
+    color: PAGE_MUTED,
+    marginTop: 4,
   },
   colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     marginLeft: 12,
+  },
+  createEntryButton: {
+    marginTop: 22,
+    marginBottom: 28,
+    minHeight: 54,
+    borderRadius: 999,
+    backgroundColor: PAGE_PRIMARY,
+    shadowColor: PAGE_CARD_SHADOW,
+    shadowOpacity: 1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  createEntryButtonText: {
+    color: PAGE_SURFACE,
+    fontWeight: "600",
+  },
+  archiveHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  archiveHeaderContent: {
+    flex: 1,
+  },
+  archiveFilterButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+    marginTop: -10,
   },
   sortBar: {
     flexDirection: "row",
@@ -667,43 +991,228 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
-  sortButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderRadius: 8,
+  sortLabel: {
+    color: PAGE_MUTED,
+  },
+  sortCount: {
+    color: PAGE_MUTED,
+  },
+  metaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  clearAllText: {
+    color: PAGE_SECONDARY,
   },
   entriesList: {
-    paddingBottom: 20,
+    paddingBottom: 10,
+  },
+  dateGroup: {
+    marginBottom: 8,
+  },
+  dateHeading: {
+    color: PAGE_TEXT,
+    marginBottom: 12,
+    marginTop: 6,
+    fontWeight: "500",
+  },
+  entriesLoadingContainer: {
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  entryCardSurface: {
+    backgroundColor: PAGE_SURFACE,
+    borderColor: PAGE_BORDER,
   },
   entryCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
+    position: "relative",
+    paddingVertical: 18,
+    paddingLeft: 18,
+    paddingRight: 18,
+    borderRadius: 22,
+    marginBottom: 14,
     borderWidth: 1,
+    shadowColor: PAGE_TEXT,
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+  },
+  entryMore: {
+    position: "absolute",
+    top: 10,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
   },
   entryHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  entryHeaderContent: {
+    flex: 1,
+    paddingRight: 34,
+  },
+  entryTitle: {
+    color: PAGE_TEXT,
+    fontFamily: Fonts.serif,
+    fontWeight: "400",
+  },
+  entryDate: {
+    color: PAGE_MUTED,
+    marginTop: 4,
+  },
+  moodEmoji: {
+    fontSize: 24,
+    marginLeft: 10,
+  },
+  entryBody: {
+    color: PAGE_MUTED,
+    marginVertical: 12,
   },
   entryMeta: {
     flexDirection: "row",
     gap: 8,
     marginTop: 8,
   },
+  entryMetaText: {
+    color: PAGE_PRIMARY,
+  },
+  tagsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 12,
+  },
   tagBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
+  },
+  emptyCard: {
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 36,
+    minHeight: 320,
+    borderRadius: 28,
+    backgroundColor: PAGE_SURFACE,
+    borderWidth: 1,
+    borderColor: PAGE_BORDER,
+    shadowColor: PAGE_SECONDARY,
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 1,
+  },
+  emptyIconCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: PAGE_SOFT_SURFACE,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    color: PAGE_TEXT,
+    fontFamily: Fonts.serif,
+    fontWeight: "400",
+    textAlign: "center",
+  },
+  emptyBody: {
+    color: PAGE_MUTED,
+    marginTop: 12,
+    textAlign: "center",
+  },
+  emptyButton: {
+    marginTop: 22,
+    minHeight: 54,
+    borderRadius: 20,
+    paddingHorizontal: 28,
+    backgroundColor: PAGE_PRIMARY,
+  },
+  menuBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  filtersModal: {
+    width: "100%",
+    maxHeight: "78%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+    backgroundColor: PAGE_SURFACE,
+  },
+  filtersHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 6,
+  },
+  saveText: {
+    color: PAGE_SECONDARY,
+    fontWeight: "700",
+  },
+  menuTitle: {
+    color: PAGE_TEXT,
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  menuSubtitle: {
+    color: PAGE_MUTED,
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  controlsLabel: {
+    color: PAGE_MUTED,
+    textTransform: "uppercase",
+    letterSpacing: 1.6,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
     borderWidth: 1,
   },
-  emptyContainer: {
+  filterChipActive: {
+    shadowOpacity: 0,
+  },
+  filtersFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  footerButton: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    minHeight: 300,
+    minHeight: 52,
+    borderRadius: 999,
+    backgroundColor: CANCEL_BUTTON_BG,
+    borderColor: CANCEL_BUTTON_BORDER,
   },
   loaderContainer: {
     flex: 1,
@@ -718,25 +1227,44 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  modalTitle: {
+    color: PAGE_TEXT,
+    fontFamily: Fonts.serif,
+    fontWeight: "400",
   },
   modalContent: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingBottom: 40,
   },
+  modalLabel: {
+    color: PAGE_MUTED,
+    marginBottom: 10,
+  },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 20,
+    borderColor: PAGE_BORDER,
+    backgroundColor: PAGE_SURFACE,
+    color: PAGE_TEXT,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     fontSize: 16,
   },
   colorOption: {
     width: "23%",
     aspectRatio: 1,
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+  },
+  saveButton: {
+    marginTop: 8,
+    minHeight: 54,
+    borderRadius: 20,
+    backgroundColor: PAGE_PRIMARY,
   },
 });

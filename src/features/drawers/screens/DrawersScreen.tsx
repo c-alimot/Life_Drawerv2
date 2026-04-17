@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppBottomNav, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
 import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
@@ -10,7 +10,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { Drawer } from "@types";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -75,6 +75,7 @@ export function DrawersScreen() {
   const [editingDrawer, setEditingDrawer] = useState<DrawerListItem | null>(null);
   const [editDrawerName, setEditDrawerName] = useState("");
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
+  const hasLoadedInitialData = useRef(false);
   const displayDrawers: DrawerListItem[] = isStarterDrawerHidden
     ? drawers
     : [STARTER_DRAWER, ...drawers];
@@ -225,7 +226,10 @@ export function DrawersScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      fetchDrawers();
+      if (!hasLoadedInitialData.current) {
+        hasLoadedInitialData.current = true;
+        fetchDrawers();
+      }
     }, [fetchDrawers]),
   );
 
@@ -233,7 +237,9 @@ export function DrawersScreen() {
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
         <View style={styles.header}>
-          <View style={styles.headerLeft} />
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}
