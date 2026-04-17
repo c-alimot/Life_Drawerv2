@@ -35,11 +35,12 @@ type FilterType = "all" | "mood" | "drawer" | "tag" | "date";
 export function SearchScreen() {
   const theme = useTheme();
   const { entries, isLoading, total, fetchEntries } = useEntries();
-  const { activePhase, fetchActivePhase } = useLifePhase();
+  const { fetchActivePhase } = useLifePhase();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasLoadedSearch, setHasLoadedSearch] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     mood: null,
     drawer: null,
@@ -48,11 +49,16 @@ export function SearchScreen() {
   });
   const { searchRequest } = useSearch(searchTerm, filters);
 
+  const loadSearchResults = useCallback(async () => {
+    await fetchEntries(searchRequest);
+    setHasLoadedSearch(true);
+  }, [fetchEntries, searchRequest]);
+
   useFocusEffect(
     useCallback(() => {
-      fetchEntries(searchRequest);
       fetchActivePhase();
-    }, [fetchActivePhase, fetchEntries, searchRequest]),
+      loadSearchResults();
+    }, [fetchActivePhase, loadSearchResults]),
   );
 
   const handleEntryPress = useCallback((entryId: string) => {
@@ -159,7 +165,7 @@ export function SearchScreen() {
     </Text>
   );
 
-  if (isLoading) {
+  if (isLoading && !hasLoadedSearch) {
     return (
       <SafeArea>
         <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
@@ -260,17 +266,22 @@ export function SearchScreen() {
                   <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
                     {total} {total === 1 ? "entry" : "entries"} found
                   </Text>
-                  {hasActiveFilters ? (
-                    <TouchableOpacity
-                      onPress={clearFilters}
-                      accessible
-                      accessibilityLabel="Clear filters"
-                    >
-                      <Text style={[styles.clearText, { color: PAGE_SECONDARY }]}>
-                        Clear all
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
+                  <View style={styles.searchMetaActions}>
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color={PAGE_PRIMARY} />
+                    ) : null}
+                    {hasActiveFilters ? (
+                      <TouchableOpacity
+                        onPress={clearFilters}
+                        accessible
+                        accessibilityLabel="Clear filters"
+                      >
+                        <Text style={[styles.clearText, { color: PAGE_SECONDARY }]}>
+                          Clear all
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
               </View>
 
@@ -719,6 +730,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  searchMetaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   clearText: {
     fontSize: 14,
