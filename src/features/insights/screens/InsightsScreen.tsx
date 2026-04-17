@@ -1,10 +1,10 @@
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -24,8 +24,6 @@ const PAGE_BORDER = "#B39C87";
 export function InsightsScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   useFocusEffect(
     useCallback(() => {
       fetchEntries();
@@ -228,19 +226,9 @@ export function InsightsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <AppSideMenu
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          currentRoute="/insights"
-        />
-
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
-              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}

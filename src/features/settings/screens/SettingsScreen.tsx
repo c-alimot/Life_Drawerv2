@@ -1,4 +1,4 @@
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { Button, Modal, SectionHeader } from "@components/ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -67,7 +67,6 @@ export function SettingsScreen() {
   const theme = useTheme();
   const { logout, isLoading } = useLogout();
   const { user, setUser } = useAuthStore();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [selectedPhotoUri, setSelectedPhotoUri] = useState<string | null>(null);
@@ -518,21 +517,8 @@ export function SettingsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <AppSideMenu
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          currentRoute="/settings"
-        />
-
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={() => setIsMenuOpen(true)}
-              style={styles.headerIconButton}
-            >
-              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}

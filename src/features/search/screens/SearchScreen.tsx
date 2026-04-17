@@ -1,4 +1,4 @@
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP } from "@constants/moods";
@@ -37,7 +37,6 @@ export function SearchScreen() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [hasLoadedSearch, setHasLoadedSearch] = useState(false);
   const [filters, setFilters] = useState<SearchFilters>({
     mood: null,
@@ -177,24 +176,8 @@ export function SearchScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <AppSideMenu
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          currentRoute="/search"
-        />
-
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={() => setIsMenuOpen(true)}
-              style={styles.headerIconButton}
-              accessible
-              accessibilityLabel="Open menu"
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <View style={styles.headerIconButton}>
             <MaterialCommunityIcons name="magnify" size={30} color={PAGE_PRIMARY} />
           </View>

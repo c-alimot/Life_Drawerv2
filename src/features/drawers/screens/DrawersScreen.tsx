@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
@@ -68,7 +68,6 @@ export function DrawersScreen() {
   const { createDrawer, isLoading: isCreatingDrawer } = useCreateDrawer();
   const { updateDrawer, isLoading: isUpdatingDrawer } = useUpdateDrawer();
   const { deleteDrawer, isLoading: isDeletingDrawer } = useDeleteDrawer();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [drawerMenuTarget, setDrawerMenuTarget] = useState<DrawerListItem | null>(null);
@@ -233,21 +232,8 @@ export function DrawersScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <AppSideMenu
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          currentRoute="/drawers"
-        />
-
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={() => setIsMenuOpen(true)}
-              style={styles.headerIconButton}
-            >
-              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}

@@ -1,5 +1,5 @@
 import { tagsService } from "@services/supabase/tags";
-import { ApiError, CreateTagRequest } from "@types";
+import { ApiError, CreateTagRequest, UpdateTagRequest } from "@types";
 
 export const tagsApi = {
   async createTag(userId: string, data: CreateTagRequest) {
@@ -66,6 +66,24 @@ export const tagsApi = {
       };
     } catch (error) {
       console.error("Tags API delete error:", error);
+      return {
+        success: false,
+        data: null,
+        error: error as ApiError,
+      };
+    }
+  },
+
+  async updateTag(tagId: string, userId: string, data: UpdateTagRequest) {
+    try {
+      const result = await tagsService.updateTag(tagId, userId, data);
+      return {
+        success: true,
+        data: result,
+        error: null,
+      };
+    } catch (error) {
+      console.error("Tags API update error:", error);
       return {
         success: false,
         data: null,

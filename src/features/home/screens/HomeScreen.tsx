@@ -1,4 +1,4 @@
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { Button, Modal, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
@@ -62,7 +62,6 @@ export function HomeScreen() {
   const { drawers, isLoading: drawersLoading, fetchDrawers } = useDrawers();
 
   const [groupedEntries, setGroupedEntries] = useState<GroupedEntries>({});
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [entryMenuTarget, setEntryMenuTarget] = useState<EntryWithRelations | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EntryWithRelations | null>(null);
   const [drawerMenuTarget, setDrawerMenuTarget] = useState<DrawerMenuTarget | null>(null);
@@ -215,35 +214,15 @@ export function HomeScreen() {
     }
   }, [deleteDrawer, deleteDrawerTarget, fetchDrawers, fetchRecentEntries]);
 
-  const closeMenu = useCallback(() => {
-    setIsMenuOpen(false);
-  }, []);
-
-  const handleOpenMenu = useCallback(() => {
-    setIsMenuOpen(true);
-  }, []);
-
   const isLoading = entriesLoading || drawersLoading;
   const recentDrawers = drawers.length > 0 ? drawers.slice(0, 5) : [STARTER_DRAWER];
 
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: HOME_BACKGROUND }]}>
-        <AppSideMenu visible={isMenuOpen} onClose={closeMenu} currentRoute="/" />
-
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={handleOpenMenu}
-              style={styles.headerIconButton}
-              accessible
-              accessibilityLabel="Open menu"
-              accessibilityRole="button"
-            >
-              <MaterialCommunityIcons name="menu" size={34} color={HOME_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={handleSearch}
             style={styles.headerIconButton}

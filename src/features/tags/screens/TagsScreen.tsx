@@ -1,4 +1,4 @@
-import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, SafeArea, Screen } from "@components/layout";
 import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
@@ -39,7 +39,6 @@ export function TagsScreen() {
   const theme = useTheme();
   const { tags, isLoading, fetchTags } = useTags();
   const { createTag, isLoading: isCreatingTag } = useCreateTag();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
 
@@ -82,18 +81,8 @@ export function TagsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <AppSideMenu
-          visible={isMenuOpen}
-          onClose={() => setIsMenuOpen(false)}
-          currentRoute="/tags"
-        />
-
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={() => setIsMenuOpen(true)} style={styles.headerIconButton}>
-              <MaterialCommunityIcons name="menu" size={34} color={PAGE_TEXT} />
-            </TouchableOpacity>
-          </View>
+          <View style={styles.headerLeft} />
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}
