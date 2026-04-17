@@ -31,7 +31,7 @@ const ITEMS: {
   { label: "Home", route: "/", icon: "home" },
   { label: "Drawers", route: "/drawers", icon: "archive-outline" },
   { label: "Insights", route: "/insights", icon: "chart-box-outline" },
-  { label: "Account", route: "/settings", icon: "cog-outline" },
+  { label: "Account", route: "/settings", icon: "account-outline" },
 ];
 
 export function AppBottomNav({ currentRoute }: AppBottomNavProps) {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     backgroundColor: NAV_BACKGROUND,
     overflow: "hidden",
     paddingHorizontal: 18,
-    paddingTop: 12,
+    paddingTop: 2,
     paddingBottom: 14,
     shadowColor: NAV_SHADOW,
     shadowOffset: { width: 0, height: 14 },
