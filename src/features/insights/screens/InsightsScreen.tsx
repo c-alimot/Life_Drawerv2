@@ -1,5 +1,4 @@
 import { AppBottomNav, AppSideMenu, SafeArea, Screen } from "@components/layout";
-import { Button } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -22,7 +21,6 @@ const PAGE_SURFACE = "#FFFFFF";
 const PAGE_TEXT = "#2F2924";
 const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
-const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
 
 export function InsightsScreen() {
@@ -296,68 +294,34 @@ export function InsightsScreen() {
 
           {activePhase ? (
             <View style={styles.lifePhaseSection}>
-              <View style={styles.sectionHeaderRow}>
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    styles.sectionHeaderText,
-                    { color: PAGE_MUTED },
-                  ]}
-                >
-                  Life Phase
-                </Text>
-                <View
-                  style={[
-                    styles.sectionDivider,
-                    { backgroundColor: theme.colors.accent1 },
-                  ]}
-                />
-              </View>
-
-              <View
+              <TouchableOpacity
+                onPress={handleSetLifePhase}
                 style={[
-                  styles.lifePhaseCard,
+                  styles.lifePhaseTab,
                   {
                     backgroundColor: PAGE_SURFACE,
                     borderColor: `${PAGE_BORDER}88`,
-                    shadowColor: PAGE_TEXT,
                   },
                 ]}
+                accessible
+                accessibilityLabel={`Current life phase: ${activePhase.name}`}
+                accessibilityRole="button"
               >
-                <View style={styles.lifePhaseIcon}>
-                  <MaterialCommunityIcons
-                    name="calendar-blank-outline"
-                    size={34}
-                    color={PAGE_PRIMARY}
-                  />
-                </View>
+                <MaterialCommunityIcons
+                  name="book-open-page-variant"
+                  size={20}
+                  color={PAGE_PRIMARY}
+                />
                 <Text
                   style={[
-                    styles.lifePhaseTitle,
-                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                    theme.typography.body,
+                    styles.lifePhaseTabText,
+                    { color: PAGE_TEXT },
                   ]}
                 >
                   {`Current Life Phase: ${activePhase.name}`}
                 </Text>
-                <Text style={[styles.lifePhaseBody, { color: PAGE_MUTED }]}>
-                  {activePhase.description ||
-                    "This is the season of life currently shaping your reflections and helping you look back with more context."}
-                </Text>
-                <Button
-                  label="Manage Life Phase"
-                  onPress={handleSetLifePhase}
-                  variant="outline"
-                  textStyle={{ color: PAGE_PRIMARY }}
-                  style={[
-                    styles.lifePhaseButton,
-                    {
-                      backgroundColor: "transparent",
-                      borderColor: PAGE_BORDER,
-                    },
-                  ]}
-                  accessibilityLabel="Manage current life phase button"
-                />
-              </View>
+              </TouchableOpacity>
             </View>
           ) : null}
 
@@ -592,62 +556,18 @@ const styles = StyleSheet.create({
   lifePhaseSection: {
     marginBottom: 34,
   },
-  sectionHeaderRow: {
+  lifePhaseTab: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 18,
-  },
-  sectionHeaderText: {
-    textTransform: "uppercase",
-    letterSpacing: 2.6,
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 14,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    opacity: 0.7,
-  },
-  lifePhaseCard: {
-    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 10,
     borderWidth: 1,
-    borderRadius: 24,
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  lifePhaseIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#F1ECE4",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  lifePhaseTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "300",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  lifePhaseBody: {
-    fontSize: 16,
-    lineHeight: 30,
-    textAlign: "center",
-    maxWidth: 540,
-    marginBottom: 24,
-  },
-  lifePhaseButton: {
-    minHeight: 58,
     borderRadius: 999,
-    paddingHorizontal: 24,
-    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  lifePhaseTabText: {
+    fontWeight: "400",
   },
   featureStack: {
     gap: 18,

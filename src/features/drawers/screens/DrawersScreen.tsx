@@ -292,78 +292,34 @@ export function DrawersScreen() {
 
                 {activePhase ? (
                   <View style={styles.lifePhaseSection}>
-                    <View style={styles.sectionHeaderRow}>
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          styles.sectionHeaderText,
-                          { color: PAGE_MUTED },
-                        ]}
-                      >
-                        Life Phase
-                      </Text>
-                      <View
-                        style={[
-                          styles.sectionDivider,
-                          { backgroundColor: theme.colors.accent1 },
-                        ]}
-                      />
-                    </View>
-
-                    <View
+                    <TouchableOpacity
+                      onPress={handleSetLifePhase}
                       style={[
-                        styles.lifePhaseCard,
+                        styles.lifePhaseTab,
                         {
                           backgroundColor: PAGE_SURFACE,
                           borderColor: theme.colors.accent1 + "AA",
                         },
                       ]}
+                      accessible
+                      accessibilityLabel={`Current life phase: ${activePhase.name}`}
+                      accessibilityRole="button"
                     >
-                      <View
-                        style={[
-                          styles.lifePhaseIcon,
-                          { backgroundColor: theme.colors.accent1 + "3D" },
-                        ]}
-                      >
-                        <MaterialCommunityIcons
-                          name="calendar-blank-outline"
-                          size={34}
-                          color={PAGE_PRIMARY}
-                        />
-                      </View>
+                      <MaterialCommunityIcons
+                        name="book-open-page-variant"
+                        size={20}
+                        color={PAGE_PRIMARY}
+                      />
                       <Text
                         style={[
-                          styles.lifePhaseTitle,
-                          { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                          theme.typography.body,
+                          styles.lifePhaseTabText,
+                          { color: PAGE_TEXT },
                         ]}
                       >
                         {`Current Life Phase: ${activePhase.name}`}
                       </Text>
-                      <Text
-                        style={[
-                          theme.typography.body,
-                          styles.lifePhaseBody,
-                          { color: PAGE_MUTED },
-                        ]}
-                      >
-                        {activePhase.description ||
-                          "This is the season of life currently shaping your reflections and helping you look back with more context."}
-                      </Text>
-                      <Button
-                        label="Manage Life Phase"
-                        onPress={handleSetLifePhase}
-                        variant="outline"
-                        textStyle={{ color: PAGE_PRIMARY }}
-                        style={[
-                          styles.lifePhaseButton,
-                          {
-                            backgroundColor: "transparent",
-                            borderColor: theme.colors.accent2,
-                          },
-                        ]}
-                        accessibilityLabel="Manage current life phase button"
-                      />
-                    </View>
+                    </TouchableOpacity>
                   </View>
                 ) : null}
 
@@ -756,40 +712,18 @@ const styles = StyleSheet.create({
   lifePhaseSection: {
     marginBottom: 24,
   },
-  lifePhaseCard: {
+  lifePhaseTab: {
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 40,
-    paddingHorizontal: 24,
-    borderRadius: 24,
+    alignSelf: "flex-start",
+    gap: 10,
     borderWidth: 1,
-    borderStyle: "solid",
-  },
-  lifePhaseIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 20,
-  },
-  lifePhaseTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: "300",
-    textAlign: "center",
-    marginBottom: 12,
-  },
-  lifePhaseBody: {
-    textAlign: "center",
-    lineHeight: 30,
-    marginBottom: 24,
-    maxWidth: 540,
-  },
-  lifePhaseButton: {
-    minHeight: 58,
     borderRadius: 999,
-    paddingHorizontal: 24,
-    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  lifePhaseTabText: {
+    fontWeight: "400",
   },
   primaryAction: {
     minHeight: 92,

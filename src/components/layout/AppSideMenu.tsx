@@ -39,8 +39,6 @@ const MENU_ITEMS: {
   route: MenuRoute;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
 }[] = [
-  { label: "Home", route: "/", icon: "home-outline" },
-  { label: "Tags", route: "/tags", icon: "tag-outline" },
   {
     label: "Account & Settings",
     route: "/settings",

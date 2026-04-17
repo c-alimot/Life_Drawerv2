@@ -293,84 +293,108 @@ export function HomeScreen() {
             </Text>
 
             <View style={styles.section}>
-              <SectionHeader
-                label="Life Phase"
-                textColor={HOME_MUTED}
-                dividerColor={theme.colors.accent1}
-              />
-
-              <View
-                style={[
-                  styles.emptyState,
-                  {
-                    borderColor: theme.colors.accent1 + "AA",
-                    backgroundColor: HOME_SURFACE,
-                  },
-                ]}
-              >
-                <View
+              {activePhase ? (
+                <TouchableOpacity
+                  onPress={handleSetLifePhase}
                   style={[
-                    styles.emptyIcon,
+                    styles.lifePhaseTab,
                     {
-                      backgroundColor: theme.colors.accent1 + "3D",
+                      backgroundColor: HOME_SURFACE,
+                      borderColor: theme.colors.accent1 + "B8",
                     },
                   ]}
+                  accessible
+                  accessibilityLabel={`Current life phase: ${activePhase.name}`}
+                  accessibilityRole="button"
                 >
                   <MaterialCommunityIcons
                     name="book-open-page-variant"
-                    size={34}
+                    size={20}
                     color={HOME_PRIMARY}
                   />
-                </View>
-                <Text
-                  style={[
-                    styles.emptyTitle,
-                    styles.lifePhaseTitle,
-                    {
-                      color: HOME_TEXT,
-                      fontFamily: theme.fonts.serif,
-                      marginBottom: theme.spacing.md,
-                    },
-                  ]}
-                >
-                  {activePhase
-                    ? `Current Life Phase: ${activePhase.name}`
-                    : "Define Your Current Chapter"}
-                </Text>
-                <Text
-                  style={[
-                    theme.typography.body,
-                    styles.lifePhaseBody,
-                    {
-                      color: HOME_MUTED,
-                      marginBottom: theme.spacing.lg,
-                    },
-                  ]}
-                >
-                  {activePhase?.description ||
-                    (activePhase
-                      ? "This is the season of life currently shaping your reflections and helping you look back with more context."
-                      : "Life phases represent different seasons of your life. Setting one helps you reflect and look back with more context.")}
-                </Text>
-                <Button
-                  label={activePhase ? "Manage Life Phase" : "Set Life Phase"}
-                  onPress={handleSetLifePhase}
-                  variant="outline"
-                  textStyle={{ color: HOME_PRIMARY }}
-                  style={[
-                    styles.inlineCta,
-                    {
-                      backgroundColor: "transparent",
-                      borderColor: theme.colors.accent2,
-                    },
-                  ]}
-                  accessibilityLabel={
-                    activePhase
-                      ? "Manage current life phase button"
-                      : "Set life phase button"
-                  }
-                />
-              </View>
+                  <Text
+                    style={[
+                      theme.typography.body,
+                      styles.lifePhaseTabText,
+                      { color: HOME_TEXT },
+                    ]}
+                  >
+                    {`Current Life Phase: ${activePhase.name}`}
+                  </Text>
+                </TouchableOpacity>
+              ) : (
+                <>
+                  <SectionHeader
+                    label="Life Phase"
+                    textColor={HOME_MUTED}
+                    dividerColor={theme.colors.accent1}
+                  />
+
+                  <View
+                    style={[
+                      styles.emptyState,
+                      {
+                        borderColor: theme.colors.accent1 + "AA",
+                        backgroundColor: HOME_SURFACE,
+                      },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        styles.emptyIcon,
+                        {
+                          backgroundColor: theme.colors.accent1 + "3D",
+                        },
+                      ]}
+                    >
+                      <MaterialCommunityIcons
+                        name="book-open-page-variant"
+                        size={34}
+                        color={HOME_PRIMARY}
+                      />
+                    </View>
+                    <Text
+                      style={[
+                        styles.emptyTitle,
+                        styles.lifePhaseTitle,
+                        {
+                          color: HOME_TEXT,
+                          fontFamily: theme.fonts.serif,
+                          marginBottom: theme.spacing.md,
+                        },
+                      ]}
+                    >
+                      Define Your Current Chapter
+                    </Text>
+                    <Text
+                      style={[
+                        theme.typography.body,
+                        styles.lifePhaseBody,
+                        {
+                          color: HOME_MUTED,
+                          marginBottom: theme.spacing.lg,
+                        },
+                      ]}
+                    >
+                      Life phases represent different seasons of your life. Setting one helps you reflect and look back with more context.
+                    </Text>
+                    <Button
+                      label="Set Life Phase"
+                      onPress={handleSetLifePhase}
+                      variant="outline"
+                      textStyle={{ color: HOME_PRIMARY }}
+                      style={[
+                        styles.inlineCta,
+                        {
+                          backgroundColor: "transparent",
+                          borderColor: theme.colors.accent2,
+                        },
+                      ]}
+                      accessibilityLabel="Set life phase button"
+                    />
+                  </View>
+                </>
+              )}
             </View>
 
             {/* Recent Entries Section */}
@@ -1031,6 +1055,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 18,
     fontStyle: "italic",
+  },
+  lifePhaseTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  lifePhaseTabText: {
+    fontWeight: "400",
   },
   menuBackdrop: {
     paddingHorizontal: 24,
