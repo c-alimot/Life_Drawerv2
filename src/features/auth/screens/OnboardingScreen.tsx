@@ -1,4 +1,4 @@
-import { Screen } from "@components/layout";
+import { SafeArea, Screen } from "@components/layout";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -11,7 +11,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../../../constants/theme";
 import { setOnboardingCompleted } from "../utils/onboarding";
 
@@ -85,12 +84,7 @@ export function OnboardingScreen() {
   const isLastSlide = currentSlide === ONBOARDING_SLIDES.length - 1;
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        { backgroundColor: Colors.light.background },
-      ]}
-    >
+    <SafeArea backgroundColor={Colors.light.background}>
       <Screen
         style={[
           styles.container,
@@ -337,15 +331,11 @@ export function OnboardingScreen() {
           </View>
         </ScrollView>
       </Screen>
-    </SafeAreaView>
+    </SafeArea>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    overflow: "hidden",
-  },
   container: {
     flex: 1,
     overflow: "hidden",

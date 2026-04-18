@@ -3,14 +3,18 @@ import { useTheme } from '@styles/theme';
 
 interface CustomSafeAreaProps {
   children: React.ReactNode;
+  backgroundColor?: string;
 }
 
-export function SafeArea({ children }: CustomSafeAreaProps) {
+export function SafeArea({ children, backgroundColor }: CustomSafeAreaProps) {
   const theme = useTheme();
 
   return (
     <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
+      style={{
+        flex: 1,
+        backgroundColor: backgroundColor || theme.colors.background,
+      }}
     >
       {children}
     </SafeAreaView>

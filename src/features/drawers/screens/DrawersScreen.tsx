@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Button, Card, CardIconWrap, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
@@ -243,19 +243,7 @@ export function DrawersScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/search")}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader onSearchPress={() => router.push("/search")} />
 
         {isLoading ? (
           <View style={styles.loader}>

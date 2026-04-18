@@ -1,4 +1,4 @@
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Button, Card, CardIconWrap, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -100,20 +100,7 @@ export function HomeScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: HOME_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={handleSearch}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-            accessibilityHint="Open search and filter screen"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={HOME_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader onSearchPress={handleSearch} />
 
         {isLoading && entries.length === 0 ? (
           <View style={styles.loaderContainer}>
@@ -270,24 +257,6 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   loaderContainer: {
     flex: 1,

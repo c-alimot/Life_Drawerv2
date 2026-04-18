@@ -8,6 +8,7 @@ import {
   ViewProps,
   ViewStyle,
 } from "react-native";
+import { useTheme } from "@styles/theme";
 
 type CardVariant = "soft" | "elevated";
 type CardBorder = "none" | "subtle";
@@ -25,28 +26,23 @@ interface CardProps extends Omit<ViewProps, "style"> {
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 26,
     borderWidth: 0,
-    shadowColor: "#2F2924",
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
   soft: {
     backgroundColor: "#F8F6F2",
   },
   elevated: {
-    backgroundColor: "#F8F6F2",
+    backgroundColor: "#FFFFFF",
   },
   borderNone: {
     borderWidth: 0,
   },
   borderSubtle: {
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: "#E7DED2",
   },
   paddingMd: {
-    padding: 22,
+    padding: 20,
   },
   paddingLg: {
     padding: 22,
@@ -63,8 +59,13 @@ export function Card({
   accessibilityLabel,
   ...props
 }: CardProps) {
+  const theme = useTheme();
   const cardStyles = [
     styles.base,
+    {
+      borderRadius: theme.radii.card,
+      ...theme.shadows.card,
+    },
     variant === "elevated" ? styles.elevated : styles.soft,
     border === "none" ? styles.borderNone : styles.borderSubtle,
     padding === "lg" ? styles.paddingLg : styles.paddingMd,

@@ -1,13 +1,12 @@
 import {
+    AppPageHeader,
     AppBottomNav,
-    AppHeaderBrand,
     SafeArea,
     Screen,
 } from "@components/layout";
-import { Modal as AppModal, Button, SectionHeader } from "@components/ui";
+import { AppModalSheet, Modal as AppModal, Button, EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import {
   ENTRY_PREVIEW_PILLS,
-  sanitizeEntryPreviewLabel,
 } from "@constants/entryPreviewPills";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -180,10 +179,6 @@ export function DrawerDetailScreen() {
     );
   }, [resolvedDrawerId]);
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, []);
-
   const handleOpenEditOptions = useCallback(() => {
     setShowEditOptionsModal(true);
   }, []);
@@ -274,35 +269,7 @@ export function DrawerDetailScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, styles.pageBackground]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity
-              onPress={handleBack}
-              style={styles.headerIconButton}
-              accessible
-              accessibilityLabel="Go back"
-            >
-              <MaterialCommunityIcons
-                name="arrow-left"
-                size={30}
-                color={PAGE_PRIMARY}
-              />
-            </TouchableOpacity>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={handleSearch}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons
-              name="magnify"
-              size={32}
-              color={PAGE_PRIMARY}
-            />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader showBack onSearchPress={handleSearch} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -378,33 +345,18 @@ export function DrawerDetailScreen() {
               <ActivityIndicator size="small" color={PAGE_PRIMARY} />
             </View>
           ) : visibleEntries.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIconCircle}>
-                <MaterialCommunityIcons
-                  name="pencil-outline"
-                  size={32}
-                  color={PAGE_PRIMARY}
-                />
-              </View>
-              <Text style={[theme.typography.h2, styles.emptyTitle]}>
-                {hasActiveFilters ? "No matching entries" : "No entries yet"}
-              </Text>
-              <Text style={[theme.typography.body, styles.emptyBody]}>
-                {hasActiveFilters
+            <EmptyStateCard
+              icon="pencil-outline"
+              title={hasActiveFilters ? "No matching entries" : "No entries yet"}
+              description={
+                hasActiveFilters
                   ? "Try a different sort or tag filter to explore this drawer."
-                  : "Create your first entry in this drawer when you're ready"}
-              </Text>
-              <Button
-                label="Create First Entry"
-                onPress={handleCreateEntry}
-                style={styles.emptyButton}
-                textStyle={[
-                  theme.typography.body,
-                  styles.createEntryButtonText,
-                ]}
-                accessibilityLabel="Create your first entry in this drawer"
-              />
-            </View>
+                  : "Create your first entry in this drawer when you're ready"
+              }
+              actionLabel={hasActiveFilters ? undefined : "Create First Entry"}
+              onActionPress={hasActiveFilters ? undefined : handleCreateEntry}
+              accessibilityActionLabel="Create your first entry in this drawer"
+            />
           ) : (
             <View style={styles.entriesList}>
               {visibleEntries.map((item, index) => {
@@ -438,117 +390,12 @@ export function DrawerDetailScreen() {
                       </Text>
                     ) : null}
 
-                    <TouchableOpacity
-                      style={[styles.entryCard, styles.entryCardSurface]}
+                    <EntryPreviewCard
+                      entry={item}
                       onPress={() => handleEntryPress(item.id)}
-                      accessible
-                      accessibilityLabel={`Entry: ${item.title}`}
-                      accessibilityRole="button"
-                    >
-                      <View style={styles.entryMore}>
-                        <MaterialCommunityIcons
-                          name="dots-vertical"
-                          size={22}
-                          color={PAGE_MUTED_LIGHT}
-                        />
-                      </View>
-                      <View style={styles.entryHeader}>
-                        <View style={styles.entryHeaderContent}>
-                          <Text
-                            numberOfLines={1}
-                            style={[theme.typography.h3, styles.entryTitle]}
-                          >
-                            {item.title}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <Text
-                        numberOfLines={2}
-                        style={[theme.typography.bodySm, styles.entryBody]}
-                      >
-                        {item.content}
-                      </Text>
-
-                      <View style={styles.entryMeta}>
-                        {item.images && item.images.length > 0 && (
-                          <Text
-                            style={[
-                              theme.typography.labelXs,
-                              styles.entryMetaText,
-                            ]}
-                          >
-                            {item.images.length}{" "}
-                            {item.images.length === 1 ? "image" : "images"}
-                          </Text>
-                        )}
-                        {item.audioUrl && (
-                          <Text
-                            style={[
-                              theme.typography.labelXs,
-                              styles.entryMetaText,
-                            ]}
-                          >
-                            Audio
-                          </Text>
-                        )}
-                      </View>
-
-                      {((item.tags && item.tags.length > 0) ||
-                        Boolean(drawer?.name)) && (
-                        <View style={styles.tagsRow}>
-                          {drawer?.name ? (
-                            <View
-                              style={[
-                                styles.tag,
-                                {
-                                  backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
-                                  borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
-                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  theme.typography.labelXs,
-                                  {
-                                    color: ENTRY_PREVIEW_PILLS.drawerText,
-                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                                  },
-                                ]}
-                              >
-                                {sanitizeEntryPreviewLabel(drawer.name)}
-                              </Text>
-                            </View>
-                          ) : null}
-                          {(item.tags || []).map((tag) => (
-                            <View
-                              key={tag.id}
-                              style={[
-                                styles.tag,
-                                {
-                                  backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
-                                  borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
-                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  theme.typography.labelXs,
-                                  {
-                                    color: ENTRY_PREVIEW_PILLS.tagText,
-                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                                  },
-                                ]}
-                              >
-                                {sanitizeEntryPreviewLabel(tag.name)}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                      drawerName={drawer?.name || null}
+                      showMeta
+                    />
                   </View>
                 );
               })}
@@ -591,11 +438,9 @@ export function DrawerDetailScreen() {
           />
         </AppModal>
 
-        <AppModal
+        <AppModalSheet
           visible={isFiltersOpen}
           onClose={closeFilters}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.filtersModal}
         >
           <View style={styles.filtersHeader}>
@@ -642,32 +487,13 @@ export function DrawerDetailScreen() {
               ].map((option) => {
                 const isActive = draftSortOrder === option.value;
                 return (
-                  <TouchableOpacity
+                  <FilterPill
                     key={option.value}
+                    label={option.label}
+                    selected={isActive}
                     onPress={() => setDraftSortOrder(option.value)}
-                    style={[
-                      styles.filterChip,
-                      isActive && styles.filterChipActive,
-                      {
-                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
-                        backgroundColor: isActive
-                          ? `${PAGE_PRIMARY}18`
-                          : PAGE_SURFACE,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
-                          fontWeight: isActive ? "600" : "400",
-                        },
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
+                    accessibilityLabel={`Sort by ${option.label}`}
+                  />
                 );
               })}
             </View>
@@ -680,60 +506,23 @@ export function DrawerDetailScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipRow}
             >
-              <TouchableOpacity
+              <FilterPill
+                label="All tags"
+                selected={draftTagId === null}
                 onPress={() => setDraftTagId(null)}
-                style={[
-                  styles.filterChip,
-                  {
-                    borderColor:
-                      draftTagId === null ? PAGE_PRIMARY : PAGE_BORDER,
-                    backgroundColor:
-                      draftTagId === null ? `${PAGE_PRIMARY}18` : PAGE_SURFACE,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    {
-                      color: draftTagId === null ? PAGE_SECONDARY : PAGE_TEXT,
-                      fontWeight: draftTagId === null ? "600" : "400",
-                    },
-                  ]}
-                >
-                  All tags
-                </Text>
-              </TouchableOpacity>
+                accessibilityLabel="All tags"
+              />
               {uniqueTags.map((tag) => {
-                const tagColor = tag.color || PAGE_PRIMARY;
                 const isActive = draftTagId === tag.id;
 
                 return (
-                  <TouchableOpacity
+                  <FilterPill
                     key={tag.id}
+                    label={tag.name}
+                    selected={isActive}
                     onPress={() => setDraftTagId(isActive ? null : tag.id)}
-                    style={[
-                      styles.filterChip,
-                      {
-                        borderColor: isActive ? tagColor : PAGE_BORDER,
-                        backgroundColor: isActive
-                          ? `${tagColor}18`
-                          : PAGE_SURFACE,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: isActive ? tagColor : PAGE_TEXT,
-                          fontWeight: isActive ? "600" : "400",
-                        },
-                      ]}
-                    >
-                      {tag.name}
-                    </Text>
-                  </TouchableOpacity>
+                    accessibilityLabel={`Tag filter ${tag.name}`}
+                  />
                 );
               })}
             </ScrollView>
@@ -755,7 +544,7 @@ export function DrawerDetailScreen() {
               textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
             />
           </View>
-        </AppModal>
+        </AppModalSheet>
 
         {/* Edit Modal */}
         <RNModal

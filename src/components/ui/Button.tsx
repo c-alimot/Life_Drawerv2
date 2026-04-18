@@ -38,7 +38,7 @@ export function Button({
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: 8,
+      borderRadius: theme.radii.pill,
       justifyContent: "center",
       alignItems: "center",
       flexDirection: "row",
@@ -53,13 +53,13 @@ export function Button({
       },
       md: {
         paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.md,
-        minHeight: 44,
+        paddingVertical: theme.spacing.sm,
+        minHeight: 48,
       },
       lg: {
         paddingHorizontal: theme.spacing.xl,
-        paddingVertical: theme.spacing.lg,
-        minHeight: 52,
+        paddingVertical: theme.spacing.md,
+        minHeight: 56,
       },
     };
 

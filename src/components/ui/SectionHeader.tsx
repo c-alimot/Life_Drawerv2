@@ -14,7 +14,7 @@ export function SectionHeader({ label, textColor, dividerColor }: SectionHeaderP
     <View style={styles.row}>
       <Text
         style={[
-          theme.typography.bodySm,
+          theme.typography.caption,
           styles.text,
           { color: textColor },
         ]}
@@ -31,11 +31,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   text: {
     textTransform: "uppercase",
-    letterSpacing: 1.4,
+    letterSpacing: 1.8,
   },
   divider: {
     flex: 1,

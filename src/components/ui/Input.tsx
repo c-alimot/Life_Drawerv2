@@ -55,23 +55,23 @@ export function Input({
   };
 
   const getInputContainerStyle = (): ViewStyle => {
-    let borderColor = theme.colors.border;
+    let borderColor = theme.borders.subtle;
     if (error) {
       borderColor = theme.colors.error;
     } else if (isFocused) {
-      borderColor = theme.colors.primary;
+      borderColor = theme.borders.focus;
     }
 
     return {
       borderWidth: 1,
       borderColor,
-      borderRadius: 14,
+      borderRadius: theme.radii.input,
       backgroundColor: disabled
         ? theme.colors.gray[100]
-        : theme.colors.surface || theme.colors.background,
+        : theme.surfaces.soft,
       paddingHorizontal: theme.spacing.md,
       paddingVertical: multiline ? theme.spacing.md : theme.spacing.sm,
-      minHeight: multiline ? 80 : 44,
+      minHeight: multiline ? 84 : 48,
     };
   };
 

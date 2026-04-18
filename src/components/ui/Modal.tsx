@@ -61,7 +61,7 @@ export function Modal({
   const getBackdropStyle = (): ViewStyle => {
     return {
       flex: 1,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backgroundColor: "rgba(47, 41, 36, 0.28)",
       justifyContent: "center",
       alignItems: "center",
       padding: theme.spacing.lg,
@@ -70,19 +70,12 @@ export function Modal({
 
   const getContentStyle = (): ViewStyle => {
     return {
-      backgroundColor: theme.colors.background,
-      borderRadius: 16,
-      padding: theme.spacing.xl,
+      backgroundColor: theme.surfaces.modal,
+      borderRadius: theme.radii.sheet,
+      padding: 20,
       maxWidth: "100%",
       maxHeight: "90%",
-      shadowColor: "#000",
-      shadowOffset: {
-        width: 0,
-        height: 8,
-      },
-      shadowOpacity: 0.25,
-      shadowRadius: 16,
-      elevation: 16, // Android shadow
+      ...theme.shadows.modal,
     };
   };
 

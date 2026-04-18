@@ -8,6 +8,11 @@ import { useColorScheme } from "../../hooks/use-color-scheme";
 import { useThemeColor } from "../../hooks/use-theme-color";
 
 const typography = {
+  hero: {
+    fontSize: 34,
+    fontWeight: "300" as const,
+    lineHeight: 42,
+  },
   h1: {
     fontSize: 32,
     fontWeight: "700" as const,
@@ -53,6 +58,22 @@ const typography = {
     fontWeight: "600" as const,
     lineHeight: 12,
   },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "500" as const,
+    lineHeight: 30,
+  },
+  helper: {
+    fontSize: 13,
+    fontWeight: "400" as const,
+    lineHeight: 18,
+  },
+  caption: {
+    fontSize: 11,
+    fontWeight: "500" as const,
+    lineHeight: 16,
+    letterSpacing: 1.2,
+  },
 };
 
 const spacing = {
@@ -62,6 +83,64 @@ const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+};
+
+const layout = {
+  screenPaddingX: 24,
+  screenPaddingTop: 6,
+  screenPaddingBottom: 120,
+  headerPaddingTop: 40,
+  headerPaddingBottom: 12,
+  sectionGap: 24,
+};
+
+const radii = {
+  input: 16,
+  card: 26,
+  sheet: 24,
+  chip: 999,
+  iconWrap: 14,
+  pill: 999,
+};
+
+const shadows = {
+  card: {
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  modal: {
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  floating: {
+    shadowColor: "#2F2924",
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
+  },
+};
+
+const surfaces = {
+  background: "#EDEAE4",
+  soft: "#F8F6F2",
+  card: "#F8F6F2",
+  elevated: "#FFFFFF",
+  modal: "#FFFFFF",
+};
+
+const borders = {
+  subtle: "#E7DED2",
+  default: "#DAC8B1",
+  strong: "#B39C87",
+  focus: "#8C9A7F",
+  divider: "#DAC8B1",
 };
 
 // Extended color palette
@@ -140,6 +219,11 @@ export const theme = {
   fonts: Fonts,
   typography,
   spacing,
+  layout,
+  radii,
+  shadows,
+  surfaces,
+  borders,
 };
 
 export const useTheme = () => {
@@ -156,6 +240,11 @@ export const useTheme = () => {
     fonts: Fonts,
     typography,
     spacing,
+    layout,
+    radii,
+    shadows,
+    surfaces,
+    borders,
     useThemedColor: useThemeColor,
   };
 };

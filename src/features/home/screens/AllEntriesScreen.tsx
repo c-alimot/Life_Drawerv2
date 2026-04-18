@@ -1,6 +1,6 @@
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
-import { Button, Modal, SectionHeader } from "@components/ui";
-import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
+import { Button, EmptyStateCard, EntryPreviewCard, FilterPill, Modal, SectionHeader } from "@components/ui";
+import { ENTRY_PREVIEW_PILLS } from "@constants/entryPreviewPills";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDeleteEntry } from "@features/entries/hooks/useDeleteEntry";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -31,7 +31,6 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_SURFACE = "#FFFFFF";
-const PAGE_BORDER = "#DAC8B1";
 const CANCEL_BUTTON_BG = "#E3E1DC";
 const CANCEL_BUTTON_BORDER = "#C9C4BB";
 const CANCEL_BUTTON_TEXT = "#5F6368";
@@ -216,19 +215,7 @@ export function AllEntriesScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={handleSearch}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader onSearchPress={handleSearch} />
 
         <FlatList
           data={Object.entries(groupedEntries)}
@@ -268,54 +255,11 @@ export function AllEntriesScreen() {
               </View>
 
               {entries.length === 0 ? (
-                <View
-                  style={[
-                    styles.emptyState,
-                    {
-                      borderColor: theme.colors.accent1 + "AA",
-                      backgroundColor: PAGE_SURFACE,
-                    },
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.emptyIcon,
-                      {
-                        backgroundColor: theme.colors.accent1 + "3D",
-                      },
-                    ]}
-                  >
-                    <MaterialCommunityIcons
-                      name="pen"
-                      size={34}
-                      color={PAGE_PRIMARY}
-                    />
-                  </View>
-                  <Text
-                    style={[
-                      styles.emptyTitle,
-                      {
-                        color: PAGE_TEXT,
-                        fontFamily: theme.fonts.serif,
-                        marginBottom: theme.spacing.md,
-                      },
-                    ]}
-                  >
-                    No matching entries
-                  </Text>
-                  <Text
-                    style={[
-                      theme.typography.body,
-                      {
-                        color: PAGE_MUTED,
-                        textAlign: "center",
-                        lineHeight: 28,
-                      },
-                    ]}
-                  >
-                    Try a different sort or filter to explore more of your archive.
-                  </Text>
-                </View>
+                <EmptyStateCard
+                  icon="pen"
+                  title="No matching entries"
+                  description="Try a different sort or filter to explore more of your archive."
+                />
               ) : null}
             </>
           }
@@ -334,116 +278,12 @@ export function AllEntriesScreen() {
                 {date}
               </Text>
               {dateEntries.map((entry) => (
-                <View
+                <EntryPreviewCard
                   key={entry.id}
-                  style={[
-                    styles.entryCard,
-                    {
-                      backgroundColor: PAGE_SURFACE,
-                      shadowColor: PAGE_TEXT,
-                    },
-                  ]}
-                >
-                  <TouchableOpacity
-                    onPress={() => setEntryMenuTarget(entry)}
-                    style={styles.entryMore}
-                    accessible
-                    accessibilityLabel={`More options for ${entry.title || "Untitled Entry"}`}
-                  >
-                    <MaterialCommunityIcons
-                      name="dots-vertical"
-                      size={22}
-                      color={PAGE_MUTED}
-                    />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.entryContent}
-                    onPress={() => handleEntryPress(entry.id)}
-                    accessible
-                    accessibilityLabel={`Entry: ${entry.title || "Untitled"}`}
-                  >
-                    <View style={styles.entryHeader}>
-                      <Text
-                        style={[
-                          theme.typography.h3,
-                          styles.entryTitle,
-                          {
-                            color: PAGE_TEXT,
-                            fontFamily: theme.fonts.serif,
-                          },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {entry.title || "Untitled Entry"}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        { color: PAGE_MUTED, marginBottom: 0 },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {entry.content}
-                    </Text>
-                    {(entry.drawers?.length > 0 || entry.tags?.length > 0) && (
-                      <View style={styles.entryTags}>
-                        {entry.drawers?.map((drawer) => (
-                          <View
-                            key={drawer.id}
-                            style={[
-                              styles.tag,
-                                {
-                                backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
-                                borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
-                                borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                theme.typography.labelXs,
-                                {
-                                  color: ENTRY_PREVIEW_PILLS.drawerText,
-                                  fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                                },
-                              ]}
-                            >
-                              {sanitizeEntryPreviewLabel(drawer.name)}
-                            </Text>
-                          </View>
-                        ))}
-                        {entry.tags?.map((tag) => {
-                          return (
-                            <View
-                              key={tag.id}
-                              style={[
-                                styles.tag,
-                                {
-                                  backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
-                                  borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
-                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  theme.typography.labelXs,
-                                  {
-                                    color: ENTRY_PREVIEW_PILLS.tagText,
-                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                                  },
-                                ]}
-                              >
-                                {sanitizeEntryPreviewLabel(tag.name)}
-                              </Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
+                  entry={entry}
+                  onPress={() => handleEntryPress(entry.id)}
+                  onMenuPress={() => setEntryMenuTarget(entry)}
+                />
               ))}
             </View>
           )}
@@ -506,30 +346,13 @@ export function AllEntriesScreen() {
               ].map((option) => {
                 const isActive = draftSortOrder === option.value;
                 return (
-                  <TouchableOpacity
+                  <FilterPill
                     key={option.value}
+                    label={option.label}
+                    selected={isActive}
                     onPress={() => setDraftSortOrder(option.value)}
-                    style={[
-                      styles.filterChip,
-                      isActive && styles.filterChipActive,
-                      {
-                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
-                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
-                          fontWeight: "500",
-                        },
-                      ]}
-                    >
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
+                    accessibilityLabel={`Sort by ${option.label}`}
+                  />
                 );
               })}
             </View>
@@ -544,55 +367,22 @@ export function AllEntriesScreen() {
               Filter by Drawer
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              <TouchableOpacity
+              <FilterPill
+                label="All drawers"
+                selected={draftDrawerId === null}
                 onPress={() => setDraftDrawerId(null)}
-                style={[
-                  styles.filterChip,
-                  {
-                    borderColor: draftDrawerId === null ? PAGE_PRIMARY : PAGE_BORDER,
-                    backgroundColor:
-                      draftDrawerId === null ? "#ECE6DB" : "transparent",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    {
-                      color: draftDrawerId === null ? PAGE_SECONDARY : PAGE_TEXT,
-                      fontWeight: "500",
-                    },
-                  ]}
-                >
-                  All drawers
-                </Text>
-              </TouchableOpacity>
+                accessibilityLabel="All drawers"
+              />
               {drawers.map((drawer) => {
                 const isActive = draftDrawerId === drawer.id;
                 return (
-                  <TouchableOpacity
+                  <FilterPill
                     key={drawer.id}
+                    label={drawer.name}
+                    selected={isActive}
                     onPress={() => setDraftDrawerId(isActive ? null : drawer.id)}
-                    style={[
-                      styles.filterChip,
-                      {
-                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
-                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
-                          fontWeight: "500",
-                        },
-                      ]}
-                    >
-                      {drawer.name}
-                    </Text>
-                  </TouchableOpacity>
+                    accessibilityLabel={`Drawer filter ${drawer.name}`}
+                  />
                 );
               })}
             </ScrollView>
@@ -607,55 +397,22 @@ export function AllEntriesScreen() {
               Filter by Tag
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-              <TouchableOpacity
+              <FilterPill
+                label="All tags"
+                selected={draftTagId === null}
                 onPress={() => setDraftTagId(null)}
-                style={[
-                  styles.filterChip,
-                  {
-                    borderColor: draftTagId === null ? PAGE_PRIMARY : PAGE_BORDER,
-                    backgroundColor:
-                      draftTagId === null ? "#ECE6DB" : "transparent",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    theme.typography.bodySm,
-                    {
-                      color: draftTagId === null ? PAGE_SECONDARY : PAGE_TEXT,
-                      fontWeight: "500",
-                    },
-                  ]}
-                >
-                  All tags
-                </Text>
-              </TouchableOpacity>
+                accessibilityLabel="All tags"
+              />
               {tags.map((tag) => {
                 const isActive = draftTagId === tag.id;
                 return (
-                  <TouchableOpacity
+                  <FilterPill
                     key={tag.id}
+                    label={tag.name}
+                    selected={isActive}
                     onPress={() => setDraftTagId(isActive ? null : tag.id)}
-                    style={[
-                      styles.filterChip,
-                      {
-                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
-                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        {
-                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
-                          fontWeight: "500",
-                        },
-                      ]}
-                    >
-                      {tag.name}
-                    </Text>
-                  </TouchableOpacity>
+                    accessibilityLabel={`Tag filter ${tag.name}`}
+                  />
                 );
               })}
             </ScrollView>

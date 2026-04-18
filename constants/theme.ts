@@ -27,6 +27,30 @@ export const Colors = {
   },
 };
 
+export const SurfaceTokens = {
+  background: "#EDEAE4",
+  soft: "#F8F6F2",
+  card: "#F8F6F2",
+  elevated: "#FFFFFF",
+  modal: "#FFFFFF",
+} as const;
+
+export const BorderTokens = {
+  subtle: "#E7DED2",
+  default: "#DAC8B1",
+  strong: "#B39C87",
+  focus: "#8C9A7F",
+  divider: "#DAC8B1",
+} as const;
+
+export const RadiusTokens = {
+  input: 16,
+  card: 26,
+  sheet: 24,
+  chip: 999,
+  pill: 999,
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     sans: 'system-ui',

@@ -38,7 +38,7 @@ export function Chip({
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "center",
-      borderRadius: variant === "tag" ? 16 : 20,
+      borderRadius: theme.radii.chip,
       borderWidth: 1,
     };
 
@@ -46,13 +46,13 @@ export function Chip({
     const sizeStyles: Record<string, ViewStyle> = {
       sm: {
         paddingHorizontal: theme.spacing.sm,
-        paddingVertical: theme.spacing.xs,
+        paddingVertical: 4,
         minHeight: 28,
       },
       md: {
-        paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.sm,
-        minHeight: 36,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        minHeight: 34,
       },
     };
 

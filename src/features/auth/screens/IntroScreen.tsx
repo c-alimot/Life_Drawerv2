@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Screen } from "@components/layout";
+import { SafeArea, Screen } from "@components/layout";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";
 import { useEffect, useRef } from "react";
@@ -13,7 +13,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 const INTRO_BACKGROUND = "#EDEAE4";
 const INTRO_TEXT = "#2F2924";
@@ -67,12 +66,7 @@ export function IntroScreen() {
   }, [pulse]);
 
   return (
-    <SafeAreaView
-      style={[
-        styles.safeArea,
-        { backgroundColor: INTRO_BACKGROUND },
-      ]}
-    >
+    <SafeArea backgroundColor={INTRO_BACKGROUND}>
       <Screen
         style={[
           styles.container,
@@ -254,14 +248,11 @@ export function IntroScreen() {
         </View>
         </ScrollView>
       </Screen>
-    </SafeAreaView>
+    </SafeArea>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },

@@ -1,14 +1,10 @@
 import {
+    AppPageHeader,
     AppBottomNav,
-    AppHeaderBrand,
     SafeArea,
     Screen,
 } from "@components/layout";
-import { Card, SectionHeader } from "@components/ui";
-import {
-  ENTRY_PREVIEW_PILLS,
-  sanitizeEntryPreviewLabel,
-} from "@constants/entryPreviewPills";
+import { EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import { MOOD_MAP } from "@constants/moods";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
@@ -40,7 +36,6 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
-const PAGE_MUTED_TEXT = "#8A8178";
 
 type FilterType = "all" | "mood" | "drawer" | "tag" | "date";
 
@@ -134,37 +129,6 @@ export function SearchScreen() {
     filters.dateRange !== "all" ||
     searchTerm !== "";
 
-  const renderFilterChip = (
-    key: FilterType,
-    label: string,
-    accessibilityLabel: string,
-  ) => (
-    <TouchableOpacity
-      key={key}
-      onPress={() => setActiveFilter(key)}
-      style={[
-        styles.filterTab,
-        {
-          backgroundColor: activeFilter === key ? PAGE_SECONDARY : PAGE_SURFACE,
-          borderColor: PAGE_BORDER,
-          shadowColor: PAGE_TEXT,
-        },
-      ]}
-      accessible
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Text
-        style={[
-          theme.typography.labelSm,
-          styles.filterTabText,
-          { color: activeFilter === key ? PAGE_BACKGROUND : PAGE_TEXT },
-        ]}
-      >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-
   const renderFilterSectionTitle = (title: string) => (
     <Text
       style={[
@@ -194,18 +158,17 @@ export function SearchScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <View style={styles.headerIconButton}>
-            <MaterialCommunityIcons
-              name="magnify"
-              size={30}
-              color={PAGE_PRIMARY}
-            />
-          </View>
-        </View>
+        <AppPageHeader
+          rightSlot={
+            <View style={styles.headerIconButton}>
+              <MaterialCommunityIcons
+                name="magnify"
+                size={30}
+                color={PAGE_PRIMARY}
+              />
+            </View>
+          }
+        />
 
         <FlatList
           data={entries}
@@ -306,11 +269,36 @@ export function SearchScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.filterTabs}
               >
-                {renderFilterChip("all", "All", "All entries filter")}
-                {renderFilterChip("mood", "Mood", "Filter by mood")}
-                {renderFilterChip("drawer", "Drawer", "Filter by drawer")}
-                {renderFilterChip("tag", "Tag", "Filter by tag")}
-                {renderFilterChip("date", "Date", "Filter by date")}
+                <FilterPill
+                  label="All"
+                  selected={activeFilter === "all"}
+                  onPress={() => setActiveFilter("all")}
+                  accessibilityLabel="All entries filter"
+                />
+                <FilterPill
+                  label="Mood"
+                  selected={activeFilter === "mood"}
+                  onPress={() => setActiveFilter("mood")}
+                  accessibilityLabel="Filter by mood"
+                />
+                <FilterPill
+                  label="Drawer"
+                  selected={activeFilter === "drawer"}
+                  onPress={() => setActiveFilter("drawer")}
+                  accessibilityLabel="Filter by drawer"
+                />
+                <FilterPill
+                  label="Tag"
+                  selected={activeFilter === "tag"}
+                  onPress={() => setActiveFilter("tag")}
+                  accessibilityLabel="Filter by tag"
+                />
+                <FilterPill
+                  label="Date"
+                  selected={activeFilter === "date"}
+                  onPress={() => setActiveFilter("date")}
+                  accessibilityLabel="Filter by date"
+                />
               </ScrollView>
 
               <View
@@ -597,141 +585,27 @@ export function SearchScreen() {
             </>
           }
           renderItem={({ item }) => (
-            <Card
-              style={styles.entryCard}
-              variant="elevated"
+            <EntryPreviewCard
+              entry={item}
               onPress={() => handleEntryPress(item.id)}
-              accessibilityLabel={`Entry: ${item.title}`}
-            >
-              <View style={styles.entryHeader}>
-                {/** Search results can include older rows with missing titles. */}
-                {(() => {
-                  const title = item.title || "Untitled Entry";
-                  return (
-                    <Text
-                      numberOfLines={2}
-                      style={[
-                        styles.entryTitle,
-                        {
-                          color: PAGE_TEXT,
-                          fontFamily: theme.fonts.serif,
-                          flex: 1,
-                        },
-                      ]}
-                    >
-                      {title}
-                    </Text>
-                  );
-                })()}
-              </View>
-
-              <Text
-                numberOfLines={2}
-                style={[styles.entryBody, { color: PAGE_MUTED }]}
-              >
-                {item.content || ""}
-              </Text>
-
-              <Text style={[styles.entryDate, { color: PAGE_MUTED_TEXT }]}>
-                {new Date(item.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </Text>
-
-              {(item.drawers?.length || 0) > 0 || (item.tags?.length || 0) > 0 ? (
-                <View style={styles.entryTagRow}>
-                  {item.drawers?.map((drawer) => (
-                    <View
-                      key={drawer.id}
-                      style={[
-                        styles.tag,
-                        {
-                          backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
-                          borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
-                          borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          {
-                            color: ENTRY_PREVIEW_PILLS.drawerText,
-                            fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                          },
-                        ]}
-                      >
-                        {sanitizeEntryPreviewLabel(drawer.name)}
-                      </Text>
-                    </View>
-                  ))}
-                  {item.tags?.map((tag) => (
-                    <View
-                      key={tag.id}
-                      style={[
-                        styles.tag,
-                        {
-                          backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
-                          borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
-                          borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          theme.typography.labelXs,
-                          {
-                            color: ENTRY_PREVIEW_PILLS.tagText,
-                            fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
-                          },
-                        ]}
-                      >
-                        {sanitizeEntryPreviewLabel(tag.name)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-            </Card>
+              showDate
+              dateText={new Date(item.createdAt).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            />
           )}
           ListEmptyComponent={
-            <View
-              style={[
-                styles.emptyState,
-                {
-                  backgroundColor: PAGE_SURFACE,
-                  borderColor: theme.colors.accent1 + "99",
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.emptyIcon,
-                  { backgroundColor: theme.colors.accent1 + "40" },
-                ]}
-              >
-                <MaterialCommunityIcons
-                  name="magnify"
-                  size={28}
-                  color={PAGE_PRIMARY}
-                />
-              </View>
-              <Text
-                style={[
-                  styles.emptyTitle,
-                  { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
-                ]}
-              >
-                No entries found
-              </Text>
-              <Text style={[styles.emptyDescription, { color: PAGE_MUTED }]}>
-                {hasActiveFilters
+            <EmptyStateCard
+              icon="magnify"
+              title="No entries found"
+              description={
+                hasActiveFilters
                   ? "Try adjusting your search terms or clearing a few filters."
-                  : "Once you start writing, your searchable archive will appear here."}
-              </Text>
-            </View>
+                  : "Once you start writing, your searchable archive will appear here."
+              }
+            />
           }
         />
 
@@ -851,21 +725,6 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
     gap: 10,
   },
-  filterTab: {
-    minHeight: 42,
-    paddingHorizontal: 18,
-    justifyContent: "center",
-    borderRadius: 999,
-    borderWidth: 1,
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  filterTabText: {
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
-  },
   filterPanel: {
     borderRadius: 24,
     padding: 18,
@@ -952,17 +811,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 14,
     fontWeight: "600",
-  },
-  entryTagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: ENTRY_PREVIEW_PILLS.rowGap,
-    marginTop: ENTRY_PREVIEW_PILLS.rowMarginTop,
-  },
-  tag: {
-    paddingHorizontal: ENTRY_PREVIEW_PILLS.pillPaddingHorizontal,
-    paddingVertical: ENTRY_PREVIEW_PILLS.pillPaddingVertical,
-    borderRadius: ENTRY_PREVIEW_PILLS.pillRadius,
   },
   emptyState: {
     borderRadius: 24,
