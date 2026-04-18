@@ -1,4 +1,4 @@
-import { AppBottomNav, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
 import { Button, Modal, SectionHeader } from "@components/ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -518,7 +518,9 @@ export function SettingsScreen() {
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
         <View style={styles.header}>
-          <View style={styles.headerLeft} />
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}

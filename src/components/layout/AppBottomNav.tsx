@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 const NAV_BACKGROUND = "#F8F6F299";
-const NAV_TEXT = "#8C9A7F";
+const NAV_TEXT = "#6F6860";
 const NAV_TEXT_ACTIVE = "#556950";
 const NAV_CIRCLE = "#E6E2D8";
 const NAV_PLUS = "#556950";
@@ -13,6 +13,7 @@ const NAV_SHADOW = "#2F2924";
 
 type NavRoute =
   | "/"
+  | "/all-entries"
   | "/drawers"
   | "/insights"
   | "/search"

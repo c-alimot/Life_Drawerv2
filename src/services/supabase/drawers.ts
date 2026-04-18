@@ -94,7 +94,14 @@ export const drawersService = {
         throw drawerError || new Error("Drawer not found");
       }
 
-      const entriesResult = await this.getDrawerEntries(drawerId, userId);
+      const { count: entryCount, error: countError } = await supabase
+        .from("entry_drawers")
+        .select("*", { count: "exact", head: true })
+        .eq("drawer_id", drawerId)
+        .eq("user_id", userId);
+
+      if (countError) throw countError;
+
       const { data: owner } = await supabase
         .from("profiles")
         .select("*")
@@ -103,8 +110,8 @@ export const drawersService = {
 
       return {
         ...this.mapDrawerRow(drawer as DrawerRow),
-        entries: entriesResult.entries,
-        entryCount: entriesResult.total,
+        entries: [],
+        entryCount: entryCount || 0,
         owner: owner ? this.mapProfileRow(owner as ProfileRow) : undefined,
       };
     } catch (error) {
@@ -123,20 +130,26 @@ export const drawersService = {
 
       if (error) throw error;
 
-      const drawersWithCounts = await Promise.all(
-        (drawers || []).map(async (drawer) => {
-          const { count: entryCount } = await supabase
+      const drawerIds = (drawers || []).map((drawer) => drawer.id);
+      const { data: entryLinks, error: entryLinksError } = drawerIds.length
+        ? await supabase
             .from("entry_drawers")
-            .select("*", { count: "exact", head: true })
-            .eq("drawer_id", drawer.id)
-            .eq("user_id", userId);
+            .select("drawer_id")
+            .eq("user_id", userId)
+            .in("drawer_id", drawerIds)
+        : { data: [], error: null };
 
-          return {
-            ...this.mapDrawerRow(drawer as DrawerRow),
-            entryCount: entryCount || 0,
-          };
-        }),
-      );
+      if (entryLinksError) throw entryLinksError;
+
+      const entryCounts = new Map<string, number>();
+      for (const row of entryLinks || []) {
+        entryCounts.set(row.drawer_id, (entryCounts.get(row.drawer_id) || 0) + 1);
+      }
+
+      const drawersWithCounts = (drawers || []).map((drawer) => ({
+        ...this.mapDrawerRow(drawer as DrawerRow),
+        entryCount: entryCounts.get(drawer.id) || 0,
+      }));
 
       return {
         drawers: drawersWithCounts,
@@ -240,11 +253,7 @@ export const drawersService = {
 
       if (entriesError) throw entriesError;
 
-      const enrichedEntries = await Promise.all(
-        (entries || []).map((row) =>
-          entriesService.getEntryById((row as EntryRow).id, userId),
-        ),
-      );
+      const enrichedEntries = await entriesService.hydrateEntries(userId, (entries || []) as EntryRow[]);
 
       return {
         entries: enrichedEntries,

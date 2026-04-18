@@ -29,10 +29,8 @@ export const Colors = {
 
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
+    serif: 'Roboto_500Medium',
     /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
@@ -40,13 +38,13 @@ export const Fonts = Platform.select({
   },
   default: {
     sans: 'normal',
-    serif: 'serif',
+    serif: 'Roboto_500Medium',
     rounded: 'normal',
     mono: 'monospace',
   },
   web: {
     sans: "system-ui",
-    serif: "serif",
+    serif: "Roboto_500Medium",
     rounded: "sans-serif",
     mono: "monospace",
   },

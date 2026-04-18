@@ -64,8 +64,8 @@ export function EntryMoodPickerModal({
                   style={[
                     styles.moodOption,
                     {
-                      backgroundColor: isSelected ? `${primaryColor}20` : surfaceColor,
-                      borderColor: isSelected ? primaryColor : borderColor,
+                      backgroundColor: isSelected ? "#E6E2D8" : "#F8F6F2",
+                      borderColor: isSelected ? "#556950" : "#DAC8B1",
                     },
                   ]}
                   onPress={() => {
@@ -111,17 +111,17 @@ const styles = StyleSheet.create({
   moodGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
+    gap: 10,
   },
   moodOption: {
     width: "22%",
-    minHeight: 84,
-    borderWidth: 2,
-    borderRadius: 12,
+    minHeight: 86,
+    borderWidth: 1,
+    borderRadius: 14,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 6,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   moodText: {
     fontSize: 28,

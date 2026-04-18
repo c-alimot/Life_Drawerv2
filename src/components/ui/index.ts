@@ -9,3 +9,4 @@ export { EntryImageStrip } from "./EntryImageStrip";
 export { EntryMoodPickerModal } from "./EntryMoodPickerModal";
 export { EntrySelectionModal } from "./EntrySelectionModal";
 export { SectionHeader } from "./SectionHeader";
+export { Card, CardIconWrap } from "./Card";

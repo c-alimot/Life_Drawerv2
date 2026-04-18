@@ -5,7 +5,10 @@ import {
     Screen,
 } from "@components/layout";
 import { Modal as AppModal, Button, SectionHeader } from "@components/ui";
-import { MOOD_MAP, type MoodValue } from "@constants/moods";
+import {
+  ENTRY_PREVIEW_PILLS,
+  sanitizeEntryPreviewLabel,
+} from "@constants/entryPreviewPills";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Fonts, useTheme } from "@styles/theme";
@@ -36,9 +39,9 @@ const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#D8CCBD";
 const PAGE_CARD_SHADOW = "rgba(85, 105, 80, 0.08)";
-const CANCEL_BUTTON_BG = "#E3E1DC";
-const CANCEL_BUTTON_BORDER = "#C9C4BB";
-const CANCEL_BUTTON_TEXT = "#5F6368";
+const CANCEL_BUTTON_BG = "#EDEAE4";
+const CANCEL_BUTTON_BORDER = "#DAC8B1";
+const CANCEL_BUTTON_TEXT = "#2F2924";
 
 export function DrawerDetailScreen() {
   const theme = useTheme();
@@ -61,6 +64,7 @@ export function DrawerDetailScreen() {
   } = useDrawerEntries(resolvedDrawerId);
 
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showEditOptionsModal, setShowEditOptionsModal] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
@@ -167,7 +171,7 @@ export function DrawerDetailScreen() {
   }, [drawer?.name, deleteDrawer]);
 
   const handleEntryPress = useCallback((entryId: string) => {
-    router.push(`/entry/${entryId}`);
+    router.push(`/edit-entry/${entryId}`);
   }, []);
 
   const handleCreateEntry = useCallback(() => {
@@ -179,6 +183,24 @@ export function DrawerDetailScreen() {
   const handleBack = useCallback(() => {
     router.back();
   }, []);
+
+  const handleOpenEditOptions = useCallback(() => {
+    setShowEditOptionsModal(true);
+  }, []);
+
+  const handleCloseEditOptions = useCallback(() => {
+    setShowEditOptionsModal(false);
+  }, []);
+
+  const handleRenameFromEditOptions = useCallback(() => {
+    setShowEditOptionsModal(false);
+    setShowEditModal(true);
+  }, []);
+
+  const handleDeleteFromEditOptions = useCallback(() => {
+    setShowEditOptionsModal(false);
+    handleDelete();
+  }, [handleDelete]);
 
   const handleSearch = useCallback(() => {
     router.push("/search");
@@ -288,76 +310,31 @@ export function DrawerDetailScreen() {
         >
           <View style={styles.heroBlock}>
             <Text
-              numberOfLines={1}
               style={[styles.heroTitle, { fontFamily: theme.fonts.serif }]}
             >
               <Text style={{ color: PAGE_TEXT }}>{drawer.name}</Text>{" "}
-              <Text style={{ color: PAGE_PRIMARY }}>Entries</Text>
+              <Text style={{ color: PAGE_PRIMARY }}>Drawer</Text>
             </Text>
-            <Text style={[theme.typography.bodySm, styles.heroSubtitle]}>
-              {entriesLoading
-                ? "Loading your archive..."
-                : `${visibleEntries.length} of ${drawerEntries.length} ${drawerEntries.length === 1 ? "entry" : "entries"}`}
-            </Text>
-          </View>
-
-          <View
-            style={[
-              styles.drawerInfoCard,
-              {
-                backgroundColor: PAGE_SURFACE,
-                borderColor: drawer.color || PAGE_BORDER,
-              },
-            ]}
-          >
-            <View style={styles.drawerIcon}>
-              <MaterialCommunityIcons
-                name="archive-outline"
-                size={34}
-                color={drawer.color || PAGE_PRIMARY}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[theme.typography.h2, styles.drawerName]}>
-                {drawer.name}
-              </Text>
-              <Text style={[theme.typography.bodySm, styles.drawerCount]}>
-                {entriesLoading
-                  ? "Loading entries..."
-                  : `${drawerEntries.length} ${drawerEntries.length === 1 ? "entry" : "entries"}`}
-              </Text>
-            </View>
-            <View
-              style={[styles.colorDot, { backgroundColor: drawer.color }]}
-            />
           </View>
 
           <View style={styles.heroActions}>
             <Button
-              label="Edit Drawer"
-              onPress={() => setShowEditModal(true)}
+              label="Add Entry"
+              onPress={handleCreateEntry}
+              size="sm"
+              style={styles.addEntryActionButton}
+              textStyle={[theme.typography.body, styles.addEntryActionButtonText]}
+              accessibilityLabel="Add entry"
+            />
+            <Button
+              label="Edit"
+              onPress={handleOpenEditOptions}
               size="sm"
               style={styles.editButton}
               textStyle={[theme.typography.body, styles.editButtonText]}
               accessibilityLabel="Edit drawer"
             />
-            <Button
-              label="Delete"
-              onPress={handleDelete}
-              size="sm"
-              style={styles.deleteActionButton}
-              textStyle={[theme.typography.body, styles.deleteActionButtonText]}
-              accessibilityLabel="Delete drawer"
-            />
           </View>
-
-          <Button
-            label="Add Entry to Drawer"
-            onPress={handleCreateEntry}
-            style={styles.createEntryButton}
-            textStyle={[theme.typography.body, styles.createEntryButtonText]}
-            accessibilityLabel="Create entry in this drawer"
-          />
 
           <View style={styles.archiveHeaderRow}>
             <View style={styles.archiveHeaderContent}>
@@ -393,9 +370,6 @@ export function DrawerDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               ) : null}
-              <Text style={[theme.typography.bodySm, styles.sortCount]}>
-                {visibleEntries.length} shown
-              </Text>
             </View>
           </View>
 
@@ -487,11 +461,6 @@ export function DrawerDetailScreen() {
                             {item.title}
                           </Text>
                         </View>
-                        {item.mood && (
-                          <Text style={styles.moodEmoji}>
-                            {MOOD_MAP[item.mood as MoodValue]?.emoji}
-                          </Text>
-                        )}
                       </View>
 
                       <Text
@@ -509,7 +478,8 @@ export function DrawerDetailScreen() {
                               styles.entryMetaText,
                             ]}
                           >
-                            🖼️ {item.images.length}
+                            {item.images.length}{" "}
+                            {item.images.length === 1 ? "image" : "images"}
                           </Text>
                         )}
                         {item.audioUrl && (
@@ -519,51 +489,63 @@ export function DrawerDetailScreen() {
                               styles.entryMetaText,
                             ]}
                           >
-                            🎙️
-                          </Text>
-                        )}
-                        {item.location && (
-                          <Text
-                            style={[
-                              theme.typography.labelXs,
-                              styles.entryMetaText,
-                            ]}
-                          >
-                            📍
+                            Audio
                           </Text>
                         )}
                       </View>
 
-                      {item.tags && item.tags.length > 0 && (
+                      {((item.tags && item.tags.length > 0) ||
+                        Boolean(drawer?.name)) && (
                         <View style={styles.tagsRow}>
-                          {item.tags.slice(0, 3).map((tag) => (
+                          {drawer?.name ? (
                             <View
-                              key={tag.id}
                               style={[
-                                styles.tagBadge,
-                                { backgroundColor: `${tag.color}20` },
+                                styles.tag,
+                                {
+                                  backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
+                                  borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
+                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
+                                },
                               ]}
                             >
                               <Text
                                 style={[
                                   theme.typography.labelXs,
-                                  { color: tag.color, fontWeight: "600" },
+                                  {
+                                    color: ENTRY_PREVIEW_PILLS.drawerText,
+                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                                  },
                                 ]}
                               >
-                                {tag.name}
+                                {sanitizeEntryPreviewLabel(drawer.name)}
+                              </Text>
+                            </View>
+                          ) : null}
+                          {(item.tags || []).map((tag) => (
+                            <View
+                              key={tag.id}
+                              style={[
+                                styles.tag,
+                                {
+                                  backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+                                  borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
+                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  theme.typography.labelXs,
+                                  {
+                                    color: ENTRY_PREVIEW_PILLS.tagText,
+                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                                  },
+                                ]}
+                              >
+                                {sanitizeEntryPreviewLabel(tag.name)}
                               </Text>
                             </View>
                           ))}
-                          {item.tags.length > 3 && (
-                            <Text
-                              style={[
-                                theme.typography.labelXs,
-                                styles.entryDate,
-                              ]}
-                            >
-                              +{item.tags.length - 3}
-                            </Text>
-                          )}
                         </View>
                       )}
                     </TouchableOpacity>
@@ -575,6 +557,39 @@ export function DrawerDetailScreen() {
         </ScrollView>
 
         <AppBottomNav currentRoute="/drawers" />
+
+        <AppModal
+          visible={showEditOptionsModal}
+          onClose={handleCloseEditOptions}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.editOptionsModal}
+        >
+          <Text style={[styles.menuTitle, { fontFamily: theme.fonts.serif }]}>
+            Edit Drawer
+          </Text>
+          <Button
+            label="Rename"
+            onPress={handleRenameFromEditOptions}
+            variant="primary"
+            style={styles.menuActionButton}
+            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Delete"
+            onPress={handleDeleteFromEditOptions}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuDeleteButton]}
+            textStyle={{ color: PAGE_TEXT, fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={handleCloseEditOptions}
+            variant="primary"
+            style={styles.menuActionButton}
+            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+          />
+        </AppModal>
 
         <AppModal
           visible={isFiltersOpen}
@@ -880,29 +895,27 @@ const styles = StyleSheet.create({
     fontSize: 34,
     lineHeight: 42,
     fontWeight: "300",
-  },
-  heroSubtitle: {
-    color: PAGE_MUTED,
-    marginTop: 6,
+    maxWidth: "100%",
   },
   editButton: {
     minHeight: 46,
+    flex: 1,
     paddingHorizontal: 22,
     borderRadius: 999,
-    backgroundColor: PAGE_PRIMARY,
+    backgroundColor: PAGE_SECONDARY,
   },
   editButtonText: {
     color: PAGE_SURFACE,
     fontWeight: "600",
   },
-  deleteActionButton: {
+  addEntryActionButton: {
     minHeight: 46,
+    flex: 1,
     paddingHorizontal: 22,
     borderRadius: 999,
-    backgroundColor: "#A6544E",
-    borderColor: "#A6544E",
+    backgroundColor: PAGE_PRIMARY,
   },
-  deleteActionButtonText: {
+  addEntryActionButtonText: {
     color: PAGE_SURFACE,
     fontWeight: "600",
   },
@@ -914,44 +927,8 @@ const styles = StyleSheet.create({
   heroActions: {
     flexDirection: "row",
     gap: 10,
-    marginTop: 14,
-    marginBottom: 4,
-  },
-  drawerInfoCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 18,
-    borderRadius: 22,
-    borderWidth: 1,
-    shadowColor: PAGE_SECONDARY,
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  drawerIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: PAGE_SOFT_SURFACE,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
-  },
-  drawerName: {
-    color: PAGE_TEXT,
-    fontFamily: Fonts.serif,
-    fontWeight: "400",
-  },
-  drawerCount: {
-    color: PAGE_MUTED,
-    marginTop: 4,
-  },
-  colorDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    marginLeft: 12,
+    marginTop: 12,
+    marginBottom: 22,
   },
   createEntryButton: {
     marginTop: 22,
@@ -992,9 +969,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sortLabel: {
-    color: PAGE_MUTED,
-  },
-  sortCount: {
     color: PAGE_MUTED,
   },
   metaActions: {
@@ -1070,10 +1044,6 @@ const styles = StyleSheet.create({
     color: PAGE_MUTED,
     marginTop: 4,
   },
-  moodEmoji: {
-    fontSize: 24,
-    marginLeft: 10,
-  },
   entryBody: {
     color: PAGE_MUTED,
     marginVertical: 12,
@@ -1089,13 +1059,13 @@ const styles = StyleSheet.create({
   tagsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
-    marginTop: 12,
+    gap: ENTRY_PREVIEW_PILLS.rowGap,
+    marginTop: ENTRY_PREVIEW_PILLS.rowMarginTop,
   },
-  tagBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  tag: {
+    paddingHorizontal: ENTRY_PREVIEW_PILLS.pillPaddingHorizontal,
+    paddingVertical: ENTRY_PREVIEW_PILLS.pillPaddingVertical,
+    borderRadius: ENTRY_PREVIEW_PILLS.pillRadius,
   },
   emptyCard: {
     alignItems: "center",
@@ -1142,6 +1112,24 @@ const styles = StyleSheet.create({
   menuBackdrop: {
     paddingHorizontal: 24,
     backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  editOptionsModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: PAGE_SURFACE,
+  },
+  menuActionButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    marginBottom: 10,
+    backgroundColor: CANCEL_BUTTON_BG,
+    borderColor: CANCEL_BUTTON_BORDER,
+  },
+  menuDeleteButton: {
+    backgroundColor: PAGE_SOFT_SURFACE,
+    borderColor: PAGE_BORDER,
   },
   filtersModal: {
     width: "100%",

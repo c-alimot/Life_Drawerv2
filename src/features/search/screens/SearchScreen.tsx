@@ -1,23 +1,35 @@
-import { AppBottomNav, SafeArea, Screen } from "@components/layout";
-import { SectionHeader } from "@components/ui";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+    AppBottomNav,
+    AppHeaderBrand,
+    SafeArea,
+    Screen,
+} from "@components/layout";
+import { Card, SectionHeader } from "@components/ui";
+import {
+  ENTRY_PREVIEW_PILLS,
+  sanitizeEntryPreviewLabel,
+} from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
-import { useSearch, type SearchFilters } from "@features/search/hooks/useSearch";
+import {
+    useSearch,
+    type SearchFilters,
+} from "@features/search/hooks/useSearch";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
 import { router } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
-  ActivityIndicator,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 const PAGE_BACKGROUND = "#EDEAE4";
@@ -28,6 +40,7 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
+const PAGE_MUTED_TEXT = "#8A8178";
 
 type FilterType = "all" | "mood" | "drawer" | "tag" | "date";
 
@@ -58,7 +71,10 @@ export function SearchScreen() {
   );
 
   const handleEntryPress = useCallback((entryId: string) => {
-    router.push(`/entry/${entryId}`);
+    router.push({
+      pathname: "/edit-entry/[entryId]",
+      params: { entryId, fromSearch: "1" },
+    });
   }, []);
 
   const handleMoodFilterChange = useCallback((mood: MoodValue | null) => {
@@ -164,7 +180,9 @@ export function SearchScreen() {
   if (isLoading && !hasLoadedSearch) {
     return (
       <SafeArea>
-        <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
+        <Screen
+          style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}
+        >
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color={PAGE_PRIMARY} />
           </View>
@@ -177,9 +195,15 @@ export function SearchScreen() {
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
         <View style={styles.header}>
-          <View style={styles.headerLeft} />
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
           <View style={styles.headerIconButton}>
-            <MaterialCommunityIcons name="magnify" size={30} color={PAGE_PRIMARY} />
+            <MaterialCommunityIcons
+              name="magnify"
+              size={30}
+              color={PAGE_PRIMARY}
+            />
           </View>
         </View>
 
@@ -198,7 +222,9 @@ export function SearchScreen() {
                   ]}
                 >
                   Search your{" "}
-                  <Text style={[styles.heroTitleSecondary, { color: PAGE_PRIMARY }]}>
+                  <Text
+                    style={[styles.heroTitleSecondary, { color: PAGE_PRIMARY }]}
+                  >
                     archive
                   </Text>
                 </Text>
@@ -243,7 +269,9 @@ export function SearchScreen() {
                 </View>
 
                 <View style={styles.searchMetaRow}>
-                  <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
+                  <Text
+                    style={[theme.typography.bodySm, { color: PAGE_MUTED }]}
+                  >
                     {total} {total === 1 ? "entry" : "entries"} found
                   </Text>
                   <View style={styles.searchMetaActions}>
@@ -256,7 +284,9 @@ export function SearchScreen() {
                         accessible
                         accessibilityLabel="Clear filters"
                       >
-                        <Text style={[styles.clearText, { color: PAGE_SECONDARY }]}>
+                        <Text
+                          style={[styles.clearText, { color: PAGE_SECONDARY }]}
+                        >
                           Clear all
                         </Text>
                       </TouchableOpacity>
@@ -295,7 +325,8 @@ export function SearchScreen() {
               >
                 {activeFilter === "all" && (
                   <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
-                    Search across every entry, or choose a filter to narrow the view.
+                    Search across every entry, or choose a filter to narrow the
+                    view.
                   </Text>
                 )}
 
@@ -308,15 +339,21 @@ export function SearchScreen() {
                         styles.filterOption,
                         {
                           backgroundColor:
-                            filters.mood === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                            filters.mood === null
+                              ? PAGE_PRIMARY + "1F"
+                              : PAGE_SOFT_SURFACE,
                           borderColor:
-                            filters.mood === null ? PAGE_PRIMARY : theme.colors.accent1,
+                            filters.mood === null
+                              ? PAGE_PRIMARY
+                              : theme.colors.accent1,
                         },
                       ]}
                       accessible
                       accessibilityLabel="Clear mood filter"
                     >
-                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                      <Text
+                        style={[theme.typography.body, { color: PAGE_TEXT }]}
+                      >
                         All moods
                       </Text>
                     </TouchableOpacity>
@@ -335,9 +372,13 @@ export function SearchScreen() {
                             styles.moodFilterOption,
                             {
                               backgroundColor:
-                                filters.mood === moodKey ? PAGE_PRIMARY + "26" : PAGE_SOFT_SURFACE,
+                                filters.mood === moodKey
+                                  ? PAGE_PRIMARY + "26"
+                                  : PAGE_SOFT_SURFACE,
                               borderColor:
-                                filters.mood === moodKey ? PAGE_PRIMARY : theme.colors.accent1,
+                                filters.mood === moodKey
+                                  ? PAGE_PRIMARY
+                                  : theme.colors.accent1,
                             },
                           ]}
                           accessible
@@ -368,15 +409,21 @@ export function SearchScreen() {
                         styles.filterOption,
                         {
                           backgroundColor:
-                            filters.drawer === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                            filters.drawer === null
+                              ? PAGE_PRIMARY + "1F"
+                              : PAGE_SOFT_SURFACE,
                           borderColor:
-                            filters.drawer === null ? PAGE_PRIMARY : theme.colors.accent1,
+                            filters.drawer === null
+                              ? PAGE_PRIMARY
+                              : theme.colors.accent1,
                         },
                       ]}
                       accessible
                       accessibilityLabel="Clear drawer filter"
                     >
-                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                      <Text
+                        style={[theme.typography.body, { color: PAGE_TEXT }]}
+                      >
                         All drawers
                       </Text>
                     </TouchableOpacity>
@@ -392,21 +439,29 @@ export function SearchScreen() {
                           styles.filterOption,
                           {
                             backgroundColor:
-                              filters.drawer === drawer.id ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                              filters.drawer === drawer.id
+                                ? PAGE_PRIMARY + "1F"
+                                : PAGE_SOFT_SURFACE,
                             borderColor:
-                              filters.drawer === drawer.id ? PAGE_PRIMARY : theme.colors.accent1,
+                              filters.drawer === drawer.id
+                                ? PAGE_PRIMARY
+                                : theme.colors.accent1,
                           },
                         ]}
                         accessible
                         accessibilityLabel={`Filter by ${drawer.name}`}
                       >
-                        <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                        <Text
+                          style={[theme.typography.body, { color: PAGE_TEXT }]}
+                        >
                           {drawer.name}
                         </Text>
                       </TouchableOpacity>
                     ))}
                     {uniqueDrawers.length === 0 ? (
-                      <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
+                      <Text
+                        style={[styles.filterHintText, { color: PAGE_MUTED }]}
+                      >
                         No drawers found yet.
                       </Text>
                     ) : null}
@@ -422,15 +477,21 @@ export function SearchScreen() {
                         styles.filterOption,
                         {
                           backgroundColor:
-                            filters.tag === null ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
+                            filters.tag === null
+                              ? PAGE_PRIMARY + "1F"
+                              : PAGE_SOFT_SURFACE,
                           borderColor:
-                            filters.tag === null ? PAGE_PRIMARY : theme.colors.accent1,
+                            filters.tag === null
+                              ? PAGE_PRIMARY
+                              : theme.colors.accent1,
                         },
                       ]}
                       accessible
                       accessibilityLabel="Clear tag filter"
                     >
-                      <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
+                      <Text
+                        style={[theme.typography.body, { color: PAGE_TEXT }]}
+                      >
                         All tags
                       </Text>
                     </TouchableOpacity>
@@ -439,15 +500,21 @@ export function SearchScreen() {
                         <TouchableOpacity
                           key={tag.id}
                           onPress={() =>
-                            handleTagFilterChange(filters.tag === tag.id ? null : tag.id)
+                            handleTagFilterChange(
+                              filters.tag === tag.id ? null : tag.id,
+                            )
                           }
                           style={[
                             styles.tagFilterOption,
                             {
                               backgroundColor:
-                                filters.tag === tag.id ? PAGE_PRIMARY + "1F" : tag.color + "22",
+                                filters.tag === tag.id
+                                  ? PAGE_PRIMARY + "1F"
+                                  : tag.color + "22",
                               borderColor:
-                                filters.tag === tag.id ? PAGE_PRIMARY : tag.color,
+                                filters.tag === tag.id
+                                  ? PAGE_PRIMARY
+                                  : tag.color,
                             },
                           ]}
                           accessible
@@ -457,7 +524,10 @@ export function SearchScreen() {
                             style={[
                               theme.typography.bodySm,
                               {
-                                color: filters.tag === tag.id ? PAGE_SECONDARY : tag.color,
+                                color:
+                                  filters.tag === tag.id
+                                    ? PAGE_SECONDARY
+                                    : tag.color,
                                 fontWeight: "600",
                               },
                             ]}
@@ -468,7 +538,9 @@ export function SearchScreen() {
                       ))}
                     </View>
                     {uniqueTags.length === 0 ? (
-                      <Text style={[styles.filterHintText, { color: PAGE_MUTED }]}>
+                      <Text
+                        style={[styles.filterHintText, { color: PAGE_MUTED }]}
+                      >
                         No tags found yet.
                       </Text>
                     ) : null}
@@ -478,30 +550,41 @@ export function SearchScreen() {
                 {activeFilter === "date" && (
                   <View>
                     {renderFilterSectionTitle("Filter by Date")}
-                    {(["all", "today", "week", "month"] as const).map((range) => (
-                      <TouchableOpacity
-                        key={range}
-                        onPress={() => handleDateRangeChange(range)}
-                        style={[
-                          styles.filterOption,
-                          {
-                            backgroundColor:
-                              filters.dateRange === range ? PAGE_PRIMARY + "1F" : PAGE_SOFT_SURFACE,
-                            borderColor:
-                              filters.dateRange === range ? PAGE_PRIMARY : theme.colors.accent1,
-                          },
-                        ]}
-                        accessible
-                        accessibilityLabel={`Filter by ${range}`}
-                      >
-                        <Text style={[theme.typography.body, { color: PAGE_TEXT }]}>
-                          {range === "all" && "All time"}
-                          {range === "today" && "Today"}
-                          {range === "week" && "This week"}
-                          {range === "month" && "This month"}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {(["all", "today", "week", "month"] as const).map(
+                      (range) => (
+                        <TouchableOpacity
+                          key={range}
+                          onPress={() => handleDateRangeChange(range)}
+                          style={[
+                            styles.filterOption,
+                            {
+                              backgroundColor:
+                                filters.dateRange === range
+                                  ? PAGE_PRIMARY + "1F"
+                                  : PAGE_SOFT_SURFACE,
+                              borderColor:
+                                filters.dateRange === range
+                                  ? PAGE_PRIMARY
+                                  : theme.colors.accent1,
+                            },
+                          ]}
+                          accessible
+                          accessibilityLabel={`Filter by ${range}`}
+                        >
+                          <Text
+                            style={[
+                              theme.typography.body,
+                              { color: PAGE_TEXT },
+                            ]}
+                          >
+                            {range === "all" && "All time"}
+                            {range === "today" && "Today"}
+                            {range === "week" && "This week"}
+                            {range === "month" && "This month"}
+                          </Text>
+                        </TouchableOpacity>
+                      ),
+                    )}
                   </View>
                 )}
               </View>
@@ -514,16 +597,10 @@ export function SearchScreen() {
             </>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.entryCard,
-                {
-                  backgroundColor: PAGE_SURFACE,
-                  shadowColor: PAGE_TEXT,
-                },
-              ]}
+            <Card
+              style={styles.entryCard}
+              variant="elevated"
               onPress={() => handleEntryPress(item.id)}
-              accessible
               accessibilityLabel={`Entry: ${item.title}`}
             >
               <View style={styles.entryHeader}>
@@ -535,25 +612,17 @@ export function SearchScreen() {
                       numberOfLines={2}
                       style={[
                         styles.entryTitle,
-                        { color: PAGE_TEXT, fontFamily: theme.fonts.serif, flex: 1 },
+                        {
+                          color: PAGE_TEXT,
+                          fontFamily: theme.fonts.serif,
+                          flex: 1,
+                        },
                       ]}
                     >
                       {title}
                     </Text>
                   );
                 })()}
-                {item.mood ? (
-                  <View
-                    style={[
-                      styles.entryMoodBadge,
-                      { backgroundColor: theme.colors.accent1 + "55" },
-                    ]}
-                  >
-                    <Text style={styles.entryMoodEmoji}>
-                      {MOOD_MAP[item.mood as MoodValue]?.emoji}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
 
               <Text
@@ -563,7 +632,7 @@ export function SearchScreen() {
                 {item.content || ""}
               </Text>
 
-              <Text style={[styles.entryDate, { color: PAGE_MUTED }]}>
+              <Text style={[styles.entryDate, { color: PAGE_MUTED_TEXT }]}>
                 {new Date(item.createdAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -571,27 +640,61 @@ export function SearchScreen() {
                 })}
               </Text>
 
-              {(item.tags?.length || 0) > 0 ? (
+              {(item.drawers?.length || 0) > 0 || (item.tags?.length || 0) > 0 ? (
                 <View style={styles.entryTagRow}>
+                  {item.drawers?.map((drawer) => (
+                    <View
+                      key={drawer.id}
+                      style={[
+                        styles.tag,
+                        {
+                          backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
+                          borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
+                          borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          theme.typography.labelXs,
+                          {
+                            color: ENTRY_PREVIEW_PILLS.drawerText,
+                            fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                          },
+                        ]}
+                      >
+                        {sanitizeEntryPreviewLabel(drawer.name)}
+                      </Text>
+                    </View>
+                  ))}
                   {item.tags?.map((tag) => (
                     <View
                       key={tag.id}
                       style={[
-                        styles.tagBadge,
+                        styles.tag,
                         {
-                          backgroundColor: tag.color + "22",
-                          borderColor: tag.color,
+                          backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+                          borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
+                          borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
                         },
                       ]}
                     >
-                      <Text style={[theme.typography.labelXs, { color: tag.color }]}>
-                        {tag.name}
+                      <Text
+                        style={[
+                          theme.typography.labelXs,
+                          {
+                            color: ENTRY_PREVIEW_PILLS.tagText,
+                            fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                          },
+                        ]}
+                      >
+                        {sanitizeEntryPreviewLabel(tag.name)}
                       </Text>
                     </View>
                   ))}
                 </View>
               ) : null}
-            </TouchableOpacity>
+            </Card>
           )}
           ListEmptyComponent={
             <View
@@ -609,7 +712,11 @@ export function SearchScreen() {
                   { backgroundColor: theme.colors.accent1 + "40" },
                 ]}
               >
-                <MaterialCommunityIcons name="magnify" size={28} color={PAGE_PRIMARY} />
+                <MaterialCommunityIcons
+                  name="magnify"
+                  size={28}
+                  color={PAGE_PRIMARY}
+                />
               </View>
               <Text
                 style={[
@@ -820,58 +927,42 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   entryCard: {
-    padding: 18,
     borderRadius: 24,
-    marginBottom: 14,
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    marginBottom: 22,
   },
   entryHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   entryTitle: {
     fontSize: 26,
     lineHeight: 32,
-    fontWeight: "300",
-  },
-  entryMoodBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
-  },
-  entryMoodEmoji: {
-    fontSize: 18,
+    fontWeight: "600",
   },
   entryBody: {
     fontSize: 14,
     lineHeight: 22,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   entryDate: {
     fontSize: 11,
     lineHeight: 16,
     letterSpacing: 1.3,
     textTransform: "uppercase",
-    marginBottom: 12,
+    marginBottom: 14,
     fontWeight: "600",
   },
   entryTagRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 6,
+    gap: ENTRY_PREVIEW_PILLS.rowGap,
+    marginTop: ENTRY_PREVIEW_PILLS.rowMarginTop,
   },
-  tagBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+  tag: {
+    paddingHorizontal: ENTRY_PREVIEW_PILLS.pillPaddingHorizontal,
+    paddingVertical: ENTRY_PREVIEW_PILLS.pillPaddingVertical,
+    borderRadius: ENTRY_PREVIEW_PILLS.pillRadius,
   },
   emptyState: {
     borderRadius: 24,

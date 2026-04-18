@@ -33,7 +33,7 @@ export function EntryMediaToolbar({
             buttonStyle,
             {
               borderColor: button.borderColor,
-              backgroundColor: button.backgroundColor || "transparent",
+              backgroundColor: button.backgroundColor || "#ECE6DB",
             },
           ]}
           onPress={button.onPress}
@@ -62,8 +62,9 @@ const styles = StyleSheet.create({
     width: "22%",
     aspectRatio: 1,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    padding: 8,
   },
 });

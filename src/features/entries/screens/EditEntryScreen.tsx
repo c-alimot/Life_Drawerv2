@@ -1,15 +1,16 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeArea, Screen } from "@components/layout";
 import {
-  Button,
-  EntryImageStrip,
-  EntryMediaToolbar,
-  type EntryMediaToolbarButton,
-  Modal,
-  EntryMoodPickerModal,
-  EntrySelectionModal,
+    Button,
+    EntryImageStrip,
+    EntryMediaToolbar,
+    type EntryMediaToolbarButton,
+    EntryMoodPickerModal,
+    EntrySelectionModal,
+    Modal,
 } from "@components/ui";
+import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
@@ -19,15 +20,15 @@ import { useDeleteTag } from "@features/tags/hooks/useDeleteTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
     ActivityIndicator,
@@ -79,6 +80,7 @@ const ENTRY_DANGER = "#A6544E";
 const ENTRY_CANCEL_BG = "#E3E1DC";
 const ENTRY_CANCEL_BORDER = "#C9C4BB";
 const ENTRY_CANCEL_TEXT = "#5F6368";
+const ENTRY_PLACEHOLDER = "#8A8178";
 const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
 const STARTER_DRAWER_ID = "starter-drawer";
 const STARTER_DRAWER = {
@@ -97,17 +99,27 @@ const starterDrawerStorage = Platform.OS === "web" ? webStorage : AsyncStorage;
 
 export function EditEntryScreen() {
   const theme = useTheme();
-  const { entryId } = useLocalSearchParams<{ entryId: string }>();
+  const { entryId, fromSearch } = useLocalSearchParams<{
+    entryId: string;
+    fromSearch?: string;
+  }>();
   const entryIdValue = Array.isArray(entryId) ? entryId[0] : entryId;
   const resolvedEntryId = entryIdValue ?? "";
+  const fromSearchValue = Array.isArray(fromSearch)
+    ? fromSearch[0]
+    : fromSearch;
+  const openedFromSearch = fromSearchValue === "1";
 
   const {
     entry,
     isLoading: entryLoading,
     fetchEntry,
   } = useEntryDetail(resolvedEntryId);
-  const { isLoading: updateLoading, updateEntry, error: updateError } =
-    useEditEntry(resolvedEntryId);
+  const {
+    isLoading: updateLoading,
+    updateEntry,
+    error: updateError,
+  } = useEditEntry(resolvedEntryId);
   const { drawers, fetchDrawers } = useDrawers();
   const { tags, fetchTags } = useTags();
   const { createDrawer } = useCreateDrawer();
@@ -139,10 +151,12 @@ export function EditEntryScreen() {
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [audioUri, setAudioUri] = useState<string | null>(null);
   const [pendingImageRemoval, setPendingImageRemoval] = useState<
     { kind: "new"; index: number } | { kind: "existing"; uri: string } | null
@@ -151,6 +165,8 @@ export function EditEntryScreen() {
   const recordingRef = useRef<Audio.Recording | null>(null);
 
   const mood = watch("mood");
+  const titleValue = watch("title");
+  const contentValue = watch("content");
 
   // Initialize
   useFocusEffect(
@@ -164,7 +180,9 @@ export function EditEntryScreen() {
   useEffect(() => {
     const loadStarterDrawerPreference = async () => {
       try {
-        const value = await starterDrawerStorage.getItem(STARTER_DRAWER_HIDDEN_KEY);
+        const value = await starterDrawerStorage.getItem(
+          STARTER_DRAWER_HIDDEN_KEY,
+        );
         setIsStarterDrawerHidden(value === "true");
       } catch {
         setIsStarterDrawerHidden(false);
@@ -224,7 +242,9 @@ export function EditEntryScreen() {
       });
 
       if (!result.canceled) {
-        const uris = result.assets.map((asset: ImagePicker.ImagePickerAsset) => asset.uri);
+        const uris = result.assets.map(
+          (asset: ImagePicker.ImagePickerAsset) => asset.uri,
+        );
         setNewImageUris((prev) => [...prev, ...uris]);
       }
     } catch {
@@ -310,7 +330,9 @@ export function EditEntryScreen() {
     try {
       if (!audioUri) return;
       if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+        await soundRef.current.playAsync();
+        setIsAudioPlaying(true);
+        return;
       }
 
       const { sound } = await Audio.Sound.createAsync(
@@ -318,13 +340,38 @@ export function EditEntryScreen() {
         { shouldPlay: true },
       );
       soundRef.current = sound;
-      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) {
+          setIsAudioPlaying(false);
+          return;
+        }
+        setIsAudioPlaying(status.isPlaying);
+        if (status.didJustFinish) {
+          setIsAudioPlaying(false);
+        }
+      });
+      setIsAudioPlaying(true);
     } catch {
       Alert.alert("Error", "Failed to play audio");
     }
   }, [audioUri]);
 
+  const pauseAudio = useCallback(async () => {
+    try {
+      if (!soundRef.current) return;
+      await soundRef.current.pauseAsync();
+      setIsAudioPlaying(false);
+    } catch {
+      Alert.alert("Error", "Failed to pause audio");
+    }
+  }, []);
+
   const removeAudio = useCallback(() => {
+    if (soundRef.current) {
+      soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
+    }
+    setIsAudioPlaying(false);
     setAudioUri(null);
   }, []);
 
@@ -460,15 +507,81 @@ export function EditEntryScreen() {
 
     if (result) {
       Alert.alert("Success", "Entry updated successfully");
-      router.back();
+      if (openedFromSearch) {
+        router.replace("/search");
+      } else {
+        router.back();
+      }
     } else {
       Alert.alert("Error", updateError?.message || "Failed to update entry");
     }
   };
 
   const handleBack = useCallback(() => {
+    if (openedFromSearch) {
+      router.replace("/search");
+      return;
+    }
+
     router.back();
+  }, [openedFromSearch]);
+
+  const arraysEqual = useCallback((left: string[], right: string[]) => {
+    if (left.length !== right.length) return false;
+    const leftSorted = [...left].sort();
+    const rightSorted = [...right].sort();
+    return leftSorted.every((value, index) => value === rightSorted[index]);
   }, []);
+
+  const hasUnsavedChanges = useMemo(() => {
+    if (!entry) {
+      return false;
+    }
+
+    const baseDrawerIds = entry.drawers?.map((drawer) => drawer.id) || [];
+    const baseTagIds = entry.tags?.map((tag) => tag.id) || [];
+
+    return (
+      (titleValue || "") !== entry.title ||
+      (contentValue || "") !== entry.content ||
+      (mood || undefined) !== (entry.mood || undefined) ||
+      !arraysEqual(selectedDrawers, baseDrawerIds) ||
+      !arraysEqual(selectedTags, baseTagIds) ||
+      newImageUris.length > 0 ||
+      removedImageUris.length > 0 ||
+      (audioUri || null) !== (entry.audioUrl || null)
+    );
+  }, [
+    arraysEqual,
+    audioUri,
+    contentValue,
+    entry,
+    mood,
+    newImageUris.length,
+    removedImageUris.length,
+    selectedDrawers,
+    selectedTags,
+    titleValue,
+  ]);
+
+  const handleBackPress = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowExitPrompt(true);
+      return;
+    }
+
+    handleBack();
+  }, [handleBack, hasUnsavedChanges]);
+
+  const handleDiscardEntry = useCallback(() => {
+    setShowExitPrompt(false);
+    handleBack();
+  }, [handleBack]);
+
+  const handleSaveFromExitPrompt = () => {
+    setShowExitPrompt(false);
+    handleSubmit(onSubmit)();
+  };
 
   const visibleExistingImages =
     entry?.images.filter((imageUri) => !removedImageUris.includes(imageUri)) ||
@@ -488,7 +601,10 @@ export function EditEntryScreen() {
   const starterDrawerPreview = selectedDrawers.includes(STARTER_DRAWER_ID)
     ? [STARTER_DRAWER]
     : [];
-  const displayDrawerPreview = [...starterDrawerPreview, ...selectedDrawerPreview];
+  const displayDrawerPreview = [
+    ...starterDrawerPreview,
+    ...selectedDrawerPreview,
+  ];
   const selectableDrawers = isStarterDrawerHidden
     ? drawers
     : [{ ...STARTER_DRAWER, isManageable: false }, ...drawers];
@@ -504,10 +620,7 @@ export function EditEntryScreen() {
     border: ENTRY_ACCENT,
     inverseText: "#F8F6F2",
   };
-  const renderToolbarItem = (
-    icon: ReactNode,
-    label: string,
-  ) => (
+  const renderToolbarItem = (icon: ReactNode, label: string) => (
     <View style={styles.toolbarItemContent}>
       {icon}
       <Text style={styles.toolbarItemLabel}>{label}</Text>
@@ -516,7 +629,9 @@ export function EditEntryScreen() {
   const toolbarButtons: EntryMediaToolbarButton[] = [
     {
       key: "drawers",
-      borderColor: selectedDrawers.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor:
+        selectedDrawers.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedDrawers.length > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Manage drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
@@ -524,14 +639,16 @@ export function EditEntryScreen() {
         <MaterialCommunityIcons
           name="archive-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Drawer",
       ),
     },
     {
       key: "tags",
-      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor:
+        selectedTags.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedTags.length > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowTagModal(true),
       accessibilityLabel: "Manage tags",
       accessibilityHint: `${selectedTags.length} tags selected`,
@@ -539,14 +656,15 @@ export function EditEntryScreen() {
         <MaterialCommunityIcons
           name="tag-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Tags",
       ),
     },
     {
       key: "images",
-      borderColor: totalImages > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor: totalImages > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: totalImages > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: pickImages,
       disabled: totalImages >= MAX_IMAGES,
       accessibilityLabel: "Add images",
@@ -555,7 +673,7 @@ export function EditEntryScreen() {
         <MaterialCommunityIcons
           name="image-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Image",
       ),
@@ -563,9 +681,13 @@ export function EditEntryScreen() {
     {
       key: "audio",
       borderColor:
-        isRecording || audioUri ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
-      backgroundColor: isRecording ? `${theme.colors.error}20` : "transparent",
-      onPress: isRecording ? stopRecording : audioUri ? playAudio : startRecording,
+        isRecording || audioUri ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: isRecording || audioUri ? "#E6E2D8" : "#ECE6DB",
+      onPress: isRecording
+        ? stopRecording
+        : audioUri
+          ? playAudio
+          : startRecording,
       accessibilityLabel: isRecording
         ? "Stop recording"
         : audioUri
@@ -581,17 +703,20 @@ export function EditEntryScreen() {
                 : "microphone-outline"
           }
           size={28}
-          color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Voice Memo",
       ),
     },
     {
       key: "mood",
-      borderColor: mood ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor: mood ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: mood ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowMoodPicker(true),
       accessibilityLabel: "Change mood",
-      accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
+      accessibilityHint: mood
+        ? `Mood: ${MOOD_MAP[mood]?.label}`
+        : "Select a mood",
       content: renderToolbarItem(
         mood ? (
           <Text style={styles.toolbarMoodIcon}>{MOOD_MAP[mood]?.emoji}</Text>
@@ -599,7 +724,7 @@ export function EditEntryScreen() {
           <MaterialCommunityIcons
             name="emoticon-happy-outline"
             size={28}
-            color={ENTRY_PRIMARY}
+            color={ENTRY_SECONDARY}
           />
         ),
         "Mood",
@@ -610,7 +735,9 @@ export function EditEntryScreen() {
   if (entryLoading) {
     return (
       <SafeArea>
-        <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
+        <Screen
+          style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}
+        >
           <View style={styles.loaderContainer}>
             <ActivityIndicator size="large" color={ENTRY_PRIMARY} />
           </View>
@@ -622,7 +749,9 @@ export function EditEntryScreen() {
   if (!entry) {
     return (
       <SafeArea>
-        <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
+        <Screen
+          style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}
+        >
           <View style={styles.loaderContainer}>
             <Text style={[theme.typography.body, { color: ENTRY_TEXT }]}>
               Entry not found
@@ -639,7 +768,7 @@ export function EditEntryScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={handleBack}
+            onPress={handleBackPress}
             style={styles.headerBack}
             accessible
             accessibilityLabel="Go back"
@@ -674,10 +803,11 @@ export function EditEntryScreen() {
                   {
                     color: ENTRY_TEXT,
                     fontFamily: theme.fonts.serif,
+                    fontWeight: value?.trim() ? "600" : "400",
                   },
                 ]}
                 placeholder="Add a title"
-                placeholderTextColor={theme.colors.accent2}
+                placeholderTextColor={ENTRY_PLACEHOLDER}
                 value={value}
                 onChangeText={onChange}
                 cursorColor={ENTRY_PRIMARY}
@@ -722,9 +852,10 @@ export function EditEntryScreen() {
           />
 
           <EntryImageStrip
-            title="Existing Images"
+            title="MEDIA"
             items={visibleExistingImages}
-            titleColor={theme.colors.textSecondary}
+            titleColor="#8A8178"
+            titleStyle={styles.linkedPreviewLabel}
             onRemove={(imageUri) => requestRemoveExistingImage(imageUri)}
             getItemAccessibilityLabel={() => "Existing image"}
           />
@@ -740,26 +871,42 @@ export function EditEntryScreen() {
           {audioUri && (
             <View style={[styles.audioBox, { borderColor: ENTRY_ACCENT }]}>
               <View style={styles.audioContent}>
-                <Text
-                  style={[theme.typography.body, { color: ENTRY_TEXT }]}
-                >
-                  🎙️ Voice Memo
+                <Text style={[theme.typography.body, { color: ENTRY_TEXT }]}>
+                  Voice Memo
                 </Text>
-                <TouchableOpacity
-                  onPress={playAudio}
-                  accessible
-                  accessibilityLabel="Play voice memo"
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: ENTRY_TEXT },
-                    ]}
+                <View style={styles.audioActions}>
+                  <TouchableOpacity
+                    onPress={playAudio}
+                    accessible
+                    accessibilityLabel="Play voice memo"
+                    accessibilityRole="button"
                   >
-                    Play
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        { color: ENTRY_TEXT },
+                      ]}
+                    >
+                      Play
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={pauseAudio}
+                    disabled={!isAudioPlaying}
+                    accessible
+                    accessibilityLabel="Pause voice memo"
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        { color: isAudioPlaying ? ENTRY_TEXT : "#8A8178" },
+                      ]}
+                    >
+                      Pause
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -776,15 +923,21 @@ export function EditEntryScreen() {
             </View>
           )}
 
-          {(displayDrawerPreview.length > 0 || selectedTagPreview.length > 0) && (
+          {(displayDrawerPreview.length > 0 ||
+            selectedTagPreview.length > 0) && (
             <View style={styles.linkedPreviewSection}>
               {displayDrawerPreview.length > 0 && (
                 <>
                   <Text style={styles.linkedPreviewLabel}>Linked Drawers</Text>
                   <View style={styles.linkedChipRow}>
                     {displayDrawerPreview.map((drawer) => (
-                      <View key={`drawer-${drawer.id}`} style={styles.linkedChip}>
-                        <Text style={styles.linkedChipText}>{drawer.name}</Text>
+                      <View
+                        key={`drawer-${drawer.id}`}
+                        style={styles.linkedDrawerChip}
+                      >
+                        <Text style={styles.linkedDrawerChipText}>
+                          {sanitizeEntryPreviewLabel(drawer.name)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -795,8 +948,10 @@ export function EditEntryScreen() {
                   <Text style={styles.linkedPreviewLabel}>Linked Tags</Text>
                   <View style={styles.linkedChipRow}>
                     {selectedTagPreview.map((tag) => (
-                      <View key={`tag-${tag.id}`} style={styles.linkedChip}>
-                        <Text style={styles.linkedChipText}>{tag.name}</Text>
+                      <View key={`tag-${tag.id}`} style={styles.linkedTagChip}>
+                        <Text style={styles.linkedTagChipText}>
+                          {sanitizeEntryPreviewLabel(tag.name)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -824,7 +979,7 @@ export function EditEntryScreen() {
                   {
                     borderColor: ENTRY_ACCENT,
                     color: ENTRY_TEXT,
-                    backgroundColor: ENTRY_SURFACE,
+                    backgroundColor: "#F8F6F2",
                   },
                 ]}
                 placeholder="Start writing..."
@@ -872,7 +1027,11 @@ export function EditEntryScreen() {
         <EntrySelectionModal
           visible={showTagModal}
           title="Select Tags"
-          items={tags.map((tag) => ({ id: tag.id, name: tag.name, isManageable: true }))}
+          items={tags.map((tag) => ({
+            id: tag.id,
+            name: tag.name,
+            isManageable: true,
+          }))}
           selectedIds={selectedTags}
           onToggle={toggleTag}
           onClose={() => setShowTagModal(false)}
@@ -899,6 +1058,11 @@ export function EditEntryScreen() {
           selectedMood={mood}
           onSelectMood={(moodValue) => setValue("mood", moodValue)}
           onClose={() => setShowMoodPicker(false)}
+          backgroundColor={entryPalette.background}
+          textColor={entryPalette.text}
+          borderColor={entryPalette.border}
+          surfaceColor={entryPalette.surface}
+          primaryColor={entryPalette.primary}
         />
 
         <Modal
@@ -908,10 +1072,21 @@ export function EditEntryScreen() {
           backdropStyle={styles.actionBackdrop}
           contentStyle={styles.actionModal}
         >
-          <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
+          <Text
+            style={[
+              styles.actionTitle,
+              { color: ENTRY_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
             Delete Image
           </Text>
-          <Text style={[theme.typography.body, styles.actionSubtitle, { color: ENTRY_MUTED }]}>
+          <Text
+            style={[
+              theme.typography.body,
+              styles.actionSubtitle,
+              { color: ENTRY_MUTED },
+            ]}
+          >
             Are you sure you want to delete this image?
           </Text>
           <View style={styles.actionRow}>
@@ -919,15 +1094,75 @@ export function EditEntryScreen() {
               label="Cancel"
               onPress={() => setPendingImageRemoval(null)}
               variant="primary"
-              style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: ENTRY_CANCEL_BG,
+                  borderColor: ENTRY_CANCEL_BORDER,
+                },
+              ]}
               textStyle={{ color: ENTRY_CANCEL_TEXT, fontWeight: "700" }}
             />
             <Button
               label="Delete"
               onPress={confirmRemoveImage}
               variant="primary"
-              style={[styles.actionButton, { backgroundColor: ENTRY_DANGER, borderColor: ENTRY_DANGER }]}
+              style={[
+                styles.actionButton,
+                { backgroundColor: ENTRY_DANGER, borderColor: ENTRY_DANGER },
+              ]}
               textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={showExitPrompt}
+          onClose={() => setShowExitPrompt(false)}
+          animationType="fade"
+          backdropStyle={styles.actionBackdrop}
+          contentStyle={styles.actionModal}
+        >
+          <Text
+            style={[
+              styles.actionTitle,
+              { color: ENTRY_TEXT, fontFamily: theme.fonts.serif },
+            ]}
+          >
+            Leave Entry?
+          </Text>
+          <Text
+            style={[
+              theme.typography.body,
+              styles.actionSubtitle,
+              { color: ENTRY_MUTED },
+            ]}
+          >
+            Do you want to save your changes before leaving?
+          </Text>
+          <View style={styles.actionRow}>
+            <Button
+              label="Save Changes"
+              onPress={handleSaveFromExitPrompt}
+              variant="primary"
+              style={[
+                styles.actionButton,
+                { backgroundColor: ENTRY_SECONDARY, borderColor: ENTRY_SECONDARY },
+              ]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+            <Button
+              label="Discard Entry"
+              onPress={handleDiscardEntry}
+              variant="primary"
+              style={[
+                styles.actionButton,
+                {
+                  backgroundColor: ENTRY_CANCEL_BG,
+                  borderColor: ENTRY_CANCEL_BORDER,
+                },
+              ]}
+              textStyle={{ color: ENTRY_TEXT, fontWeight: "700" }}
             />
           </View>
         </Modal>
@@ -974,17 +1209,20 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
     marginBottom: 14,
     marginTop: 4,
   },
   toolbarButton: {
     width: "17.6%",
     aspectRatio: 1,
-    borderWidth: 2,
-    borderRadius: 14,
+    borderWidth: 1,
+    borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#ECE6DB",
+    borderColor: ENTRY_ACCENT,
+    padding: 8,
   },
   toolbarItemContent: {
     alignItems: "center",
@@ -1024,14 +1262,14 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   contentInput: {
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 18,
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
     minHeight: 200,
     marginTop: 12,
     fontSize: 19,
-    lineHeight: 30,
+    lineHeight: 32,
   },
   audioBox: {
     borderWidth: 1,
@@ -1047,14 +1285,19 @@ const styles = StyleSheet.create({
   audioContent: {
     gap: 4,
   },
+  audioActions: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
+  },
   linkedPreviewSection: {
     marginBottom: 14,
-    gap: 8,
+    gap: 6,
   },
   linkedPreviewLabel: {
-    color: ENTRY_MUTED,
+    color: "#8A8178",
     fontSize: 13,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
   },
   linkedChipRow: {
@@ -1063,18 +1306,31 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 6,
   },
-  linkedChip: {
+  linkedDrawerChip: {
     borderWidth: 1,
-    borderColor: ENTRY_ACCENT,
-    backgroundColor: ENTRY_SURFACE,
+    borderColor: "#556950",
+    backgroundColor: "#E6E2D8",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  linkedChipText: {
-    color: ENTRY_TEXT,
+  linkedDrawerChipText: {
+    color: "#556950",
     fontSize: 14,
     fontWeight: "500",
+  },
+  linkedTagChip: {
+    borderWidth: 1,
+    borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
+    backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  linkedTagChipText: {
+    color: ENTRY_PREVIEW_PILLS.tagText,
+    fontSize: 14,
+    fontWeight: "400",
   },
   actionBackdrop: {
     paddingHorizontal: 24,

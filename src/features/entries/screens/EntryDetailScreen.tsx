@@ -1,5 +1,6 @@
 import { SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
+import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
@@ -489,8 +490,8 @@ export function EntryDetailScreen() {
                         style={[
                           styles.tagBadge,
                           {
-                            backgroundColor: drawer.color + "20",
-                            borderColor: drawer.color,
+                            backgroundColor: "#E6E2D8",
+                            borderColor: "#556950",
                           },
                         ]}
                         onLongPress={() => handleRemoveDrawer(drawer.id)}
@@ -501,10 +502,10 @@ export function EntryDetailScreen() {
                         <Text
                           style={[
                             theme.typography.bodySm,
-                            { color: drawer.color },
+                            { color: "#556950", fontWeight: "500" },
                           ]}
                         >
-                          {drawer.name}
+                          {sanitizeEntryPreviewLabel(drawer.name)}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -536,8 +537,8 @@ export function EntryDetailScreen() {
                         style={[
                           styles.tagBadge,
                           {
-                            backgroundColor: tag.color + "20",
-                            borderColor: tag.color,
+                            backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+                            borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
                           },
                         ]}
                         onLongPress={() => handleRemoveTag(tag.id)}
@@ -548,10 +549,13 @@ export function EntryDetailScreen() {
                         <Text
                           style={[
                             theme.typography.bodySm,
-                            { color: tag.color },
+                            {
+                              color: ENTRY_PREVIEW_PILLS.tagText,
+                              fontWeight: "400",
+                            },
                           ]}
                         >
-                          {tag.name}
+                          {sanitizeEntryPreviewLabel(tag.name)}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -701,9 +705,9 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   tagBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 999,
     borderWidth: 1,
   },
 });

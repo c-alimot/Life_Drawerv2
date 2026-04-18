@@ -1,0 +1,1006 @@
+import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
+import { Button, Modal, SectionHeader } from "@components/ui";
+import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { useDeleteEntry } from "@features/entries/hooks/useDeleteEntry";
+import { useEntries } from "@features/entries/hooks/useEntries";
+import { useDrawers } from "@features/drawers/hooks/useDrawers";
+import { useTags } from "@features/tags/hooks/useTags";
+import { useTheme } from "@styles/theme";
+import type { EntryWithRelations, SearchEntriesRequest } from "@types";
+import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+
+interface GroupedEntries {
+  [date: string]: EntryWithRelations[];
+}
+
+const PAGE_BACKGROUND = "#EDEAE4";
+const PAGE_TEXT = "#2F2924";
+const PAGE_MUTED = "#6F6860";
+const PAGE_PRIMARY = "#8C9A7F";
+const PAGE_SECONDARY = "#556950";
+const PAGE_SURFACE = "#FFFFFF";
+const PAGE_BORDER = "#DAC8B1";
+const CANCEL_BUTTON_BG = "#E3E1DC";
+const CANCEL_BUTTON_BORDER = "#C9C4BB";
+const CANCEL_BUTTON_TEXT = "#5F6368";
+
+export function AllEntriesScreen() {
+  const theme = useTheme();
+  const params = useLocalSearchParams<{ tagId?: string }>();
+  const initialTagId = Array.isArray(params.tagId) ? params.tagId[0] : params.tagId;
+  const { entries, isLoading, total, fetchEntries } = useEntries();
+  const { deleteEntry } = useDeleteEntry();
+  const { drawers, fetchDrawers } = useDrawers();
+  const { tags, fetchTags } = useTags();
+
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+  const [selectedDrawerId, setSelectedDrawerId] = useState<string | null>(null);
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(initialTagId ?? null);
+  const [draftSortOrder, setDraftSortOrder] = useState<"desc" | "asc">("desc");
+  const [draftDrawerId, setDraftDrawerId] = useState<string | null>(null);
+  const [draftTagId, setDraftTagId] = useState<string | null>(initialTagId ?? null);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [entryMenuTarget, setEntryMenuTarget] = useState<EntryWithRelations | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EntryWithRelations | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    setSelectedTagId(initialTagId ?? null);
+    setDraftTagId(initialTagId ?? null);
+  }, [initialTagId]);
+
+  useEffect(() => {
+    fetchDrawers();
+    fetchTags();
+  }, [fetchDrawers, fetchTags]);
+
+  const request = useMemo<SearchEntriesRequest>(
+    () => ({
+      limit: 100,
+      offset: 0,
+      sortOrder,
+      drawerIds: selectedDrawerId ? [selectedDrawerId] : undefined,
+      tagIds: selectedTagId ? [selectedTagId] : undefined,
+    }),
+    [selectedDrawerId, selectedTagId, sortOrder],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEntries = async () => {
+      setIsRefreshing(true);
+      await fetchEntries(request);
+      if (isMounted) {
+        setIsRefreshing(false);
+      }
+    };
+
+    loadEntries();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchEntries, request]);
+
+  const groupedEntries = useMemo(() => {
+    const grouped: GroupedEntries = {};
+    entries.forEach((entry) => {
+      const date = new Date(entry.createdAt).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      if (!grouped[date]) {
+        grouped[date] = [];
+      }
+
+      grouped[date].push(entry);
+    });
+
+    return grouped;
+  }, [entries]);
+
+  const handleSearch = useCallback(() => {
+    router.push("/search");
+  }, []);
+
+  const handleEntryPress = useCallback((entryId: string) => {
+    router.push(`/edit-entry/${entryId}`);
+  }, []);
+
+  const handleEditEntry = useCallback((entryId: string) => {
+    router.push(`/edit-entry/${entryId}`);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setSelectedDrawerId(null);
+    setSelectedTagId(null);
+    setSortOrder("desc");
+    setDraftDrawerId(null);
+    setDraftTagId(null);
+    setDraftSortOrder("desc");
+  }, []);
+
+  const openFilters = useCallback(() => {
+    setDraftSortOrder(sortOrder);
+    setDraftDrawerId(selectedDrawerId);
+    setDraftTagId(selectedTagId);
+    setIsFiltersOpen(true);
+  }, [selectedDrawerId, selectedTagId, sortOrder]);
+
+  const closeFilters = useCallback(() => {
+    setIsFiltersOpen(false);
+  }, []);
+
+  const handleSaveFilters = useCallback(() => {
+    setSortOrder(draftSortOrder);
+    setSelectedDrawerId(draftDrawerId);
+    setSelectedTagId(draftTagId);
+    setIsFiltersOpen(false);
+  }, [draftDrawerId, draftSortOrder, draftTagId]);
+
+  const handleClearDraftFilters = useCallback(() => {
+    setDraftDrawerId(null);
+    setDraftTagId(null);
+    setDraftSortOrder("desc");
+  }, []);
+
+  const closeEntryMenu = useCallback(() => {
+    setEntryMenuTarget(null);
+  }, []);
+
+  const handleEditFromMenu = useCallback(() => {
+    if (!entryMenuTarget) {
+      return;
+    }
+
+    const targetId = entryMenuTarget.id;
+    setEntryMenuTarget(null);
+    handleEditEntry(targetId);
+  }, [entryMenuTarget, handleEditEntry]);
+
+  const handleDeletePrompt = useCallback(() => {
+    if (!entryMenuTarget) {
+      return;
+    }
+
+    setDeleteTarget(entryMenuTarget);
+    setEntryMenuTarget(null);
+  }, [entryMenuTarget]);
+
+  const handleDeleteEntry = useCallback(async () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    const success = await deleteEntry(deleteTarget.id);
+    setDeleteTarget(null);
+
+    if (success) {
+      await fetchEntries(request);
+    } else {
+      Alert.alert("Error", "Failed to delete entry");
+    }
+  }, [deleteEntry, deleteTarget, fetchEntries, request]);
+
+  const hasActiveFilters =
+    sortOrder !== "desc" || selectedDrawerId !== null || selectedTagId !== null;
+
+  if (isLoading && entries.length === 0) {
+    return (
+      <SafeArea>
+        <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
+          <View style={styles.loaderContainer}>
+            <ActivityIndicator size="large" color={PAGE_PRIMARY} />
+          </View>
+        </Screen>
+      </SafeArea>
+    );
+  }
+
+  return (
+    <SafeArea>
+      <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
+          <TouchableOpacity
+            onPress={handleSearch}
+            style={styles.headerIconButton}
+            accessible
+            accessibilityLabel="Search entries"
+          >
+            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={Object.entries(groupedEntries)}
+          keyExtractor={([date]) => date}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.content}
+          ListHeaderComponent={
+            <>
+              <View style={styles.heroBlock}>
+                <Text
+                  style={[
+                    styles.heroTitle,
+                    { color: PAGE_TEXT, fontFamily: theme.fonts.serif },
+                  ]}
+                >
+                  Your{" "}
+                  <Text style={{ color: PAGE_PRIMARY }}>Entries</Text>
+                </Text>
+              </View>
+
+              <View style={styles.archiveHeaderRow}>
+                <View style={styles.archiveHeaderContent}>
+                  <SectionHeader
+                    label="Archive"
+                    textColor={PAGE_MUTED}
+                    dividerColor={theme.colors.accent1}
+                  />
+                </View>
+                <TouchableOpacity
+                  onPress={openFilters}
+                  style={styles.archiveFilterButton}
+                  accessible
+                  accessibilityLabel="Open sort and filter options"
+                >
+                  <MaterialCommunityIcons name="tune-variant" size={24} color={PAGE_PRIMARY} />
+                </TouchableOpacity>
+              </View>
+
+              {entries.length === 0 ? (
+                <View
+                  style={[
+                    styles.emptyState,
+                    {
+                      borderColor: theme.colors.accent1 + "AA",
+                      backgroundColor: PAGE_SURFACE,
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.emptyIcon,
+                      {
+                        backgroundColor: theme.colors.accent1 + "3D",
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons
+                      name="pen"
+                      size={34}
+                      color={PAGE_PRIMARY}
+                    />
+                  </View>
+                  <Text
+                    style={[
+                      styles.emptyTitle,
+                      {
+                        color: PAGE_TEXT,
+                        fontFamily: theme.fonts.serif,
+                        marginBottom: theme.spacing.md,
+                      },
+                    ]}
+                  >
+                    No matching entries
+                  </Text>
+                  <Text
+                    style={[
+                      theme.typography.body,
+                      {
+                        color: PAGE_MUTED,
+                        textAlign: "center",
+                        lineHeight: 28,
+                      },
+                    ]}
+                  >
+                    Try a different sort or filter to explore more of your archive.
+                  </Text>
+                </View>
+              ) : null}
+            </>
+          }
+          renderItem={({ item: [date, dateEntries] }) => (
+            <View style={styles.dateGroup}>
+              <Text
+                style={[
+                  theme.typography.bodySm,
+                  {
+                    color: PAGE_MUTED,
+                    marginBottom: theme.spacing.md,
+                    fontWeight: "500",
+                  },
+                ]}
+              >
+                {date}
+              </Text>
+              {dateEntries.map((entry) => (
+                <View
+                  key={entry.id}
+                  style={[
+                    styles.entryCard,
+                    {
+                      backgroundColor: PAGE_SURFACE,
+                      shadowColor: PAGE_TEXT,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    onPress={() => setEntryMenuTarget(entry)}
+                    style={styles.entryMore}
+                    accessible
+                    accessibilityLabel={`More options for ${entry.title || "Untitled Entry"}`}
+                  >
+                    <MaterialCommunityIcons
+                      name="dots-vertical"
+                      size={22}
+                      color={PAGE_MUTED}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.entryContent}
+                    onPress={() => handleEntryPress(entry.id)}
+                    accessible
+                    accessibilityLabel={`Entry: ${entry.title || "Untitled"}`}
+                  >
+                    <View style={styles.entryHeader}>
+                      <Text
+                        style={[
+                          theme.typography.h3,
+                          styles.entryTitle,
+                          {
+                            color: PAGE_TEXT,
+                            fontFamily: theme.fonts.serif,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {entry.title || "Untitled Entry"}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        { color: PAGE_MUTED, marginBottom: 0 },
+                      ]}
+                      numberOfLines={2}
+                    >
+                      {entry.content}
+                    </Text>
+                    {(entry.drawers?.length > 0 || entry.tags?.length > 0) && (
+                      <View style={styles.entryTags}>
+                        {entry.drawers?.map((drawer) => (
+                          <View
+                            key={drawer.id}
+                            style={[
+                              styles.tag,
+                                {
+                                backgroundColor: ENTRY_PREVIEW_PILLS.drawerBackground,
+                                borderColor: ENTRY_PREVIEW_PILLS.drawerBorder,
+                                borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                theme.typography.labelXs,
+                                {
+                                  color: ENTRY_PREVIEW_PILLS.drawerText,
+                                  fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                                },
+                              ]}
+                            >
+                              {sanitizeEntryPreviewLabel(drawer.name)}
+                            </Text>
+                          </View>
+                        ))}
+                        {entry.tags?.map((tag) => {
+                          return (
+                            <View
+                              key={tag.id}
+                              style={[
+                                styles.tag,
+                                {
+                                  backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+                                  borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
+                                  borderWidth: ENTRY_PREVIEW_PILLS.borderWidth,
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  theme.typography.labelXs,
+                                  {
+                                    color: ENTRY_PREVIEW_PILLS.tagText,
+                                    fontWeight: ENTRY_PREVIEW_PILLS.textWeight,
+                                  },
+                                ]}
+                              >
+                                {sanitizeEntryPreviewLabel(tag.name)}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        />
+
+        <AppBottomNav currentRoute="/all-entries" />
+
+        <Modal
+          visible={isFiltersOpen}
+          onClose={closeFilters}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.filtersModal}
+        >
+          <View style={styles.filtersHeader}>
+            <Text style={[styles.menuTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
+              Sort & Filter
+            </Text>
+            <TouchableOpacity onPress={handleSaveFilters} accessible accessibilityLabel="Save filters">
+              <Text style={[theme.typography.body, styles.saveText, { color: PAGE_SECONDARY }]}>
+                Save
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+            <Text style={[theme.typography.bodySm, styles.menuSubtitle, { color: PAGE_MUTED }]}>
+              Choose how you want to explore your archive.
+            </Text>
+
+          <View style={styles.metaRow}>
+            <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
+              {total} {total === 1 ? "entry" : "entries"}
+            </Text>
+            <View style={styles.metaActions}>
+              {isRefreshing ? <ActivityIndicator size="small" color={PAGE_PRIMARY} /> : null}
+              {hasActiveFilters ? (
+                <TouchableOpacity onPress={handleClearFilters}>
+                  <Text style={[theme.typography.bodySm, { color: PAGE_SECONDARY }]}>
+                    Clear all
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Text
+              style={[
+                theme.typography.labelSm,
+                styles.controlsLabel,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              Sort
+            </Text>
+            <View style={styles.chipRow}>
+              {[
+                { label: "Recently Added", value: "desc" as const },
+                { label: "Oldest First", value: "asc" as const },
+              ].map((option) => {
+                const isActive = draftSortOrder === option.value;
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => setDraftSortOrder(option.value)}
+                    style={[
+                      styles.filterChip,
+                      isActive && styles.filterChipActive,
+                      {
+                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
+                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        {
+                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
+                          fontWeight: "500",
+                        },
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text
+              style={[
+                theme.typography.labelSm,
+                styles.controlsLabel,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              Filter by Drawer
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              <TouchableOpacity
+                onPress={() => setDraftDrawerId(null)}
+                style={[
+                  styles.filterChip,
+                  {
+                    borderColor: draftDrawerId === null ? PAGE_PRIMARY : PAGE_BORDER,
+                    backgroundColor:
+                      draftDrawerId === null ? "#ECE6DB" : "transparent",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    {
+                      color: draftDrawerId === null ? PAGE_SECONDARY : PAGE_TEXT,
+                      fontWeight: "500",
+                    },
+                  ]}
+                >
+                  All drawers
+                </Text>
+              </TouchableOpacity>
+              {drawers.map((drawer) => {
+                const isActive = draftDrawerId === drawer.id;
+                return (
+                  <TouchableOpacity
+                    key={drawer.id}
+                    onPress={() => setDraftDrawerId(isActive ? null : drawer.id)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
+                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        {
+                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
+                          fontWeight: "500",
+                        },
+                      ]}
+                    >
+                      {drawer.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <Text
+              style={[
+                theme.typography.labelSm,
+                styles.controlsLabel,
+                { color: PAGE_MUTED },
+              ]}
+            >
+              Filter by Tag
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              <TouchableOpacity
+                onPress={() => setDraftTagId(null)}
+                style={[
+                  styles.filterChip,
+                  {
+                    borderColor: draftTagId === null ? PAGE_PRIMARY : PAGE_BORDER,
+                    backgroundColor:
+                      draftTagId === null ? "#ECE6DB" : "transparent",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    {
+                      color: draftTagId === null ? PAGE_SECONDARY : PAGE_TEXT,
+                      fontWeight: "500",
+                    },
+                  ]}
+                >
+                  All tags
+                </Text>
+              </TouchableOpacity>
+              {tags.map((tag) => {
+                const isActive = draftTagId === tag.id;
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    onPress={() => setDraftTagId(isActive ? null : tag.id)}
+                    style={[
+                      styles.filterChip,
+                      {
+                        borderColor: isActive ? PAGE_PRIMARY : PAGE_BORDER,
+                        backgroundColor: isActive ? "#ECE6DB" : "transparent",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        {
+                          color: isActive ? PAGE_SECONDARY : PAGE_TEXT,
+                          fontWeight: "500",
+                        },
+                      ]}
+                    >
+                      {tag.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </ScrollView>
+
+          <View style={styles.filtersFooter}>
+            <Button
+              label="Clear All"
+              onPress={handleClearDraftFilters}
+              variant="primary"
+              style={[
+                styles.footerButton,
+                { backgroundColor: PAGE_BACKGROUND, borderColor: PAGE_BACKGROUND },
+              ]}
+              textStyle={{ color: PAGE_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Cancel"
+              onPress={closeFilters}
+              variant="primary"
+              style={[
+                styles.footerButton,
+                { backgroundColor: PAGE_BACKGROUND, borderColor: PAGE_BACKGROUND },
+              ]}
+              textStyle={{ color: PAGE_TEXT, fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+
+        <Modal
+          visible={!!entryMenuTarget}
+          onClose={closeEntryMenu}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
+            {entryMenuTarget?.title || "Untitled Entry"}
+          </Text>
+          <Text style={[theme.typography.bodySm, styles.menuSubtitle, { color: PAGE_MUTED }]}>
+            Choose an action for this journal entry.
+          </Text>
+          <Button
+            label="Edit"
+            onPress={handleEditFromMenu}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuEditButton]}
+            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+          />
+          <Button
+            label="Delete"
+            onPress={handleDeletePrompt}
+            variant="primary"
+            style={[styles.menuActionButton, styles.menuDeleteButton]}
+            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+          />
+          <Button
+            label="Cancel"
+            onPress={closeEntryMenu}
+            variant="primary"
+            style={[
+              styles.menuActionButton,
+              { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
+            ]}
+            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+          />
+        </Modal>
+
+        <Modal
+          visible={!!deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          animationType="fade"
+          backdropStyle={styles.menuBackdrop}
+          contentStyle={styles.menuModal}
+        >
+          <Text style={[styles.menuTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
+            Delete Entry
+          </Text>
+          <Text style={[theme.typography.body, styles.menuSubtitle, { color: PAGE_MUTED }]}>
+            Are you sure you want to delete this journal entry?
+          </Text>
+          <View style={styles.confirmActions}>
+            <Button
+              label="Cancel"
+              onPress={() => setDeleteTarget(null)}
+              variant="primary"
+              style={[
+                styles.confirmButton,
+                {
+                  backgroundColor: CANCEL_BUTTON_BG,
+                  borderColor: CANCEL_BUTTON_BORDER,
+                },
+              ]}
+              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            />
+            <Button
+              label="Delete"
+              onPress={handleDeleteEntry}
+              variant="primary"
+              style={[styles.confirmButton, styles.menuDeleteButton]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
+      </Screen>
+    </SafeArea>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 12,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerIconButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  content: {
+    paddingHorizontal: 24,
+    paddingTop: 6,
+    paddingBottom: 230,
+  },
+  loaderContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  heroBlock: {
+    marginBottom: 28,
+  },
+  heroTitle: {
+    fontSize: 34,
+    lineHeight: 42,
+    fontWeight: "300",
+    marginTop: 6,
+    marginBottom: 16,
+  },
+  controlsLabel: {
+    textTransform: "uppercase",
+    letterSpacing: 1.6,
+    marginBottom: 10,
+    marginTop: 4,
+  },
+  chipRow: {
+    flexDirection: "row",
+    gap: 10,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  filterChipActive: {
+    shadowOpacity: 0,
+  },
+  metaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  metaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  archiveHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  archiveHeaderContent: {
+    flex: 1,
+  },
+  archiveFilterButton: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 12,
+    marginTop: -10,
+  },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderStyle: "solid",
+    marginBottom: 24,
+  },
+  emptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    fontWeight: "200",
+  },
+  dateGroup: {
+    marginBottom: 20,
+  },
+  entryCard: {
+    position: "relative",
+    borderRadius: 22,
+    marginBottom: 14,
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 4,
+    paddingVertical: 18,
+    paddingLeft: 18,
+    paddingRight: 18,
+  },
+  entryContent: {
+    flex: 1,
+    paddingRight: 34,
+  },
+  entryHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  entryTitle: {
+    flex: 1,
+    fontWeight: "400",
+  },
+  entryTags: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: ENTRY_PREVIEW_PILLS.rowGap,
+    marginTop: ENTRY_PREVIEW_PILLS.rowMarginTop,
+  },
+  tag: {
+    paddingHorizontal: ENTRY_PREVIEW_PILLS.pillPaddingHorizontal,
+    paddingVertical: ENTRY_PREVIEW_PILLS.pillPaddingVertical,
+    borderRadius: ENTRY_PREVIEW_PILLS.pillRadius,
+  },
+  entryMore: {
+    position: "absolute",
+    top: 12,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  menuBackdrop: {
+    paddingHorizontal: 24,
+    backgroundColor: "rgba(47, 41, 36, 0.28)",
+  },
+  menuModal: {
+    width: "100%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: PAGE_SURFACE,
+  },
+  filtersModal: {
+    width: "100%",
+    maxHeight: "78%",
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+    backgroundColor: PAGE_SURFACE,
+    shadowColor: PAGE_TEXT,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  filtersHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+  saveText: {
+    fontWeight: "700",
+  },
+  menuTitle: {
+    fontSize: 26,
+    lineHeight: 32,
+    fontWeight: "400",
+    marginBottom: 6,
+  },
+  menuSubtitle: {
+    marginBottom: 14,
+    lineHeight: 22,
+  },
+  menuActionButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    marginBottom: 10,
+  },
+  menuEditButton: {
+    backgroundColor: "#DFE8D9",
+    borderColor: "#C9D8C0",
+  },
+  menuDeleteButton: {
+    backgroundColor: "#A6544E",
+    borderColor: "#A6544E",
+  },
+  confirmActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  filtersFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+  },
+  confirmButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
+  },
+  footerButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 999,
+  },
+});

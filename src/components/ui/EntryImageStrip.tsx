@@ -1,10 +1,11 @@
 import { useTheme } from "@styles/theme";
-import { FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleProp, FlatList, Image, StyleSheet, Text, TextStyle, TouchableOpacity, View } from "react-native";
 
 interface EntryImageStripProps {
   title?: string;
   items: string[];
   titleColor: string;
+  titleStyle?: StyleProp<TextStyle>;
   onRemove: (item: string, index: number) => void;
   getItemAccessibilityLabel: (index: number, item: string) => string;
 }
@@ -13,6 +14,7 @@ export function EntryImageStrip({
   title,
   items,
   titleColor,
+  titleStyle,
   onRemove,
   getItemAccessibilityLabel,
 }: EntryImageStripProps) {
@@ -32,6 +34,7 @@ export function EntryImageStrip({
               color: titleColor,
               marginBottom: theme.spacing.md,
             },
+            titleStyle,
           ]}
         >
           {title}
@@ -80,16 +83,16 @@ const styles = StyleSheet.create({
   image: {
     width: 100,
     height: 100,
-    borderRadius: 8,
+    borderRadius: 14,
   },
   removeImageButton: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 8,
+    right: 8,
     backgroundColor: "#A6544E",
-    borderRadius: 14,
-    width: 28,
-    height: 28,
+    borderRadius: 12,
+    width: 24,
+    height: 24,
     justifyContent: "center",
     alignItems: "center",
     zIndex: 2,

@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
-import { Button, Modal } from "@components/ui";
+import { Button, Card, CardIconWrap, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
@@ -319,15 +319,7 @@ export function DrawersScreen() {
               </>
             }
             renderItem={({ item }) => (
-              <View
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: PAGE_SURFACE,
-                    shadowColor: PAGE_TEXT,
-                  },
-                ]}
-              >
+              <Card style={styles.card} variant="elevated">
                 <TouchableOpacity
                   style={styles.cardPressable}
                   onPress={() => {
@@ -344,20 +336,13 @@ export function DrawersScreen() {
                   accessible
                   accessibilityLabel={`Open drawer ${item.name}`}
                 >
-                  <View
-                    style={[
-                      styles.icon,
-                      {
-                        backgroundColor: (item.color || PAGE_PRIMARY) + "22",
-                      },
-                    ]}
-                  >
+                  <CardIconWrap style={styles.icon}>
                     <MaterialCommunityIcons
                       name="archive-outline"
                       size={26}
-                      color={item.color || PAGE_PRIMARY}
+                      color="#556950"
                     />
-                  </View>
+                  </CardIconWrap>
                   <View style={styles.cardContent}>
                     <Text
                       style={[
@@ -367,12 +352,7 @@ export function DrawersScreen() {
                     >
                       {item.name}
                     </Text>
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        { color: PAGE_MUTED, fontWeight: "600" },
-                      ]}
-                    >
+                    <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
                       {item.entryCount} entries
                     </Text>
                   </View>
@@ -389,7 +369,7 @@ export function DrawersScreen() {
                     color={theme.colors.textDisabled}
                   />
                 </TouchableOpacity>
-              </View>
+              </Card>
             )}
             ListFooterComponent={
               <View style={styles.helperPanel}>
@@ -715,14 +695,8 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 18,
-    marginBottom: 14,
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
+    borderRadius: 24,
+    marginBottom: 22,
   },
   cardPressable: {
     flex: 1,
@@ -730,12 +704,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   icon: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 16,
+    marginRight: 14,
   },
   cardContent: {
     flex: 1,
@@ -743,7 +712,8 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 24,
     lineHeight: 30,
-    fontWeight: "300",
+    fontWeight: "600",
+    marginBottom: 14,
   },
   cardMore: {
     width: 28,

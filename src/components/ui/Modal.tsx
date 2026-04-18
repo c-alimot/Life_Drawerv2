@@ -5,6 +5,7 @@ import {
     Platform,
     Modal as RNModal,
     StatusBar,
+    StyleProp,
     Text,
     TouchableOpacity,
     TouchableWithoutFeedback,
@@ -20,9 +21,9 @@ export interface ModalProps {
   dismissOnBackdrop?: boolean;
   dismissOnBackButton?: boolean;
   transparent?: boolean;
-  style?: ViewStyle;
-  backdropStyle?: ViewStyle;
-  contentStyle?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
+  backdropStyle?: StyleProp<ViewStyle>;
+  contentStyle?: StyleProp<ViewStyle>;
 }
 
 export function Modal({

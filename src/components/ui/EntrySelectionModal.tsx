@@ -14,6 +14,11 @@ import {
 import { Button } from "./Button";
 import { Modal } from "./Modal";
 
+const ENTRY_SELECT_INPUT_BG = "#F8F6F2";
+const ENTRY_SELECT_BORDER = "#DAC8B1";
+const ENTRY_SELECT_SELECTED_BORDER = "#556950";
+const ENTRY_SELECT_SELECTED_BG = "#E6E2D8";
+
 interface EntrySelectionItem {
   id: string;
   name: string;
@@ -195,9 +200,9 @@ export function EntrySelectionModal({
                   style={[
                     styles.input,
                     {
-                      borderColor,
+                      borderColor: ENTRY_SELECT_BORDER,
                       color: textColor,
-                      backgroundColor: surfaceColor,
+                      backgroundColor: ENTRY_SELECT_INPUT_BG,
                       flex: 1,
                     },
                   ]}
@@ -228,8 +233,12 @@ export function EntrySelectionModal({
                   style={[
                     styles.modalItem,
                     {
-                      borderColor: selected ? primaryColor : borderColor,
-                      backgroundColor: selected ? `${primaryColor}10` : surfaceColor,
+                      borderColor: selected
+                        ? ENTRY_SELECT_SELECTED_BORDER
+                        : ENTRY_SELECT_BORDER,
+                      backgroundColor: selected
+                        ? ENTRY_SELECT_SELECTED_BG
+                        : ENTRY_SELECT_INPUT_BG,
                     },
                   ]}
                 >
@@ -245,8 +254,12 @@ export function EntrySelectionModal({
                       style={[
                         styles.checkbox,
                         {
-                          backgroundColor: selected ? primaryColor : "transparent",
-                          borderColor: selected ? primaryColor : borderColor,
+                          backgroundColor: selected
+                            ? ENTRY_SELECT_SELECTED_BORDER
+                            : "transparent",
+                          borderColor: selected
+                            ? ENTRY_SELECT_SELECTED_BORDER
+                            : ENTRY_SELECT_BORDER,
                         },
                       ]}
                     >
@@ -354,8 +367,8 @@ export function EntrySelectionModal({
             styles.editorInput,
             {
               color: textColor,
-              borderColor,
-              backgroundColor,
+              borderColor: ENTRY_SELECT_BORDER,
+              backgroundColor: ENTRY_SELECT_INPUT_BG,
             },
           ]}
           accessibilityLabel={`Edit ${itemTypeLabel} name`}

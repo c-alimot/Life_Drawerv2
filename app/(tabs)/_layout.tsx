@@ -30,6 +30,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="all-entries"
+        options={{
+          title: "All Entries",
+        }}
+      />
+      <Tabs.Screen
         name="insights"
         options={{
           title: "Insights",

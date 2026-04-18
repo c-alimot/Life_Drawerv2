@@ -1,4 +1,4 @@
-import { AppBottomNav, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
 import { Button, Modal } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
@@ -82,7 +82,9 @@ export function TagsScreen() {
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
         <View style={styles.header}>
-          <View style={styles.headerLeft} />
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}

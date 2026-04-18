@@ -198,18 +198,12 @@ export const entriesService = {
         throw entryError || new Error("Entry not found");
       }
 
-      const [drawers, tags, author] = await Promise.all([
-        this.getEntryDrawers(entryId),
-        this.getEntryTags(entryId),
-        this.getAuthorProfile(userId),
-      ]);
+      const [entryWithRelations] = await this.hydrateEntries(userId, [entry as EntryRow]);
+      if (!entryWithRelations) {
+        throw new Error("Entry not found");
+      }
 
-      return {
-        ...(await this.mapEntryRow(entry as EntryRow)),
-        drawers,
-        tags,
-        author,
-      };
+      return entryWithRelations;
     } catch (error) {
       console.error("Get entry error:", error);
       throw this.handleError(error);
@@ -258,15 +252,13 @@ export const entriesService = {
       }
 
       query = query
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: request?.sortOrder === "asc" })
         .range(request?.offset || 0, (request?.offset || 0) + (request?.limit || 20) - 1);
 
       const { data: entries, error: entriesError, count } = await query;
       if (entriesError) throw entriesError;
 
-      const entriesWithRelations = await Promise.all(
-        ((entries || []) as EntryRow[]).map((entry) => this.getEntryById(entry.id, userId)),
-      );
+      const entriesWithRelations = await this.hydrateEntries(userId, (entries || []) as EntryRow[]);
 
       return {
         entries: entriesWithRelations,
@@ -512,6 +504,91 @@ export const entriesService = {
     }
 
     return this.mapProfileRow(data as ProfileRow);
+  },
+
+  async hydrateEntries(userId: string, rows: EntryRow[]): Promise<EntryWithRelations[]> {
+    if (!rows.length) {
+      return [];
+    }
+
+    const entryIds = rows.map((row) => row.id);
+
+    const [mappedEntries, entryDrawersData, entryTagsData, author] = await Promise.all([
+      Promise.all(rows.map((row) => this.mapEntryRow(row))),
+      supabase
+        .from("entry_drawers")
+        .select("entry_id, drawer_id")
+        .in("entry_id", entryIds),
+      supabase
+        .from("entry_tags")
+        .select("entry_id, tag_id")
+        .in("entry_id", entryIds),
+      this.getAuthorProfile(userId),
+    ]);
+
+    if (entryDrawersData.error) {
+      throw entryDrawersData.error;
+    }
+
+    if (entryTagsData.error) {
+      throw entryTagsData.error;
+    }
+
+    const drawerIds = Array.from(
+      new Set((entryDrawersData.data || []).map((row) => row.drawer_id)),
+    );
+    const tagIds = Array.from(
+      new Set((entryTagsData.data || []).map((row) => row.tag_id)),
+    );
+
+    const [drawerRows, tagRows] = await Promise.all([
+      drawerIds.length
+        ? supabase.from("drawers").select("*").in("id", drawerIds)
+        : Promise.resolve({ data: [], error: null }),
+      tagIds.length
+        ? supabase.from("tags").select("*").in("id", tagIds)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (drawerRows.error) {
+      throw drawerRows.error;
+    }
+
+    if (tagRows.error) {
+      throw tagRows.error;
+    }
+
+    const drawerMap = new Map(
+      (drawerRows.data || []).map((row) => [row.id, this.mapDrawerRow(row as DrawerRow)]),
+    );
+    const tagMap = new Map(
+      (tagRows.data || []).map((row) => [row.id, this.mapTagRow(row as TagRow)]),
+    );
+
+    const drawerIdsByEntry = new Map<string, string[]>();
+    for (const row of entryDrawersData.data || []) {
+      const existing = drawerIdsByEntry.get(row.entry_id) || [];
+      existing.push(row.drawer_id);
+      drawerIdsByEntry.set(row.entry_id, existing);
+    }
+
+    const tagIdsByEntry = new Map<string, string[]>();
+    for (const row of entryTagsData.data || []) {
+      const existing = tagIdsByEntry.get(row.entry_id) || [];
+      existing.push(row.tag_id);
+      tagIdsByEntry.set(row.entry_id, existing);
+    }
+
+    return mappedEntries.map((entry) => ({
+      ...entry,
+      drawers: (drawerIdsByEntry.get(entry.id) || [])
+        .map((drawerId) => drawerMap.get(drawerId))
+        .filter((drawer): drawer is ReturnType<typeof this.mapDrawerRow> => Boolean(drawer)),
+      tags: (tagIdsByEntry.get(entry.id) || [])
+        .map((tagId) => tagMap.get(tagId))
+        .filter((tag): tag is ReturnType<typeof this.mapTagRow> => Boolean(tag)),
+      author,
+    }));
   },
 
   async getFilteredEntryIds(

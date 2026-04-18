@@ -13,7 +13,9 @@ export function useDrawers() {
   const fetchDrawers = useCallback(async () => {
     if (!user) return;
 
-    setIsLoading(true);
+    if (!drawers.length) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -38,7 +40,7 @@ export function useDrawers() {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [drawers.length, user]);
 
   const fetchSingleDrawer = useCallback(
     async (drawerId: string) => {

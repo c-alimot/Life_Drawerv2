@@ -1,10 +1,16 @@
 import { authApi } from "@features/auth/api/auth.api";
 import {
+  Roboto_400Regular,
+  Roboto_500Medium,
+  Roboto_700Bold,
+} from "@expo-google-fonts/roboto";
+import {
   getOnboardingCompleted,
 } from "@features/auth/utils/onboarding";
 import { supabase } from "@services/supabase";
 import type { Profile } from "@types";
 import { useAuthStore } from "@store";
+import { useFonts } from "expo-font";
 import { Stack, usePathname, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
@@ -14,6 +20,11 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 export default function RootLayout() {
   const router = useRouter();
   const pathname = usePathname();
+  const [fontsLoaded] = useFonts({
+    Roboto_400Regular,
+    Roboto_500Medium,
+    Roboto_700Bold,
+  });
   const { user, setUser, setLoading } = useAuthStore();
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboardingState] =
@@ -149,7 +160,7 @@ export default function RootLayout() {
     };
   }, [hasCompletedOnboarding, isBootstrapping, pathname, router, user]);
 
-  if (isBootstrapping) {
+  if (isBootstrapping || !fontsLoaded) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>

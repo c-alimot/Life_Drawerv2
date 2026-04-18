@@ -158,6 +158,7 @@ export interface SearchEntriesRequest {
   tagIds?: string[];
   startDate?: string;
   endDate?: string;
+  sortOrder?: "desc" | "asc";
   limit?: number;
   offset?: number;
 }

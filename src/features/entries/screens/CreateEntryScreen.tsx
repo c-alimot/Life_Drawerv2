@@ -10,6 +10,7 @@ import {
   EntrySelectionModal,
 } from "@components/ui";
 import { MOOD_MAP } from "@constants/mood";
+import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
@@ -25,7 +26,7 @@ import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import {
@@ -69,12 +70,14 @@ const ENTRY_SURFACE = "#FFFFFF";
 const ENTRY_TEXT = "#2F2924";
 const ENTRY_MUTED = "#6F6860";
 const ENTRY_PRIMARY = "#8C9A7F";
+const ENTRY_SECONDARY = "#556950";
 const ENTRY_ACCENT = "#DAC8B1";
 const ENTRY_DANGER_DARK = "#8B2D2A";
 const ENTRY_DANGER = "#A6544E";
 const ENTRY_CANCEL_BG = "#E3E1DC";
 const ENTRY_CANCEL_BORDER = "#C9C4BB";
 const ENTRY_CANCEL_TEXT = "#5F6368";
+const ENTRY_PLACEHOLDER = "#8A8178";
 const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
 const STARTER_DRAWER_ID = "starter-drawer";
 const STARTER_DRAWER = {
@@ -177,6 +180,7 @@ export function CreateEntryScreen() {
     formState: { errors },
     setValue,
     watch,
+    reset,
   } = useForm<EntryFormData>({
     resolver: zodResolver(entrySchema),
     defaultValues: {
@@ -200,6 +204,7 @@ export function CreateEntryScreen() {
   const [showDrawerModal, setShowDrawerModal] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
+  const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
@@ -209,6 +214,8 @@ export function CreateEntryScreen() {
   const recordingRef = useRef<Audio.Recording | null>(null);
 
   const mood = watch("mood");
+  const titleValue = watch("title");
+  const contentValue = watch("content");
 
   useEffect(() => {
     const loadStarterDrawerPreference = async () => {
@@ -559,6 +566,80 @@ export function CreateEntryScreen() {
     router.back();
   }, []);
 
+  const arraysEqual = useCallback((left: string[], right: string[]) => {
+    if (left.length !== right.length) return false;
+    const leftSorted = [...left].sort();
+    const rightSorted = [...right].sort();
+    return leftSorted.every((value, index) => value === rightSorted[index]);
+  }, []);
+
+  const initialSelectedDrawers = useMemo(
+    () => (initialDrawerId ? [initialDrawerId] : []),
+    [initialDrawerId],
+  );
+
+  const hasUnsavedChanges = useMemo(() => {
+    return (
+      Boolean(titleValue?.trim()) ||
+      Boolean(contentValue?.trim()) ||
+      Boolean(mood) ||
+      !arraysEqual(selectedDrawers, initialSelectedDrawers) ||
+      selectedTags.length > 0 ||
+      selectedMedia.imageUris.length > 0 ||
+      Boolean(selectedMedia.audioUri) ||
+      Boolean(selectedMedia.location)
+    );
+  }, [
+    arraysEqual,
+    contentValue,
+    initialSelectedDrawers,
+    mood,
+    selectedDrawers,
+    selectedMedia.audioUri,
+    selectedMedia.imageUris.length,
+    selectedMedia.location,
+    selectedTags.length,
+    titleValue,
+  ]);
+
+  const handleBackPress = useCallback(() => {
+    if (hasUnsavedChanges) {
+      setShowExitPrompt(true);
+      return;
+    }
+
+    handleBack();
+  }, [handleBack, hasUnsavedChanges]);
+
+  const handleDiscardEntry = useCallback(() => {
+    reset({
+      title: "",
+      content: "",
+      mood: undefined,
+    });
+    setSelectedMedia({
+      imageUris: [],
+      audioUri: null,
+      location: null,
+    });
+    setSelectedDrawers(initialDrawerId ? [initialDrawerId] : []);
+    setSelectedTags([]);
+    setLocationText("");
+    setNewDrawerName("");
+    setNewTagName("");
+    setPendingImageRemoveIndex(null);
+    setShowDrawerModal(false);
+    setShowTagModal(false);
+    setShowMoodPicker(false);
+    setShowExitPrompt(false);
+    handleBack();
+  }, [handleBack, initialDrawerId, reset]);
+
+  const handleSaveFromExitPrompt = () => {
+    setShowExitPrompt(false);
+    handleSubmit(onSubmit)();
+  };
+
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -601,7 +682,9 @@ export function CreateEntryScreen() {
   const toolbarButtons: EntryMediaToolbarButton[] = [
     {
       key: "drawers",
-      borderColor: selectedDrawers.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor:
+        selectedDrawers.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedDrawers.length > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Add to drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
@@ -609,14 +692,15 @@ export function CreateEntryScreen() {
         <MaterialCommunityIcons
           name="archive-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Drawer",
       ),
     },
     {
       key: "tags",
-      borderColor: selectedTags.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor: selectedTags.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedTags.length > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowTagModal(true),
       accessibilityLabel: "Add tags",
       accessibilityHint: `${selectedTags.length} tags selected`,
@@ -624,7 +708,7 @@ export function CreateEntryScreen() {
         <MaterialCommunityIcons
           name="tag-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Tags",
       ),
@@ -632,7 +716,8 @@ export function CreateEntryScreen() {
     {
       key: "images",
       borderColor:
-        selectedMedia.imageUris.length > 0 ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+        selectedMedia.imageUris.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedMedia.imageUris.length > 0 ? "#E6E2D8" : "#ECE6DB",
       onPress: pickImages,
       accessibilityLabel: "Add images",
       accessibilityHint: `${selectedMedia.imageUris.length}/${MAX_IMAGES} images`,
@@ -640,7 +725,7 @@ export function CreateEntryScreen() {
         <MaterialCommunityIcons
           name="image-outline"
           size={28}
-          color={ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Image",
       ),
@@ -648,22 +733,23 @@ export function CreateEntryScreen() {
     {
       key: "audio",
       borderColor:
-        selectedMedia.audioUri || isRecording ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
-      backgroundColor: isRecording ? `${theme.colors.error}20` : "transparent",
+        selectedMedia.audioUri || isRecording ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: selectedMedia.audioUri || isRecording ? "#E6E2D8" : "#ECE6DB",
       onPress: isRecording ? stopRecording : startRecording,
       accessibilityLabel: isRecording ? "Stop recording" : "Start voice memo",
       content: renderToolbarItem(
         <MaterialCommunityIcons
           name={isRecording ? "stop-circle-outline" : "microphone-outline"}
           size={28}
-          color={isRecording ? theme.colors.error : ENTRY_PRIMARY}
+          color={ENTRY_SECONDARY}
         />,
         "Voice Memo",
       ),
     },
     {
       key: "mood",
-      borderColor: mood ? ENTRY_PRIMARY : `${ENTRY_ACCENT}AA`,
+      borderColor: mood ? ENTRY_SECONDARY : ENTRY_ACCENT,
+      backgroundColor: mood ? "#E6E2D8" : "#ECE6DB",
       onPress: () => setShowMoodPicker(true),
       accessibilityLabel: "Add mood",
       accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
@@ -674,7 +760,7 @@ export function CreateEntryScreen() {
           <MaterialCommunityIcons
             name="emoticon-happy-outline"
             size={28}
-            color={ENTRY_PRIMARY}
+            color={ENTRY_SECONDARY}
           />
         ),
         "Mood",
@@ -687,7 +773,7 @@ export function CreateEntryScreen() {
       <Screen style={[styles.container, { backgroundColor: ENTRY_BACKGROUND }]}>
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={handleBack}
+            onPress={handleBackPress}
             style={styles.headerBack}
             accessible
             accessibilityLabel="Go back"
@@ -722,10 +808,11 @@ export function CreateEntryScreen() {
                   {
                     color: ENTRY_TEXT,
                     fontFamily: theme.fonts.serif,
+                    fontWeight: value?.trim() ? "600" : "300",
                   },
                 ]}
                 placeholder="Add a title"
-                placeholderTextColor={theme.colors.accent2}
+                placeholderTextColor={ENTRY_PLACEHOLDER}
                 value={value}
                 onChangeText={onChange}
                 editable
@@ -858,8 +945,10 @@ export function CreateEntryScreen() {
                   <Text style={styles.linkedPreviewLabel}>Linked Drawers</Text>
                   <View style={styles.linkedChipRow}>
                     {displayDrawerPreview.map((drawer) => (
-                      <View key={`drawer-${drawer.id}`} style={styles.linkedChip}>
-                        <Text style={styles.linkedChipText}>{drawer.name}</Text>
+                      <View key={`drawer-${drawer.id}`} style={styles.linkedDrawerChip}>
+                        <Text style={styles.linkedDrawerChipText}>
+                          {sanitizeEntryPreviewLabel(drawer.name)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -870,8 +959,10 @@ export function CreateEntryScreen() {
                   <Text style={styles.linkedPreviewLabel}>Linked Tags</Text>
                   <View style={styles.linkedChipRow}>
                     {selectedTagPreview.map((tag) => (
-                      <View key={`tag-${tag.id}`} style={styles.linkedChip}>
-                        <Text style={styles.linkedChipText}>{tag.name}</Text>
+                      <View key={`tag-${tag.id}`} style={styles.linkedTagChip}>
+                        <Text style={styles.linkedTagChipText}>
+                          {sanitizeEntryPreviewLabel(tag.name)}
+                        </Text>
                       </View>
                     ))}
                   </View>
@@ -898,7 +989,7 @@ export function CreateEntryScreen() {
                   {
                     borderColor: ENTRY_ACCENT,
                     color: ENTRY_TEXT,
-                    backgroundColor: ENTRY_SURFACE,
+                    backgroundColor: "#F8F6F2",
                   },
                 ]}
                 placeholder="Start writing..."
@@ -1010,6 +1101,37 @@ export function CreateEntryScreen() {
             />
           </View>
         </Modal>
+
+        <Modal
+          visible={showExitPrompt}
+          onClose={() => setShowExitPrompt(false)}
+          animationType="fade"
+          backdropStyle={styles.actionBackdrop}
+          contentStyle={styles.actionModal}
+        >
+          <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
+            Leave Entry?
+          </Text>
+          <Text style={[theme.typography.body, styles.actionSubtitle, { color: ENTRY_MUTED }]}>
+            Do you want to save your changes before leaving?
+          </Text>
+          <View style={styles.actionRow}>
+            <Button
+              label="Save Changes"
+              onPress={handleSaveFromExitPrompt}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_SECONDARY, borderColor: ENTRY_SECONDARY }]}
+              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            />
+            <Button
+              label="Discard Entry"
+              onPress={handleDiscardEntry}
+              variant="primary"
+              style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
+              textStyle={{ color: ENTRY_TEXT, fontWeight: "700" }}
+            />
+          </View>
+        </Modal>
       </Screen>
     </SafeArea>
   );
@@ -1035,7 +1157,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   saveButton: {
-    backgroundColor: ENTRY_PRIMARY,
+    backgroundColor: ENTRY_SECONDARY,
     borderRadius: 999,
     minHeight: 42,
     paddingHorizontal: 18,
@@ -1081,7 +1203,7 @@ const styles = StyleSheet.create({
   toolbar: {
     flexDirection: "row",
     justifyContent: "space-between",
-    gap: 8,
+    gap: 10,
     marginBottom: 14,
     marginTop: 4,
   },
@@ -1092,7 +1214,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "transparent",
+    backgroundColor: "#ECE6DB",
+    borderColor: ENTRY_ACCENT,
+    padding: 8,
     shadowColor: "#2F2924",
     shadowOpacity: 0.02,
     shadowOffset: { width: 0, height: 6 },
@@ -1105,7 +1229,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   toolbarItemLabel: {
-    color: ENTRY_TEXT,
+    color: "#2F2924",
     fontSize: 11,
     lineHeight: 13,
     fontWeight: "500",
@@ -1116,10 +1240,12 @@ const styles = StyleSheet.create({
   },
   contentInput: {
     borderWidth: 1,
-    borderRadius: 28,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
     minHeight: 430,
     marginTop: 12,
+    fontSize: 19,
+    lineHeight: 32,
     shadowColor: "#2F2924",
     shadowOpacity: 0.08,
     shadowOffset: { width: 0, height: 10 },
@@ -1172,12 +1298,12 @@ const styles = StyleSheet.create({
   },
   linkedPreviewSection: {
     marginBottom: 14,
-    gap: 8,
+    gap: 6,
   },
   linkedPreviewLabel: {
-    color: ENTRY_MUTED,
+    color: "#8A8178",
     fontSize: 13,
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textTransform: "uppercase",
   },
   linkedChipRow: {
@@ -1186,18 +1312,31 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 6,
   },
-  linkedChip: {
+  linkedDrawerChip: {
     borderWidth: 1,
-    borderColor: ENTRY_ACCENT,
-    backgroundColor: ENTRY_SURFACE,
+    borderColor: "#556950",
+    backgroundColor: "#E6E2D8",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-  linkedChipText: {
-    color: ENTRY_TEXT,
+  linkedDrawerChipText: {
+    color: "#556950",
     fontSize: 14,
     fontWeight: "500",
+  },
+  linkedTagChip: {
+    borderWidth: 1,
+    borderColor: ENTRY_PREVIEW_PILLS.tagBorder,
+    backgroundColor: ENTRY_PREVIEW_PILLS.tagBackground,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  linkedTagChipText: {
+    color: ENTRY_PREVIEW_PILLS.tagText,
+    fontSize: 14,
+    fontWeight: "400",
   },
   actionBackdrop: {
     paddingHorizontal: 24,

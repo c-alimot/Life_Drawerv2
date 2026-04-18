@@ -15,7 +15,9 @@ export function useEntries(initialRequest?: SearchEntriesRequest) {
     async (request?: SearchEntriesRequest) => {
       if (!user) return;
 
-      setIsLoading(true);
+      if (!entries.length) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -39,14 +41,16 @@ export function useEntries(initialRequest?: SearchEntriesRequest) {
         setIsLoading(false);
       }
     },
-    [user]
+    [entries.length, user]
   );
 
   const fetchRecentEntries = useCallback(
     async (limit?: number) => {
       if (!user) return;
 
-      setIsLoading(true);
+      if (!entries.length) {
+        setIsLoading(true);
+      }
       setError(null);
 
       try {
@@ -70,7 +74,7 @@ export function useEntries(initialRequest?: SearchEntriesRequest) {
         setIsLoading(false);
       }
     },
-    [user]
+    [entries.length, user]
   );
 
   const fetchSingleEntry = useCallback(

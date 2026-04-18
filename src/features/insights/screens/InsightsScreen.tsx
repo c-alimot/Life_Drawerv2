@@ -1,10 +1,12 @@
-import { AppBottomNav, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
+import { Card, CardIconWrap } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
-import { useCallback, useMemo } from "react";
+import { router } from "expo-router";
+import { useCallback, useMemo, useRef } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -19,14 +21,17 @@ const PAGE_SURFACE = "#FFFFFF";
 const PAGE_TEXT = "#2F2924";
 const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
-const PAGE_BORDER = "#B39C87";
 
 export function InsightsScreen() {
   const theme = useTheme();
   const { entries, isLoading, fetchEntries } = useEntries();
+  const hasLoadedInitialData = useRef(false);
   useFocusEffect(
     useCallback(() => {
-      fetchEntries();
+      if (!hasLoadedInitialData.current) {
+        hasLoadedInitialData.current = true;
+        fetchEntries();
+      }
     }, [fetchEntries]),
   );
 
@@ -154,9 +159,6 @@ export function InsightsScreen() {
   }, [archiveEntries]);
 
   const hasArchiveContent = stats.totalEntries > 0;
-  const heroTitle = hasArchiveContent
-    ? "Your Story Is Taking Shape"
-    : "Your Journey Begins Here";
   const heroBody =
     stats.totalEntries > 0
       ? "A quiet picture of your archive is beginning to emerge through the moments you keep."
@@ -228,7 +230,9 @@ export function InsightsScreen() {
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerLeft} />
+          <View style={styles.headerLeft}>
+            <AppHeaderBrand />
+          </View>
           <TouchableOpacity
             onPress={() => router.push("/search")}
             style={styles.headerIconButton}
@@ -248,13 +252,16 @@ export function InsightsScreen() {
               style={[
                 styles.heroTitle,
                 {
-                  color: hasArchiveContent ? PAGE_PRIMARY : PAGE_TEXT,
+                  color: PAGE_TEXT,
                   fontFamily: theme.fonts.serif,
                 },
               ]}
             >
               {hasArchiveContent ? (
-                heroTitle
+                <>
+                  Your Story Is{" "}
+                  <Text style={{ color: PAGE_PRIMARY }}>Taking Shape</Text>
+                </>
               ) : (
                 <>
                   Your Journey Begins{" "}
@@ -273,23 +280,14 @@ export function InsightsScreen() {
           </View>
 
           <View style={styles.featureStack}>
-            <View
-              style={[
-                styles.featureCard,
-                {
-                  backgroundColor: PAGE_SURFACE,
-                  borderColor: `${PAGE_BORDER}55`,
-                  shadowColor: PAGE_TEXT,
-                },
-              ]}
-            >
-              <View style={styles.featureIconWrap}>
+            <Card style={styles.featureCard}>
+              <CardIconWrap style={styles.featureIconWrap}>
                 <MaterialCommunityIcons
                   name="timer-sand"
                   size={24}
-                  color={PAGE_PRIMARY}
+                  color="#556950"
                 />
-              </View>
+              </CardIconWrap>
               <View style={styles.featureCopy}>
                 <Text
                   style={[
@@ -303,25 +301,16 @@ export function InsightsScreen() {
                   {onThisDayBody}
                 </Text>
               </View>
-            </View>
+            </Card>
 
-            <View
-              style={[
-                styles.featureCard,
-                {
-                  backgroundColor: PAGE_SURFACE,
-                  borderColor: `${PAGE_BORDER}55`,
-                  shadowColor: PAGE_TEXT,
-                },
-              ]}
-            >
-              <View style={styles.featureIconWrap}>
+            <Card style={styles.featureCard}>
+              <CardIconWrap style={styles.featureIconWrap}>
                 <MaterialCommunityIcons
                   name="star-four-points-outline"
                   size={24}
-                  color={PAGE_PRIMARY}
+                  color="#556950"
                 />
-              </View>
+              </CardIconWrap>
               <View style={styles.featureCopy}>
                 <Text
                   style={[
@@ -335,7 +324,7 @@ export function InsightsScreen() {
                   {patternsBody}
                 </Text>
               </View>
-            </View>
+            </Card>
           </View>
 
           <View style={styles.section}>
@@ -358,20 +347,11 @@ export function InsightsScreen() {
 
             <View style={styles.galleryGrid}>
               {galleryItems.map((item) => (
-                <View
-                  key={item.key}
-                  style={[
-                    styles.galleryTile,
-                    {
-                      backgroundColor: PAGE_SURFACE,
-                      borderColor: `${PAGE_BORDER}55`,
-                    },
-                  ]}
-                >
+                <Card key={item.key} style={styles.galleryTile}>
                   <MaterialCommunityIcons
                     name={item.icon}
                     size={28}
-                    color={theme.colors.textDisabled}
+                    color="#556950"
                   />
                   <Text style={[styles.galleryLabel, { color: PAGE_TEXT }]}>
                     {item.label}
@@ -379,21 +359,12 @@ export function InsightsScreen() {
                   <Text style={[styles.galleryValue, { color: PAGE_MUTED }]}>
                     {item.value}
                   </Text>
-                </View>
+                </Card>
               ))}
             </View>
           </View>
 
-          <View
-            style={[
-              styles.snapshotCard,
-              {
-                backgroundColor: PAGE_SURFACE,
-                borderColor: `${PAGE_BORDER}55`,
-                shadowColor: PAGE_TEXT,
-              },
-            ]}
-          >
+          <Card style={styles.snapshotCard}>
             <Text
               style={[
                 styles.snapshotTitle,
@@ -407,7 +378,7 @@ export function InsightsScreen() {
                 ? `${stats.totalEntries} entries, ${stats.avgWordsPerEntry} average words, and a ${writingStreak}-day writing rhythm are beginning to shape your archive.`
                 : "Once you begin writing, this space will gently reflect your rhythms, themes, and returning moments."}
             </Text>
-          </View>
+          </Card>
 
           <TouchableOpacity
             style={[
@@ -507,22 +478,15 @@ const styles = StyleSheet.create({
   featureCard: {
     flexDirection: "row",
     alignItems: "flex-start",
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 20,
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
   },
   featureIconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: "#F1ECE4",
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: "#ECE6DB",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 18,
+    marginRight: 14,
   },
   featureCopy: {
     flex: 1,
@@ -531,7 +495,7 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 22,
     lineHeight: 30,
-    fontWeight: "300",
+    fontWeight: "500",
   },
   featureBody: {
     marginTop: 12,
@@ -559,42 +523,30 @@ const styles = StyleSheet.create({
   },
   galleryTile: {
     width: "47%",
-    borderWidth: 1,
-    borderRadius: 18,
     minHeight: 170,
-    paddingHorizontal: 18,
-    paddingVertical: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderStyle: "dashed",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
   },
   galleryLabel: {
-    marginTop: 16,
+    marginTop: 14,
     fontSize: 16,
     lineHeight: 22,
-    fontWeight: "600",
-    textAlign: "center",
+    fontWeight: "500",
+    textAlign: "left",
   },
   galleryValue: {
     marginTop: 8,
     fontSize: 14,
     lineHeight: 22,
-    textAlign: "center",
+    textAlign: "left",
   },
   snapshotCard: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 20,
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
     marginBottom: 28,
   },
   snapshotTitle: {
     fontSize: 22,
     lineHeight: 30,
-    fontWeight: "300",
+    fontWeight: "500",
   },
   snapshotBody: {
     marginTop: 12,
