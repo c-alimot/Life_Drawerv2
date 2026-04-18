@@ -4,7 +4,7 @@ import {
     SafeArea,
     Screen,
 } from "@components/layout";
-import { AppModalSheet, Modal as AppModal, Button, EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
+import { AppModalSheet, Button, EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import {
   ENTRY_PREVIEW_PILLS,
 } from "@constants/entryPreviewPills";
@@ -405,11 +405,9 @@ export function DrawerDetailScreen() {
 
         <AppBottomNav currentRoute="/drawers" />
 
-        <AppModal
+        <AppModalSheet
           visible={showEditOptionsModal}
           onClose={handleCloseEditOptions}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.editOptionsModal}
         >
           <Text style={[styles.menuTitle, { fontFamily: theme.fonts.serif }]}>
@@ -436,7 +434,7 @@ export function DrawerDetailScreen() {
             style={styles.menuActionButton}
             textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
           />
-        </AppModal>
+        </AppModalSheet>
 
         <AppModalSheet
           visible={isFiltersOpen}
@@ -658,18 +656,6 @@ const styles = StyleSheet.create({
   },
   pageBackground: {
     backgroundColor: PAGE_BACKGROUND,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
   },
   headerIconButton: {
     width: 40,
@@ -898,15 +884,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 28,
     backgroundColor: PAGE_PRIMARY,
   },
-  menuBackdrop: {
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   editOptionsModal: {
-    width: "100%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
     backgroundColor: PAGE_SURFACE,
   },
   menuActionButton: {
@@ -921,12 +900,8 @@ const styles = StyleSheet.create({
     borderColor: PAGE_BORDER,
   },
   filtersModal: {
-    width: "100%",
     maxHeight: "78%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 18,
     backgroundColor: PAGE_SURFACE,
   },
   filtersHeader: {
@@ -969,15 +944,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
     marginBottom: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  filterChipActive: {
-    shadowOpacity: 0,
   },
   filtersFooter: {
     flexDirection: "row",

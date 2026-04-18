@@ -67,6 +67,9 @@ export function SignupScreen() {
 
   const agreeToTerms = watch("agreeToTerms");
   const passwordValue = watch("password");
+  const fieldLabelStyle = [theme.typography.labelSm, styles.fieldLabel, { color: AUTH_TEXT }];
+  const fieldErrorStyle = [theme.typography.bodySm, styles.fieldError, { color: theme.colors.errorText }];
+  const bottomLinkStyle = [theme.typography.body, styles.bottomLink, { color: AUTH_PRIMARY }];
 
   const passwordChecks = useMemo(
     () => ({
@@ -166,11 +169,7 @@ export function SignupScreen() {
 
           <View style={styles.form}>
             <Text
-              style={[
-                theme.typography.labelSm,
-                styles.fieldLabel,
-                { color: AUTH_TEXT },
-              ]}
+              style={fieldLabelStyle}
             >
               FULL NAME
             </Text>
@@ -189,13 +188,7 @@ export function SignupScreen() {
                     accessibilityLabel="Full name input"
                   />
                   {errors.fullName?.message ? (
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        styles.fieldError,
-                        { color: theme.colors.errorText },
-                      ]}
-                    >
+                    <Text style={fieldErrorStyle}>
                       {errors.fullName.message}
                     </Text>
                   ) : null}
@@ -204,11 +197,7 @@ export function SignupScreen() {
             />
 
             <Text
-              style={[
-                theme.typography.labelSm,
-                styles.fieldLabel,
-                { color: AUTH_TEXT },
-              ]}
+              style={fieldLabelStyle}
             >
               EMAIL ADDRESS
             </Text>
@@ -229,13 +218,7 @@ export function SignupScreen() {
                     accessibilityLabel="Email input"
                   />
                   {errors.email?.message ? (
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        styles.fieldError,
-                        { color: theme.colors.errorText },
-                      ]}
-                    >
+                    <Text style={fieldErrorStyle}>
                       {errors.email.message}
                     </Text>
                   ) : null}
@@ -244,11 +227,7 @@ export function SignupScreen() {
             />
 
             <Text
-              style={[
-                theme.typography.labelSm,
-                styles.fieldLabel,
-                { color: AUTH_TEXT },
-              ]}
+              style={fieldLabelStyle}
             >
               PASSWORD
             </Text>
@@ -365,13 +344,7 @@ export function SignupScreen() {
                     </View>
                   ) : null}
                   {errors.password?.message ? (
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        styles.fieldError,
-                        { color: theme.colors.errorText },
-                      ]}
-                    >
+                    <Text style={fieldErrorStyle}>
                       {errors.password.message}
                     </Text>
                   ) : null}
@@ -380,11 +353,7 @@ export function SignupScreen() {
             />
 
             <Text
-              style={[
-                theme.typography.labelSm,
-                styles.fieldLabel,
-                { color: AUTH_TEXT },
-              ]}
+              style={fieldLabelStyle}
             >
               CONFIRM PASSWORD
             </Text>
@@ -429,13 +398,7 @@ export function SignupScreen() {
                     </TouchableOpacity>
                   </View>
                   {errors.confirmPassword?.message ? (
-                    <Text
-                      style={[
-                        theme.typography.bodySm,
-                        styles.fieldError,
-                        { color: theme.colors.errorText },
-                      ]}
-                    >
+                    <Text style={fieldErrorStyle}>
                       {errors.confirmPassword.message}
                     </Text>
                   ) : null}
@@ -495,13 +458,7 @@ export function SignupScreen() {
             </TouchableOpacity>
 
             {errors.agreeToTerms?.message ? (
-              <Text
-                style={[
-                  theme.typography.bodySm,
-                  styles.fieldError,
-                  { color: theme.colors.errorText },
-                ]}
-              >
+              <Text style={fieldErrorStyle}>
                 {errors.agreeToTerms.message}
               </Text>
             ) : null}
@@ -536,11 +493,7 @@ export function SignupScreen() {
               accessibilityHint="Navigate to login page"
             >
               <Text
-                style={[
-                  theme.typography.body,
-                  styles.bottomLink,
-                  { color: AUTH_PRIMARY },
-                ]}
+                style={bottomLinkStyle}
               >
                 Sign in
               </Text>

@@ -1,5 +1,5 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
-import { Button, EmptyStateCard, EntryPreviewCard, FilterPill, Modal, SectionHeader } from "@components/ui";
+import { AppModalSheet, Button, EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import { ENTRY_PREVIEW_PILLS } from "@constants/entryPreviewPills";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useDeleteEntry } from "@features/entries/hooks/useDeleteEntry";
@@ -54,6 +54,10 @@ export function AllEntriesScreen() {
   const [entryMenuTarget, setEntryMenuTarget] = useState<EntryWithRelations | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EntryWithRelations | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const neutralButtonTextStyle = { color: PAGE_TEXT, fontWeight: "700" } as const;
+  const secondaryButtonTextStyle = { color: PAGE_SECONDARY, fontWeight: "700" } as const;
+  const cancelButtonTextStyle = { color: CANCEL_BUTTON_TEXT, fontWeight: "700" } as const;
+  const dangerButtonTextStyle = { color: "#FFFFFF", fontWeight: "700" } as const;
 
   useEffect(() => {
     setSelectedTagId(initialTagId ?? null);
@@ -291,11 +295,9 @@ export function AllEntriesScreen() {
 
         <AppBottomNav currentRoute="/all-entries" />
 
-        <Modal
+        <AppModalSheet
           visible={isFiltersOpen}
           onClose={closeFilters}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.filtersModal}
         >
           <View style={styles.filtersHeader}>
@@ -427,7 +429,7 @@ export function AllEntriesScreen() {
                 styles.footerButton,
                 { backgroundColor: PAGE_BACKGROUND, borderColor: PAGE_BACKGROUND },
               ]}
-              textStyle={{ color: PAGE_TEXT, fontWeight: "700" }}
+              textStyle={neutralButtonTextStyle}
             />
             <Button
               label="Cancel"
@@ -437,16 +439,14 @@ export function AllEntriesScreen() {
                 styles.footerButton,
                 { backgroundColor: PAGE_BACKGROUND, borderColor: PAGE_BACKGROUND },
               ]}
-              textStyle={{ color: PAGE_TEXT, fontWeight: "700" }}
+              textStyle={neutralButtonTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={!!entryMenuTarget}
           onClose={closeEntryMenu}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.menuModal}
         >
           <Text style={[styles.menuTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
@@ -460,14 +460,14 @@ export function AllEntriesScreen() {
             onPress={handleEditFromMenu}
             variant="primary"
             style={[styles.menuActionButton, styles.menuEditButton]}
-            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            textStyle={secondaryButtonTextStyle}
           />
           <Button
             label="Delete"
             onPress={handleDeletePrompt}
             variant="primary"
             style={[styles.menuActionButton, styles.menuDeleteButton]}
-            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            textStyle={dangerButtonTextStyle}
           />
           <Button
             label="Cancel"
@@ -477,15 +477,13 @@ export function AllEntriesScreen() {
               styles.menuActionButton,
               { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
             ]}
-            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            textStyle={cancelButtonTextStyle}
           />
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={!!deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.menuModal}
         >
           <Text style={[styles.menuTitle, { color: PAGE_TEXT, fontFamily: theme.fonts.serif }]}>
@@ -506,17 +504,17 @@ export function AllEntriesScreen() {
                   borderColor: CANCEL_BUTTON_BORDER,
                 },
               ]}
-              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+              textStyle={cancelButtonTextStyle}
             />
             <Button
               label="Delete"
               onPress={handleDeleteEntry}
               variant="primary"
               style={[styles.confirmButton, styles.menuDeleteButton]}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={dangerButtonTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
       </Screen>
     </SafeArea>
   );
@@ -525,24 +523,6 @@ export function AllEntriesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   content: {
     paddingHorizontal: 24,
@@ -575,15 +555,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingBottom: 8,
     marginBottom: 8,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  filterChipActive: {
-    shadowOpacity: 0,
   },
   metaRow: {
     flexDirection: "row",
@@ -684,24 +655,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 1,
   },
-  menuBackdrop: {
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   menuModal: {
-    width: "100%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
     backgroundColor: PAGE_SURFACE,
   },
   filtersModal: {
-    width: "100%",
     maxHeight: "78%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 18,
     backgroundColor: PAGE_SURFACE,
     shadowColor: PAGE_TEXT,
     shadowOpacity: 0.06,

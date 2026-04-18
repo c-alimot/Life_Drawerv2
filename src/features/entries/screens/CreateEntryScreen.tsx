@@ -6,7 +6,7 @@ import {
   EntryMediaToolbar,
   type EntryMediaToolbarButton,
   EntryMoodPickerModal,
-  Modal,
+  AppModalSheet,
   EntrySelectionModal,
 } from "@components/ui";
 import { MOOD_MAP } from "@constants/mood";
@@ -216,6 +216,9 @@ export function CreateEntryScreen() {
   const mood = watch("mood");
   const titleValue = watch("title");
   const contentValue = watch("content");
+  const neutralActionTextStyle = { color: ENTRY_CANCEL_TEXT, fontWeight: "700" } as const;
+  const primaryActionTextStyle = { color: "#FFFFFF", fontWeight: "700" } as const;
+  const discardActionTextStyle = { color: ENTRY_TEXT, fontWeight: "700" } as const;
 
   useEffect(() => {
     const loadStarterDrawerPreference = async () => {
@@ -1071,11 +1074,9 @@ export function CreateEntryScreen() {
           onDeleteItem={handleDeleteTag}
         />
 
-        <Modal
+        <AppModalSheet
           visible={pendingImageRemoveIndex !== null}
           onClose={() => setPendingImageRemoveIndex(null)}
-          animationType="fade"
-          backdropStyle={styles.actionBackdrop}
           contentStyle={styles.actionModal}
         >
           <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
@@ -1090,23 +1091,21 @@ export function CreateEntryScreen() {
               onPress={() => setPendingImageRemoveIndex(null)}
               variant="primary"
               style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
-              textStyle={{ color: ENTRY_CANCEL_TEXT, fontWeight: "700" }}
+              textStyle={neutralActionTextStyle}
             />
             <Button
               label="Delete"
               onPress={confirmRemoveImage}
               variant="primary"
               style={[styles.actionButton, { backgroundColor: ENTRY_DANGER, borderColor: ENTRY_DANGER }]}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={primaryActionTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={showExitPrompt}
           onClose={() => setShowExitPrompt(false)}
-          animationType="fade"
-          backdropStyle={styles.actionBackdrop}
           contentStyle={styles.actionModal}
         >
           <Text style={[styles.actionTitle, { color: ENTRY_TEXT, fontFamily: theme.fonts.serif }]}>
@@ -1121,17 +1120,17 @@ export function CreateEntryScreen() {
               onPress={handleSaveFromExitPrompt}
               variant="primary"
               style={[styles.actionButton, { backgroundColor: ENTRY_SECONDARY, borderColor: ENTRY_SECONDARY }]}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={primaryActionTextStyle}
             />
             <Button
               label="Discard Entry"
               onPress={handleDiscardEntry}
               variant="primary"
               style={[styles.actionButton, { backgroundColor: ENTRY_CANCEL_BG, borderColor: ENTRY_CANCEL_BORDER }]}
-              textStyle={{ color: ENTRY_TEXT, fontWeight: "700" }}
+              textStyle={discardActionTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
       </Screen>
     </SafeArea>
   );
@@ -1338,15 +1337,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "400",
   },
-  actionBackdrop: {
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   actionModal: {
-    width: "100%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
     backgroundColor: ENTRY_SURFACE,
   },
   actionTitle: {

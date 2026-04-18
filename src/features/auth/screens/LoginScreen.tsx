@@ -51,6 +51,10 @@ export function LoginScreen() {
   });
 
   const emailValue = watch("email");
+  const fieldLabelStyle = [theme.typography.labelSm, styles.fieldLabel, { color: AUTH_TEXT }];
+  const fieldErrorStyle = [theme.typography.bodySm, styles.fieldError, { color: theme.colors.errorText }];
+  const bottomPromptStyle = [theme.typography.body, styles.bottomPrompt, { color: AUTH_TEXT }];
+  const bottomLinkStyle = [theme.typography.body, styles.bottomLink, { color: AUTH_PRIMARY }];
 
   const onSubmit = async (data: LoginFormData) => {
     const success = await login(data);
@@ -139,11 +143,7 @@ export function LoginScreen() {
 
             <View style={styles.form}>
               <Text
-                style={[
-                  theme.typography.labelSm,
-                  styles.fieldLabel,
-                  { color: AUTH_TEXT },
-                ]}
+                style={fieldLabelStyle}
               >
                 EMAIL ADDRESS
               </Text>
@@ -164,13 +164,7 @@ export function LoginScreen() {
                       accessibilityLabel="Email input"
                     />
                     {errors.email?.message ? (
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          styles.fieldError,
-                          { color: theme.colors.errorText },
-                        ]}
-                      >
+                      <Text style={fieldErrorStyle}>
                         {errors.email.message}
                       </Text>
                     ) : null}
@@ -179,11 +173,7 @@ export function LoginScreen() {
               />
 
               <Text
-                style={[
-                  theme.typography.labelSm,
-                  styles.fieldLabel,
-                  { color: AUTH_TEXT },
-                ]}
+                style={fieldLabelStyle}
               >
                 PASSWORD
               </Text>
@@ -220,13 +210,7 @@ export function LoginScreen() {
                       </TouchableOpacity>
                     </View>
                     {errors.password?.message ? (
-                      <Text
-                        style={[
-                          theme.typography.bodySm,
-                          styles.fieldError,
-                          { color: theme.colors.errorText },
-                        ]}
-                      >
+                      <Text style={fieldErrorStyle}>
                         {errors.password.message}
                       </Text>
                     ) : null}
@@ -292,11 +276,7 @@ export function LoginScreen() {
 
             <View style={styles.signupLink}>
               <Text
-                style={[
-                  theme.typography.body,
-                  styles.bottomPrompt,
-                  { color: AUTH_TEXT },
-                ]}
+                style={bottomPromptStyle}
               >
                 Don&apos;t have an account?{" "}
               </Text>
@@ -307,11 +287,7 @@ export function LoginScreen() {
                 accessibilityHint="Navigate to signup page"
               >
                 <Text
-                  style={[
-                    theme.typography.body,
-                    styles.bottomLink,
-                    { color: AUTH_PRIMARY },
-                  ]}
+                  style={bottomLinkStyle}
                 >
                   Create account
                 </Text>

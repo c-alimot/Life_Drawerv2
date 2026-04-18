@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
-import { Button, Card, CardIconWrap, Modal } from "@components/ui";
+import { AppModalSheet, Button, Card, CardIconWrap, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
@@ -83,6 +83,9 @@ export function DrawersScreen() {
   const [editDrawerName, setEditDrawerName] = useState("");
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const hasLoadedInitialData = useRef(false);
+  const secondaryButtonTextStyle = { color: PAGE_SECONDARY, fontWeight: "700" } as const;
+  const dangerButtonTextStyle = { color: "#FFFFFF", fontWeight: "700" } as const;
+  const cancelButtonTextStyle = { color: CANCEL_BUTTON_TEXT, fontWeight: "700" } as const;
   const displayDrawers: DrawerListItem[] = isStarterDrawerHidden
     ? drawers
     : [STARTER_DRAWER, ...drawers];
@@ -294,23 +297,11 @@ export function DrawersScreen() {
                   </View>
                 </TouchableOpacity>
 
-                <View style={styles.sectionHeaderRow}>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      styles.sectionHeaderText,
-                      { color: PAGE_MUTED },
-                    ]}
-                  >
-                    Your Drawers
-                  </Text>
-                  <View
-                    style={[
-                      styles.sectionDivider,
-                      { backgroundColor: theme.colors.accent1 },
-                    ]}
-                  />
-                </View>
+                <SectionHeader
+                  label="Your Drawers"
+                  textColor={PAGE_MUTED}
+                  dividerColor={theme.colors.accent1}
+                />
               </>
             }
             renderItem={({ item }) => (
@@ -416,11 +407,9 @@ export function DrawersScreen() {
 
         <AppBottomNav currentRoute="/drawers" />
 
-        <Modal
+        <AppModalSheet
           visible={!!drawerMenuTarget}
           onClose={closeDrawerMenu}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.menuModal}
         >
           <Text
@@ -439,14 +428,14 @@ export function DrawersScreen() {
             onPress={handleEditFromMenu}
             variant="primary"
             style={[styles.menuActionButton, styles.menuEditButton]}
-            textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+            textStyle={secondaryButtonTextStyle}
           />
           <Button
             label="Delete"
             onPress={handleDeletePrompt}
             variant="primary"
             style={[styles.menuActionButton, styles.menuDeleteButton]}
-            textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+            textStyle={dangerButtonTextStyle}
           />
           <Button
             label="Cancel"
@@ -456,15 +445,13 @@ export function DrawersScreen() {
               styles.menuActionButton,
               { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
             ]}
-            textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+            textStyle={cancelButtonTextStyle}
           />
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={!!deleteDrawerTarget}
           onClose={() => setDeleteDrawerTarget(null)}
-          animationType="fade"
-          backdropStyle={styles.menuBackdrop}
           contentStyle={styles.menuModal}
         >
           <Text
@@ -487,7 +474,7 @@ export function DrawersScreen() {
                 styles.confirmButton,
                 { backgroundColor: CANCEL_BUTTON_BG, borderColor: CANCEL_BUTTON_BORDER },
               ]}
-              textStyle={{ color: CANCEL_BUTTON_TEXT, fontWeight: "700" }}
+              textStyle={cancelButtonTextStyle}
             />
             <Button
               label="Delete"
@@ -495,15 +482,14 @@ export function DrawersScreen() {
               loading={isDeletingDrawer}
               variant="primary"
               style={[styles.confirmButton, styles.menuDeleteButton]}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={dangerButtonTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={isCreateDrawerOpen}
           onClose={closeCreateDrawerModal}
-          backdropStyle={styles.drawerModalBackdrop}
           contentStyle={styles.drawerModal}
         >
           <Text
@@ -544,7 +530,7 @@ export function DrawersScreen() {
               onPress={closeCreateDrawerModal}
               variant="outline"
               style={styles.drawerModalSecondaryButton}
-              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+              textStyle={secondaryButtonTextStyle}
             />
             <Button
               label="Create"
@@ -552,15 +538,14 @@ export function DrawersScreen() {
               loading={isCreatingDrawer}
               variant="primary"
               style={styles.drawerModalPrimaryButton}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={dangerButtonTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={!!editingDrawer}
           onClose={closeEditDrawerModal}
-          backdropStyle={styles.drawerModalBackdrop}
           contentStyle={styles.drawerModal}
         >
           <Text
@@ -600,7 +585,7 @@ export function DrawersScreen() {
               onPress={closeEditDrawerModal}
               variant="outline"
               style={styles.drawerModalSecondaryButton}
-              textStyle={{ color: PAGE_SECONDARY, fontWeight: "700" }}
+              textStyle={secondaryButtonTextStyle}
             />
             <Button
               label="Save"
@@ -608,10 +593,10 @@ export function DrawersScreen() {
               loading={isUpdatingDrawer}
               variant="primary"
               style={styles.drawerModalPrimaryButton}
-              textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
+              textStyle={dangerButtonTextStyle}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
       </Screen>
     </SafeArea>
   );
@@ -620,24 +605,6 @@ export function DrawersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   loader: {
     flex: 1,
@@ -730,23 +697,6 @@ const styles = StyleSheet.create({
     color: "#6F6860",
     fontWeight: "500",
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  sectionHeaderText: {
-    textTransform: "uppercase",
-    letterSpacing: 2.6,
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 14,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    opacity: 0.7,
-  },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -788,15 +738,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontStyle: "italic",
   },
-  menuBackdrop: {
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   menuModal: {
-    width: "100%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
     backgroundColor: PAGE_SURFACE,
   },
   menuTitle: {
@@ -831,15 +774,8 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 999,
   },
-  drawerModalBackdrop: {
-    paddingHorizontal: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   drawerModal: {
-    width: "100%",
     borderRadius: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
     backgroundColor: PAGE_SURFACE,
   },
   drawerModalTitle: {

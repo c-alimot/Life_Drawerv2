@@ -619,19 +619,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
   headerIconButton: {
     width: 40,
     height: 40,
@@ -704,23 +691,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontWeight: "700",
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  sectionHeaderText: {
-    textTransform: "uppercase",
-    letterSpacing: 2.6,
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 14,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    opacity: 0.7,
-  },
   filterTabs: {
     paddingBottom: 14,
     gap: 10,
@@ -784,59 +754,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderRadius: 999,
-  },
-  entryCard: {
-    borderRadius: 24,
-    marginBottom: 22,
-  },
-  entryHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: 14,
-  },
-  entryTitle: {
-    fontSize: 26,
-    lineHeight: 32,
-    fontWeight: "600",
-  },
-  entryBody: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: 14,
-  },
-  entryDate: {
-    fontSize: 11,
-    lineHeight: 16,
-    letterSpacing: 1.3,
-    textTransform: "uppercase",
-    marginBottom: 14,
-    fontWeight: "600",
-  },
-  emptyState: {
-    borderRadius: 24,
-    borderWidth: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 30,
-    alignItems: "center",
-  },
-  emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 28,
-    lineHeight: 34,
-    marginBottom: 10,
-  },
-  emptyDescription: {
-    fontSize: 15,
-    lineHeight: 24,
-    textAlign: "center",
-    maxWidth: 290,
   },
   loaderContainer: {
     flex: 1,
