@@ -1,5 +1,5 @@
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
-import { Button, Modal, SectionHeader } from "@components/ui";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
+import { AppModalSheet, Button, SectionHeader } from "@components/ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import Constants from "expo-constants";
@@ -100,6 +100,10 @@ export function SettingsScreen() {
               : activePanel === "about"
                 ? "About"
                 : "";
+  const modalSheetContentStyle = {
+    ...styles.editModalContent,
+    backgroundColor: PAGE_SURFACE,
+  };
 
   const openEditProfile = useCallback(() => {
     setEditedName(displayName);
@@ -324,6 +328,11 @@ export function SettingsScreen() {
   );
 
   const panelContent = useMemo(() => {
+    const softPanelSurfaceStyle = {
+      backgroundColor: "#F8F6F2",
+      borderColor: PAGE_BORDER,
+    } as const;
+
     if (!activePanel) {
       return null;
     }
@@ -334,7 +343,7 @@ export function SettingsScreen() {
           <Text style={[theme.typography.body, styles.panelCopy, { color: PAGE_MUTED }]}>
             Use your sign-in email to receive a secure password reset link.
           </Text>
-          <View style={[styles.infoCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+          <View style={[styles.infoCard, softPanelSurfaceStyle]}>
             <Text style={[theme.typography.labelSm, styles.infoLabel, { color: PAGE_MUTED }]}>
               SIGN-IN EMAIL
             </Text>
@@ -361,7 +370,7 @@ export function SettingsScreen() {
             These reminders are stored on this device for now, so you can keep the experience gentle without setting up extra backend preferences.
           </Text>
           <View style={styles.preferenceList}>
-            <View style={[styles.preferenceRow, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+            <View style={[styles.preferenceRow, softPanelSurfaceStyle]}>
               <View style={styles.preferenceTextBlock}>
                 <Text style={[styles.preferenceTitle, { color: PAGE_TEXT }]}>Daily reminders</Text>
                 <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
@@ -377,7 +386,7 @@ export function SettingsScreen() {
                 thumbColor="#FFFFFF"
               />
             </View>
-            <View style={[styles.preferenceRow, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+            <View style={[styles.preferenceRow, softPanelSurfaceStyle]}>
               <View style={styles.preferenceTextBlock}>
                 <Text style={[styles.preferenceTitle, { color: PAGE_TEXT }]}>Weekly reflection prompts</Text>
                 <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
@@ -404,7 +413,7 @@ export function SettingsScreen() {
           <Text style={[theme.typography.body, styles.panelCopy, { color: PAGE_MUTED }]}>
             Your profile and journal content stay tied to your signed-in account, and private entry media is protected behind signed access.
           </Text>
-          <View style={[styles.infoCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+          <View style={[styles.infoCard, softPanelSurfaceStyle]}>
             <Text style={[theme.typography.labelSm, styles.infoLabel, { color: PAGE_MUTED }]}>
               ACCOUNT
             </Text>
@@ -439,13 +448,13 @@ export function SettingsScreen() {
             Life Drawer keeps your core journal data in your account and a small set of preferences on this device to keep the app feeling personal.
           </Text>
           <View style={styles.preferenceList}>
-            <View style={[styles.storageCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+            <View style={[styles.storageCard, softPanelSurfaceStyle]}>
               <Text style={[styles.preferenceTitle, { color: PAGE_TEXT }]}>Account data</Text>
               <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
                 Profile details, entries, tags, and drawers stay with your account.
               </Text>
             </View>
-            <View style={[styles.storageCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+            <View style={[styles.storageCard, softPanelSurfaceStyle]}>
               <Text style={[styles.preferenceTitle, { color: PAGE_TEXT }]}>This device</Text>
               <Text style={[theme.typography.bodySm, { color: PAGE_MUTED }]}>
                 Reminder choices are saved locally so they stay lightweight and fast.
@@ -471,7 +480,7 @@ export function SettingsScreen() {
           <Text style={[theme.typography.bodySm, styles.bulletText, { color: PAGE_MUTED }]}>
             • Use Storage and Privacy to review how your data is handled in this version.
           </Text>
-          <View style={[styles.infoCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+          <View style={[styles.infoCard, softPanelSurfaceStyle]}>
             <Text style={[theme.typography.labelSm, styles.infoLabel, { color: PAGE_MUTED }]}>
               SUPPORT TIP
             </Text>
@@ -488,7 +497,7 @@ export function SettingsScreen() {
         <Text style={[theme.typography.body, styles.panelCopy, { color: PAGE_MUTED }]}>
           Life Drawer is currently running version {appVersion}.
         </Text>
-        <View style={[styles.infoCard, { backgroundColor: "#F8F6F2", borderColor: PAGE_BORDER }]}>
+        <View style={[styles.infoCard, softPanelSurfaceStyle]}>
           <Text style={[theme.typography.labelSm, styles.infoLabel, { color: PAGE_MUTED }]}>
             VERSION
           </Text>
@@ -517,19 +526,7 @@ export function SettingsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/search")}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader onSearchPress={() => router.push("/search")} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -716,15 +713,10 @@ export function SettingsScreen() {
           </View>
         </ScrollView>
 
-        <Modal
+        <AppModalSheet
           visible={isEditProfileOpen}
           onClose={closeEditProfile}
-          animationType="fade"
-          backdropStyle={styles.editModalBackdrop}
-          contentStyle={{
-            ...styles.editModalContent,
-            backgroundColor: PAGE_SURFACE,
-          }}
+          contentStyle={modalSheetContentStyle}
         >
           <View style={styles.editModalHeader}>
             <Text
@@ -782,7 +774,7 @@ export function SettingsScreen() {
               accessibilityRole="button"
               accessibilityLabel="Change profile photo"
             >
-              <Text style={[styles.changePhotoText, { color: "#F8F6F2" }]}>
+              <Text style={[styles.changePhotoText, { color: PAGE_SURFACE }]}>
                 Change photo
               </Text>
             </TouchableOpacity>
@@ -835,17 +827,12 @@ export function SettingsScreen() {
               textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
 
-        <Modal
+        <AppModalSheet
           visible={!!activePanel}
           onClose={closePanel}
-          animationType="fade"
-          backdropStyle={styles.editModalBackdrop}
-          contentStyle={{
-            ...styles.editModalContent,
-            backgroundColor: PAGE_SURFACE,
-          }}
+          contentStyle={modalSheetContentStyle}
         >
           <View style={styles.editModalHeader}>
             <Text
@@ -872,7 +859,7 @@ export function SettingsScreen() {
           >
             {panelContent}
           </ScrollView>
-        </Modal>
+        </AppModalSheet>
 
         <AppBottomNav currentRoute="/settings" />
       </Screen>
@@ -883,25 +870,6 @@ export function SettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   content: {
     paddingHorizontal: 24,
@@ -922,23 +890,6 @@ const styles = StyleSheet.create({
     lineHeight: 42,
     fontWeight: "300",
     marginTop: 2,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  sectionHeaderText: {
-    textTransform: "uppercase",
-    letterSpacing: 2.6,
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 14,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    opacity: 0.7,
   },
   profileCard: {
     borderRadius: 22,
@@ -1003,10 +954,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     lineHeight: 22,
     fontWeight: "300",
-  },
-  editModalBackdrop: {
-    padding: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
   },
   editModalContent: {
     width: "100%",

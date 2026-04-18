@@ -1,11 +1,10 @@
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
-import { Button, Modal } from "@components/ui";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
+import { AppModalSheet, Button, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
-import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,6 +40,14 @@ export function TagsScreen() {
   const { createTag, isLoading: isCreatingTag } = useCreateTag();
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [newTagName, setNewTagName] = useState("");
+  const tagCardVisualStyle = {
+    backgroundColor: PAGE_SURFACE,
+    shadowColor: PAGE_TEXT,
+  } as const;
+  const modalSheetContentStyle = {
+    ...styles.modalContent,
+    backgroundColor: PAGE_SURFACE,
+  };
 
   const handleCreateTag = useCallback(() => {
     setNewTagName("");
@@ -81,19 +88,7 @@ export function TagsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/search")}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader />
 
         {isLoading ? (
           <View style={styles.loader}>
@@ -147,23 +142,11 @@ export function TagsScreen() {
                   </View>
                 </TouchableOpacity>
 
-                <View style={styles.sectionHeaderRow}>
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      styles.sectionHeaderText,
-                      { color: PAGE_MUTED },
-                    ]}
-                  >
-                    {tags.length > 0 ? "Your Tags" : "Example Tags"}
-                  </Text>
-                  <View
-                    style={[
-                      styles.sectionDivider,
-                      { backgroundColor: theme.colors.accent1 },
-                    ]}
-                  />
-                </View>
+                <SectionHeader
+                  label={tags.length > 0 ? "Your Tags" : "Example Tags"}
+                  textColor={PAGE_MUTED}
+                  dividerColor={theme.colors.accent1}
+                />
               </>
             }
             ListEmptyComponent={
@@ -173,10 +156,7 @@ export function TagsScreen() {
                     key={tag}
                     style={[
                       styles.card,
-                      {
-                        backgroundColor: PAGE_SURFACE,
-                        shadowColor: PAGE_TEXT,
-                      },
+                      tagCardVisualStyle,
                     ]}
                   >
                     <View
@@ -234,10 +214,7 @@ export function TagsScreen() {
               <TouchableOpacity
                 style={[
                   styles.card,
-                  {
-                    backgroundColor: PAGE_SURFACE,
-                    shadowColor: PAGE_TEXT,
-                  },
+                  tagCardVisualStyle,
                 ]}
               >
                 <View
@@ -308,12 +285,10 @@ export function TagsScreen() {
 
         <AppBottomNav currentRoute="/tags" />
 
-        <Modal
+        <AppModalSheet
           visible={isCreateTagOpen}
           onClose={closeCreateTagModal}
-          animationType="fade"
-          backdropStyle={styles.modalBackdrop}
-          contentStyle={styles.modalContent}
+          contentStyle={modalSheetContentStyle}
         >
           <View style={styles.modalHeader}>
             <Text
@@ -347,12 +322,12 @@ export function TagsScreen() {
             placeholder="e.g. gratitude"
             placeholderTextColor={PAGE_MUTED}
             style={[
-              styles.modalInput,
-              {
-                backgroundColor: "#F8F6F2",
-                color: PAGE_TEXT,
-                shadowColor: PAGE_TEXT,
-              },
+                styles.modalInput,
+                {
+                  backgroundColor: "#F8F6F2",
+                  color: PAGE_TEXT,
+                  shadowColor: PAGE_TEXT,
+                },
             ]}
             autoCapitalize="none"
             accessibilityLabel="Tag name input"
@@ -381,7 +356,7 @@ export function TagsScreen() {
               textStyle={{ color: "#FFFFFF", fontWeight: "700" }}
             />
           </View>
-        </Modal>
+        </AppModalSheet>
       </Screen>
     </SafeArea>
   );
@@ -390,25 +365,6 @@ export function TagsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
   },
   loader: {
     flex: 1,
@@ -470,23 +426,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     fontWeight: "300",
   },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-  },
-  sectionHeaderText: {
-    textTransform: "uppercase",
-    letterSpacing: 2.6,
-    fontSize: 12,
-    fontWeight: "600",
-    marginRight: 14,
-  },
-  sectionDivider: {
-    flex: 1,
-    height: 1,
-    opacity: 0.7,
-  },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -534,14 +473,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontStyle: "italic",
   },
-  modalBackdrop: {
-    padding: 24,
-    backgroundColor: "rgba(47, 41, 36, 0.28)",
-  },
   modalContent: {
-    width: "100%",
     borderRadius: 28,
-    padding: 24,
     backgroundColor: PAGE_SURFACE,
   },
   modalHeader: {

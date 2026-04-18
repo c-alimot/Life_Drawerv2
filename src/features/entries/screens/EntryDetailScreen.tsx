@@ -1,7 +1,8 @@
-import { SafeArea, Screen } from "@components/layout";
+import { AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
 import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
@@ -97,10 +98,6 @@ export function EntryDetailScreen() {
     [unlinkTag],
   );
 
-  const handleBack = useCallback(() => {
-    router.back();
-  }, []);
-
   if (isLoading) {
     return (
       <SafeArea>
@@ -139,38 +136,32 @@ export function EntryDetailScreen() {
   return (
     <SafeArea>
       <Screen style={styles.container}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={handleBack}
-            accessible
-            accessibilityLabel="Go back"
-          >
-            <Text style={[theme.typography.h2, { color: theme.colors.text }]}>
-              ←
-            </Text>
-          </TouchableOpacity>
-          <View style={styles.headerActions}>
-            <Button
-              label="Edit"
-              onPress={handleEdit}
-              size="sm"
-              accessibilityLabel="Edit entry"
-            />
-            <TouchableOpacity
-              onPress={handleDelete}
-              accessible
-              accessibilityLabel="Delete entry"
-              style={{ marginLeft: theme.spacing.sm }}
-            >
-              <Text
-                style={[theme.typography.body, { color: theme.colors.error }]}
+        <AppPageHeader
+          showBack
+          showSearch={false}
+          rightSlot={
+            <View style={styles.headerActions}>
+              <Button
+                label="Edit"
+                onPress={handleEdit}
+                size="sm"
+                accessibilityLabel="Edit entry"
+              />
+              <TouchableOpacity
+                onPress={handleDelete}
+                accessible
+                accessibilityLabel="Delete entry"
+                style={styles.deleteButton}
               >
-                🗑️
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+                <MaterialCommunityIcons
+                  name="trash-can-outline"
+                  size={22}
+                  color={theme.colors.error}
+                />
+              </TouchableOpacity>
+            </View>
+          }
+        />
 
         {/* Tab Navigation */}
         <View
@@ -297,14 +288,8 @@ export function EntryDetailScreen() {
               </Text>
 
               {entry.mood && (
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    marginBottom: theme.spacing.lg,
-                  }}
-                >
-                  <Text style={{ fontSize: 24, marginRight: theme.spacing.sm }}>
+                <View style={[styles.moodRow, { marginBottom: theme.spacing.lg }]}>
+                  <Text style={[styles.moodEmoji, { marginRight: theme.spacing.sm }]}>
                     {MOOD_MAP[entry.mood as MoodValue]?.emoji}
                   </Text>
                   <Text
@@ -337,7 +322,7 @@ export function EntryDetailScreen() {
             <View>
               {/* Images */}
               {entry.images && entry.images.length > 0 && (
-                <View style={{ marginBottom: theme.spacing.xl }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.xl }]}>
                   <Text
                     style={[
                       theme.typography.h3,
@@ -369,7 +354,7 @@ export function EntryDetailScreen() {
 
               {/* Audio */}
               {entry.audioUrl && (
-                <View style={{ marginBottom: theme.spacing.xl }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.xl }]}>
                   <Text
                     style={[
                       theme.typography.h3,
@@ -442,15 +427,12 @@ export function EntryDetailScreen() {
             <View>
               {/* Location */}
               {entry.location && (
-                <View style={{ marginBottom: theme.spacing.lg }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.lg }]}>
                   <Text
                     style={[
                       theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                        textTransform: "uppercase",
-                      },
+                      styles.sectionLabel,
+                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
                     ]}
                   >
                     Location
@@ -468,22 +450,17 @@ export function EntryDetailScreen() {
 
               {/* Drawers */}
               {entry.drawers && entry.drawers.length > 0 && (
-                <View style={{ marginBottom: theme.spacing.lg }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.lg }]}>
                   <Text
                     style={[
                       theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                        textTransform: "uppercase",
-                      },
+                      styles.sectionLabel,
+                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
                     ]}
                   >
                     Drawers
                   </Text>
-                  <View
-                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-                  >
+                  <View style={styles.badgeRow}>
                     {entry.drawers.map((drawer) => (
                       <TouchableOpacity
                         key={drawer.id}
@@ -515,22 +492,17 @@ export function EntryDetailScreen() {
 
               {/* Tags */}
               {entry.tags && entry.tags.length > 0 && (
-                <View style={{ marginBottom: theme.spacing.lg }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.lg }]}>
                   <Text
                     style={[
                       theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                        textTransform: "uppercase",
-                      },
+                      styles.sectionLabel,
+                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
                     ]}
                   >
                     Tags
                   </Text>
-                  <View
-                    style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}
-                  >
+                  <View style={styles.badgeRow}>
                     {entry.tags.map((tag) => (
                       <TouchableOpacity
                         key={tag.id}
@@ -565,15 +537,12 @@ export function EntryDetailScreen() {
 
               {/* Author */}
               {entry.author && (
-                <View style={{ marginBottom: theme.spacing.lg }}>
+                <View style={[styles.sectionBlock, { marginBottom: theme.spacing.lg }]}>
                   <Text
                     style={[
                       theme.typography.labelSm,
-                      {
-                        color: theme.colors.textSecondary,
-                        marginBottom: theme.spacing.sm,
-                        textTransform: "uppercase",
-                      },
+                      styles.sectionLabel,
+                      { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
                     ]}
                   >
                     Author
@@ -594,11 +563,8 @@ export function EntryDetailScreen() {
                 <Text
                   style={[
                     theme.typography.labelSm,
-                    {
-                      color: theme.colors.textSecondary,
-                      marginBottom: theme.spacing.sm,
-                      textTransform: "uppercase",
-                    },
+                    styles.sectionLabel,
+                    { color: theme.colors.textSecondary, marginBottom: theme.spacing.sm },
                   ]}
                 >
                   Dates
@@ -635,16 +601,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
   headerActions: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  deleteButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabBar: {
     flexDirection: "row",
@@ -703,6 +669,24 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
+  },
+  moodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  moodEmoji: {
+    fontSize: 24,
+  },
+  sectionBlock: {
+    width: "100%",
+  },
+  sectionLabel: {
+    textTransform: "uppercase",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
   },
   tagBadge: {
     paddingHorizontal: 10,

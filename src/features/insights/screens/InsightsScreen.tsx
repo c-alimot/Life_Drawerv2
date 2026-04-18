@@ -1,4 +1,4 @@
-import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
+import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Card, CardIconWrap } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
@@ -21,6 +21,7 @@ const PAGE_SURFACE = "#FFFFFF";
 const PAGE_TEXT = "#2F2924";
 const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
+const PAGE_SECONDARY = "#556950";
 
 export function InsightsScreen() {
   const theme = useTheme();
@@ -228,20 +229,7 @@ export function InsightsScreen() {
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: PAGE_BACKGROUND }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <AppHeaderBrand />
-          </View>
-          <TouchableOpacity
-            onPress={() => router.push("/search")}
-            style={styles.headerIconButton}
-            accessible
-            accessibilityLabel="Search entries"
-          >
-            <MaterialCommunityIcons name="magnify" size={32} color={PAGE_PRIMARY} />
-          </TouchableOpacity>
-        </View>
+        <AppPageHeader onSearchPress={() => router.push("/search")} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -285,7 +273,7 @@ export function InsightsScreen() {
                 <MaterialCommunityIcons
                   name="timer-sand"
                   size={24}
-                  color="#556950"
+                  color={PAGE_SECONDARY}
                 />
               </CardIconWrap>
               <View style={styles.featureCopy}>
@@ -308,7 +296,7 @@ export function InsightsScreen() {
                 <MaterialCommunityIcons
                   name="star-four-points-outline"
                   size={24}
-                  color="#556950"
+                  color={PAGE_SECONDARY}
                 />
               </CardIconWrap>
               <View style={styles.featureCopy}>
@@ -351,7 +339,7 @@ export function InsightsScreen() {
                   <MaterialCommunityIcons
                     name={item.icon}
                     size={28}
-                    color="#556950"
+                    color={PAGE_SECONDARY}
                   />
                   <Text style={[styles.galleryLabel, { color: PAGE_TEXT }]}>
                     {item.label}
@@ -432,28 +420,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    paddingTop: 40,
-    paddingBottom: 12,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexShrink: 1,
-  },
-  headerIconButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   content: {
-    paddingHorizontal: 28,
-    paddingTop: 8,
+    paddingHorizontal: 24,
+    paddingTop: 6,
     paddingBottom: 230,
   },
   heroBlock: {
