@@ -49,6 +49,13 @@ const STARTER_DRAWER: DrawerListItem = {
   updatedAt: new Date(0).toISOString(),
 };
 
+const EXAMPLE_DRAWER_IDEAS = [
+  "Career & Growth",
+  "Health & Habits",
+  "Family Moments",
+  "Travel Memories",
+] as const;
+
 const webStorage = {
   async getItem(key: string) {
     if (typeof window === "undefined") return null;
@@ -372,20 +379,49 @@ export function DrawersScreen() {
               </Card>
             )}
             ListFooterComponent={
-              <View style={styles.helperPanel}>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    {
-                      color: PAGE_MUTED,
-                      fontFamily: theme.fonts.serif,
-                    },
-                  ]}
-                >
-                  Create new drawers to organize your entries by theme, topic,
-                  or anything that matters to you.
-                </Text>
-              </View>
+              <>
+                {drawers.length === 0 ? (
+                  <View style={styles.exampleSection}>
+                    <Text
+                      style={[
+                        theme.typography.labelSm,
+                        styles.exampleSectionLabel,
+                        { color: "#8A8178" },
+                      ]}
+                    >
+                      EXAMPLE DRAWER IDEAS
+                    </Text>
+                    <View style={styles.examplePillWrap}>
+                      {EXAMPLE_DRAWER_IDEAS.map((idea) => (
+                        <View key={idea} style={styles.examplePill}>
+                          <Text
+                            style={[
+                              theme.typography.bodySm,
+                              styles.examplePillText,
+                            ]}
+                          >
+                            {idea}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                ) : null}
+                <View style={styles.helperPanel}>
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      {
+                        color: PAGE_MUTED,
+                        fontFamily: theme.fonts.serif,
+                      },
+                    ]}
+                  >
+                    Create new drawers to organize your entries by theme, topic,
+                    or anything that matters to you.
+                  </Text>
+                </View>
+              </>
             }
           />
         )}
@@ -674,6 +710,37 @@ const styles = StyleSheet.create({
     fontSize: 19,
     lineHeight: 24,
     fontWeight: "300",
+  },
+  exampleSection: {
+    marginBottom: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: "#F8F6F2",
+    borderWidth: 1,
+    borderColor: "#E7DED2",
+  },
+  exampleSectionLabel: {
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    marginBottom: 10,
+  },
+  examplePillWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  examplePill: {
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#ECE6DB",
+    borderWidth: 1,
+    borderColor: "#DAC8B1",
+  },
+  examplePillText: {
+    color: "#6F6860",
+    fontWeight: "500",
   },
   sectionHeaderRow: {
     flexDirection: "row",

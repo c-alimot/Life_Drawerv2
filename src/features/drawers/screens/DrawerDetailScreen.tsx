@@ -392,7 +392,7 @@ export function DrawerDetailScreen() {
               <Text style={[theme.typography.body, styles.emptyBody]}>
                 {hasActiveFilters
                   ? "Try a different sort or tag filter to explore this drawer."
-                  : "Create your first entry in this drawer when you&apos;re ready"}
+                  : "Create your first entry in this drawer when you're ready"}
               </Text>
               <Button
                 label="Create First Entry"

@@ -1,5 +1,5 @@
 import { AppBottomNav, AppHeaderBrand, SafeArea, Screen } from "@components/layout";
-import { Card, CardIconWrap, SectionHeader } from "@components/ui";
+import { Button, Card, CardIconWrap, SectionHeader } from "@components/ui";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
@@ -93,6 +93,10 @@ export function HomeScreen() {
     router.push("/search");
   }, []);
 
+  const handleCreateFirstEntry = useCallback(() => {
+    router.push("/create-entry");
+  }, []);
+
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: HOME_BACKGROUND }]}>
@@ -132,6 +136,51 @@ export function HomeScreen() {
               Document your life,{"\n"}
               <Text style={{ color: HOME_PRIMARY }}>one moment at a time.</Text>
             </Text>
+
+            {!isLoading && entries.length === 0 ? (
+              <Card
+                style={styles.createFirstEntryCard}
+                onPress={handleCreateFirstEntry}
+                accessibilityLabel="Create first entry"
+              >
+                <CardIconWrap style={styles.dashboardIcon}>
+                  <MaterialCommunityIcons
+                    name="file-document-edit-outline"
+                    size={28}
+                    color="#556950"
+                  />
+                </CardIconWrap>
+                <Text
+                  style={[
+                    styles.dashboardTitle,
+                    {
+                      color: HOME_TEXT,
+                      fontFamily: theme.fonts.serif,
+                    },
+                  ]}
+                >
+                  Create first entry
+                </Text>
+                <Text
+                  style={[
+                    theme.typography.bodySm,
+                    styles.dashboardDescription,
+                    { color: HOME_MUTED },
+                  ]}
+                >
+                  Start with one small moment. You can always add more details later.
+                </Text>
+                <Button
+                  label="Create first entry"
+                  onPress={handleCreateFirstEntry}
+                  variant="primary"
+                  size="md"
+                  style={styles.createFirstEntryButton}
+                  textStyle={styles.createFirstEntryButtonText}
+                  accessibilityLabel="Create first entry button"
+                />
+              </Card>
+            ) : null}
 
             <View style={styles.dashboardGrid}>
               {DASHBOARD_CARDS.map((card) => (
@@ -256,6 +305,23 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 28,
     fontWeight: "300",
+  },
+  createFirstEntryCard: {
+    width: "100%",
+    minHeight: 168,
+    marginBottom: 22,
+  },
+  createFirstEntryButton: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    backgroundColor: "#556950",
+    marginTop: 4,
+    minHeight: 42,
+    paddingHorizontal: 18,
+  },
+  createFirstEntryButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   dashboardGrid: {
     flexDirection: "row",
