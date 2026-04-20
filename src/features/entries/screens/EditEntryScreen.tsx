@@ -86,6 +86,7 @@ const STARTER_DRAWER_ID = "starter-drawer";
 const STARTER_DRAWER = {
   id: STARTER_DRAWER_ID,
   name: "My Life Drawer",
+  icon: "archive-outline",
 };
 
 const webStorage = {
@@ -600,7 +601,7 @@ export function EditEntryScreen() {
     : "";
   const selectedDrawerPreview = drawers
     .filter((drawer) => selectedDrawers.includes(drawer.id))
-    .map((drawer) => ({ id: drawer.id, name: drawer.name }));
+    .map((drawer) => ({ id: drawer.id, name: drawer.name, icon: drawer.icon }));
   const starterDrawerPreview = selectedDrawers.includes(STARTER_DRAWER_ID)
     ? [STARTER_DRAWER]
     : [];
@@ -629,6 +630,10 @@ export function EditEntryScreen() {
       <Text style={styles.toolbarItemLabel}>{label}</Text>
     </View>
   );
+  const resolveDrawerIcon = useCallback((icon: string | undefined | null) => {
+    if (!icon) return "archive-outline";
+    return /^[a-z0-9-]+$/i.test(icon) ? icon : "archive-outline";
+  }, []);
   const toolbarButtons: EntryMediaToolbarButton[] = [
     {
       key: "drawers",
@@ -932,6 +937,11 @@ export function EditEntryScreen() {
                         key={`drawer-${drawer.id}`}
                         style={styles.linkedDrawerChip}
                       >
+                        <MaterialCommunityIcons
+                          name={resolveDrawerIcon(drawer.icon)}
+                          size={14}
+                          color="#556950"
+                        />
                         <Text style={styles.linkedDrawerChipText}>
                           {sanitizeEntryPreviewLabel(drawer.name)}
                         </Text>
@@ -1300,6 +1310,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   linkedDrawerChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     borderWidth: 1,
     borderColor: "#556950",
     backgroundColor: "#E6E2D8",

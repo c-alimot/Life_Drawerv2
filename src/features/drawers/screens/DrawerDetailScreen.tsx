@@ -41,6 +41,23 @@ const PAGE_CARD_SHADOW = "rgba(85, 105, 80, 0.08)";
 const CANCEL_BUTTON_BG = "#EDEAE4";
 const CANCEL_BUTTON_BORDER = "#DAC8B1";
 const CANCEL_BUTTON_TEXT = "#2F2924";
+const DEFAULT_DRAWER_ICON = "archive-outline";
+const DRAWER_ICON_OPTIONS = [
+  { value: "archive-outline", label: "General" },
+  { value: "briefcase-outline", label: "Work" },
+  { value: "book-open-variant", label: "Study" },
+  { value: "heart-outline", label: "Family" },
+  { value: "dumbbell", label: "Fitness" },
+  { value: "airplane", label: "Travel" },
+  { value: "leaf-outline", label: "Wellness" },
+  { value: "palette-outline", label: "Creative" },
+  { value: "music-note-outline", label: "Music" },
+  { value: "food-apple-outline", label: "Food" },
+  { value: "target", label: "Goals" },
+  { value: "notebook-outline", label: "Journal" },
+  { value: "school-outline", label: "School" },
+  { value: "camera-outline", label: "Photos" },
+] as const;
 
 export function DrawerDetailScreen() {
   const theme = useTheme();
@@ -67,6 +84,7 @@ export function DrawerDetailScreen() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [editColor, setEditColor] = useState("");
+  const [editIcon, setEditIcon] = useState<string>(DEFAULT_DRAWER_ICON);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [draftSortOrder, setDraftSortOrder] = useState<"desc" | "asc">("desc");
@@ -85,6 +103,8 @@ export function DrawerDetailScreen() {
       if (drawer) {
         setEditName(drawer.name);
         setEditColor(drawer.color);
+        const supported = DRAWER_ICON_OPTIONS.some((option) => option.value === drawer.icon);
+        setEditIcon(supported ? (drawer.icon as string) : DEFAULT_DRAWER_ICON);
       }
     }, [drawer]),
   );
@@ -135,6 +155,7 @@ export function DrawerDetailScreen() {
     const success = await updateDrawer({
       name: editName,
       color: editColor,
+      icon: editIcon,
     });
 
     if (success) {
@@ -144,7 +165,7 @@ export function DrawerDetailScreen() {
     } else {
       Alert.alert("Error", "Failed to update drawer");
     }
-  }, [editName, editColor, updateDrawer, fetchDrawer]);
+  }, [editColor, editIcon, editName, fetchDrawer, updateDrawer]);
 
   const handleDelete = useCallback(() => {
     Alert.alert(
@@ -591,6 +612,36 @@ export function DrawerDetailScreen() {
 
                 <View>
                   <Text style={[theme.typography.labelSm, styles.modalLabel]}>
+                    Icon
+                  </Text>
+                  <View style={styles.iconPickerGrid}>
+                    {DRAWER_ICON_OPTIONS.map((option) => {
+                      const isActive = editIcon === option.value;
+                      return (
+                        <TouchableOpacity
+                          key={option.value}
+                          onPress={() => setEditIcon(option.value)}
+                          style={[
+                            styles.iconOptionButton,
+                            isActive && styles.iconOptionButtonActive,
+                          ]}
+                          accessible
+                          accessibilityLabel={`Select ${option.label} icon`}
+                          accessibilityRole="button"
+                        >
+                          <MaterialCommunityIcons
+                            name={option.value}
+                            size={20}
+                            color={isActive ? PAGE_SECONDARY : PAGE_MUTED}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View>
+                  <Text style={[theme.typography.labelSm, styles.modalLabel]}>
                     Color
                   </Text>
                   <View
@@ -1003,6 +1054,26 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",
+  },
+  iconPickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 16,
+  },
+  iconOptionButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DAC8B1",
+    backgroundColor: "#ECE6DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconOptionButtonActive: {
+    borderColor: PAGE_SECONDARY,
+    backgroundColor: "#E6E2D8",
   },
   saveButton: {
     marginTop: 8,

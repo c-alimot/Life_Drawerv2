@@ -24,6 +24,7 @@ import {
 } from "react-native";
 
 type DrawerListItem = Drawer & { entryCount: number };
+type DrawerIconOption = { value: string; label: string };
 
 const PAGE_BACKGROUND = "#EDEAE4";
 const PAGE_SURFACE = "#FFFFFF";
@@ -44,10 +45,29 @@ const STARTER_DRAWER: DrawerListItem = {
   name: "My Life Drawer",
   entryCount: 0,
   color: "#8C9A7F",
-  icon: "🗃️",
+  icon: "archive-outline",
   createdAt: new Date(0).toISOString(),
   updatedAt: new Date(0).toISOString(),
 };
+
+const DRAWER_ICON_OPTIONS: DrawerIconOption[] = [
+  { value: "archive-outline", label: "General" },
+  { value: "briefcase-outline", label: "Work" },
+  { value: "book-open-variant", label: "Study" },
+  { value: "heart-outline", label: "Family" },
+  { value: "dumbbell", label: "Fitness" },
+  { value: "airplane", label: "Travel" },
+  { value: "leaf-outline", label: "Wellness" },
+  { value: "palette-outline", label: "Creative" },
+  { value: "music-note-outline", label: "Music" },
+  { value: "food-apple-outline", label: "Food" },
+  { value: "target", label: "Goals" },
+  { value: "notebook-outline", label: "Journal" },
+  { value: "school-outline", label: "School" },
+  { value: "camera-outline", label: "Photos" },
+];
+
+const DEFAULT_DRAWER_ICON = "archive-outline";
 
 const EXAMPLE_DRAWER_IDEAS = [
   "Career & Growth",
@@ -77,10 +97,12 @@ export function DrawersScreen() {
   const { deleteDrawer, isLoading: isDeletingDrawer } = useDeleteDrawer();
   const [isCreateDrawerOpen, setIsCreateDrawerOpen] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
+  const [newDrawerIcon, setNewDrawerIcon] = useState(DEFAULT_DRAWER_ICON);
   const [drawerMenuTarget, setDrawerMenuTarget] = useState<DrawerListItem | null>(null);
   const [deleteDrawerTarget, setDeleteDrawerTarget] = useState<DrawerListItem | null>(null);
   const [editingDrawer, setEditingDrawer] = useState<DrawerListItem | null>(null);
   const [editDrawerName, setEditDrawerName] = useState("");
+  const [editDrawerIcon, setEditDrawerIcon] = useState(DEFAULT_DRAWER_ICON);
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const hasLoadedInitialData = useRef(false);
   const secondaryButtonTextStyle = { color: PAGE_SECONDARY, fontWeight: "700" } as const;
@@ -89,6 +111,16 @@ export function DrawersScreen() {
   const displayDrawers: DrawerListItem[] = isStarterDrawerHidden
     ? drawers
     : [STARTER_DRAWER, ...drawers];
+  const isSupportedDrawerIcon = useCallback(
+    (icon: string | undefined | null) =>
+      !!icon && DRAWER_ICON_OPTIONS.some((option) => option.value === icon),
+    [],
+  );
+  const resolveDrawerIcon = useCallback(
+    (icon: string | undefined | null) =>
+      isSupportedDrawerIcon(icon) ? icon : DEFAULT_DRAWER_ICON,
+    [isSupportedDrawerIcon],
+  );
 
   useEffect(() => {
     const loadStarterDrawerPreference = async () => {
@@ -105,6 +137,7 @@ export function DrawersScreen() {
 
   const handleCreateDrawer = useCallback(() => {
     setNewDrawerName("");
+    setNewDrawerIcon(DEFAULT_DRAWER_ICON);
     setIsCreateDrawerOpen(true);
   }, []);
 
@@ -119,7 +152,8 @@ export function DrawersScreen() {
 
     setEditingDrawer(drawer);
     setEditDrawerName(drawer.name);
-  }, []);
+    setEditDrawerIcon(resolveDrawerIcon(drawer.icon));
+  }, [resolveDrawerIcon]);
 
   const openDrawerMenu = useCallback((drawer: DrawerListItem) => {
     setDrawerMenuTarget(drawer);
@@ -132,11 +166,13 @@ export function DrawersScreen() {
   const closeCreateDrawerModal = useCallback(() => {
     setIsCreateDrawerOpen(false);
     setNewDrawerName("");
+    setNewDrawerIcon(DEFAULT_DRAWER_ICON);
   }, []);
 
   const closeEditDrawerModal = useCallback(() => {
     setEditingDrawer(null);
     setEditDrawerName("");
+    setEditDrawerIcon(DEFAULT_DRAWER_ICON);
   }, []);
 
   const handleSaveDrawer = useCallback(async () => {
@@ -147,7 +183,11 @@ export function DrawersScreen() {
       return;
     }
 
-    const created = await createDrawer({ name: trimmedName, color: PAGE_PRIMARY });
+    const created = await createDrawer({
+      name: trimmedName,
+      color: PAGE_PRIMARY,
+      icon: newDrawerIcon,
+    });
 
     if (!created) {
       Alert.alert("Unable to create drawer", "Please try a different name.");
@@ -156,7 +196,13 @@ export function DrawersScreen() {
 
     closeCreateDrawerModal();
     await fetchDrawers();
-  }, [closeCreateDrawerModal, createDrawer, fetchDrawers, newDrawerName]);
+  }, [
+    closeCreateDrawerModal,
+    createDrawer,
+    fetchDrawers,
+    newDrawerIcon,
+    newDrawerName,
+  ]);
 
   const handleUpdateDrawer = useCallback(async () => {
     if (!editingDrawer) {
@@ -170,7 +216,10 @@ export function DrawersScreen() {
       return;
     }
 
-    const updated = await updateDrawer(editingDrawer.id, { name: trimmedName });
+    const updated = await updateDrawer(editingDrawer.id, {
+      name: trimmedName,
+      icon: editDrawerIcon,
+    });
 
     if (!updated) {
       Alert.alert("Unable to update drawer", "Please try again.");
@@ -181,6 +230,7 @@ export function DrawersScreen() {
     await fetchDrawers();
   }, [
     closeEditDrawerModal,
+    editDrawerIcon,
     editDrawerName,
     editingDrawer,
     fetchDrawers,
@@ -324,7 +374,7 @@ export function DrawersScreen() {
                 >
                   <CardIconWrap style={styles.icon}>
                     <MaterialCommunityIcons
-                      name="archive-outline"
+                      name={resolveDrawerIcon(item.icon)}
                       size={26}
                       color="#556950"
                     />
@@ -510,6 +560,33 @@ export function DrawersScreen() {
             Give this drawer a name so you can start organizing entries by theme,
             season, or topic.
           </Text>
+          <Text style={[theme.typography.labelSm, styles.iconPickerLabel]}>
+            Choose icon
+          </Text>
+          <View style={styles.iconPickerGrid}>
+            {DRAWER_ICON_OPTIONS.map((option) => {
+              const isActive = newDrawerIcon === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setNewDrawerIcon(option.value)}
+                  style={[
+                    styles.iconOptionButton,
+                    isActive && styles.iconOptionButtonActive,
+                  ]}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose ${option.label} icon`}
+                >
+                  <MaterialCommunityIcons
+                    name={option.value}
+                    size={22}
+                    color={isActive ? PAGE_SECONDARY : PAGE_MUTED}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
           <TextInput
             value={newDrawerName}
             onChangeText={setNewDrawerName}
@@ -565,6 +642,33 @@ export function DrawersScreen() {
           >
             Update the drawer name for {editingDrawer?.name}.
           </Text>
+          <Text style={[theme.typography.labelSm, styles.iconPickerLabel]}>
+            Choose icon
+          </Text>
+          <View style={styles.iconPickerGrid}>
+            {DRAWER_ICON_OPTIONS.map((option) => {
+              const isActive = editDrawerIcon === option.value;
+              return (
+                <TouchableOpacity
+                  key={option.value}
+                  onPress={() => setEditDrawerIcon(option.value)}
+                  style={[
+                    styles.iconOptionButton,
+                    isActive && styles.iconOptionButtonActive,
+                  ]}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose ${option.label} icon`}
+                >
+                  <MaterialCommunityIcons
+                    name={option.value}
+                    size={22}
+                    color={isActive ? PAGE_SECONDARY : PAGE_MUTED}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </View>
           <TextInput
             value={editDrawerName}
             onChangeText={setEditDrawerName}
@@ -786,7 +890,33 @@ const styles = StyleSheet.create({
   },
   drawerModalMessage: {
     lineHeight: 24,
+    marginBottom: 12,
+  },
+  iconPickerLabel: {
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    color: PAGE_MUTED,
+    marginBottom: 10,
+  },
+  iconPickerGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
     marginBottom: 16,
+  },
+  iconOptionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DAC8B1",
+    backgroundColor: "#ECE6DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconOptionButtonActive: {
+    borderColor: PAGE_SECONDARY,
+    backgroundColor: "#E6E2D8",
   },
   drawerInput: {
     minHeight: 54,

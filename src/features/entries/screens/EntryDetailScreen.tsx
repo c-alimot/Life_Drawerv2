@@ -97,6 +97,10 @@ export function EntryDetailScreen() {
     },
     [unlinkTag],
   );
+  const resolveDrawerIcon = useCallback((icon: string | undefined | null) => {
+    if (!icon) return "archive-outline";
+    return /^[a-z0-9-]+$/i.test(icon) ? icon : "archive-outline";
+  }, []);
 
   if (isLoading) {
     return (
@@ -466,6 +470,7 @@ export function EntryDetailScreen() {
                         key={drawer.id}
                         style={[
                           styles.tagBadge,
+                          styles.drawerBadge,
                           {
                             backgroundColor: "#E6E2D8",
                             borderColor: "#556950",
@@ -476,6 +481,11 @@ export function EntryDetailScreen() {
                         accessibilityLabel={`Drawer: ${drawer.name}`}
                         accessibilityHint="Long press to remove"
                       >
+                        <MaterialCommunityIcons
+                          name={resolveDrawerIcon(drawer.icon)}
+                          size={14}
+                          color="#556950"
+                        />
                         <Text
                           style={[
                             theme.typography.bodySm,
@@ -693,5 +703,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
+  },
+  drawerBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
 });
