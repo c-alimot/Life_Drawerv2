@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { BlurView } from "expo-blur";
 import { router } from "expo-router";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -32,7 +32,7 @@ const ITEMS: {
   { label: "Home", route: "/", icon: "home" },
   { label: "Drawers", route: "/drawers", icon: "archive-outline" },
   { label: "Insights", route: "/insights", icon: "chart-box-outline" },
-  { label: "Account", route: "/settings", icon: "account-outline" },
+  { label: "Account", route: "/settings", icon: "account-cog-outline" },
 ];
 
 export function AppBottomNav({ currentRoute }: AppBottomNavProps) {

@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { SafeArea, Screen } from "@components/layout";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";

@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { router } from "expo-router";
 import { StyleSheet, TouchableOpacity, View } from "react-native";
 import { AppHeaderBrand } from "./AppHeaderBrand";

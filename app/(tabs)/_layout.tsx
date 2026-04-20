@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { Tabs } from "expo-router";
 
 export default function TabsLayout() {

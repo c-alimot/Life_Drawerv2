@@ -1,7 +1,7 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { AppModalSheet, Button, SectionHeader } from "@components/ui";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import Constants from "expo-constants";
 import { authApi } from "@features/auth/api/auth.api";
 import { useLogout } from "@features/auth/hooks/useLogout";

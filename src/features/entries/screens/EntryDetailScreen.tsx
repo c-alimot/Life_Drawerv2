@@ -2,7 +2,7 @@ import { AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
 import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";

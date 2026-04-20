@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { AppModalSheet, Button, Card, CardIconWrap, SectionHeader } from "@components/ui";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";

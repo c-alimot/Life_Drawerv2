@@ -1,5 +1,5 @@
 import { SafeArea, Screen } from "@components/layout";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useTheme } from "@styles/theme";
 import { useEffect, useState } from "react";
 import {

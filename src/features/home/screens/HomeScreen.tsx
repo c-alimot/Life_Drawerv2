@@ -1,6 +1,6 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Button, Card, CardIconWrap, SectionHeader } from "@components/ui";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@store";
@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, { Circle, Path } from "react-native-svg";
 
 const HOME_BACKGROUND = "#EDEAE4";
 const HOME_TEXT = "#2F2924";
@@ -51,6 +52,37 @@ const DASHBOARD_CARDS = [
     route: "/settings" as const,
   },
 ];
+
+const CARD_THEME_BY_KEY = {
+  entries: {
+    surface: "#F6F3ED",
+    border: "#DCCFC0",
+    iconSurface: "#E9E3D9",
+    iconColor: "#6A665F",
+    accent: "#BFC8B5",
+  },
+  drawers: {
+    surface: "#EEF4F0",
+    border: "#C8D8CE",
+    iconSurface: "#DCE8E1",
+    iconColor: "#5E7668",
+    accent: "#A9C2B3",
+  },
+  insights: {
+    surface: "#F3F4F3",
+    border: "#D6DCD8",
+    iconSurface: "#DEE3E6",
+    iconColor: "#687178",
+    accent: "#CAD4DB",
+  },
+  account: {
+    surface: "#F5F1F4",
+    border: "#DCCFD8",
+    iconSurface: "#E9DEE8",
+    iconColor: "#716676",
+    accent: "#D6C8D3",
+  },
+} as const;
 
 export function HomeScreen() {
   const theme = useTheme();
@@ -97,6 +129,88 @@ export function HomeScreen() {
     router.push("/create-entry");
   }, []);
 
+  const renderCardAccent = useCallback((cardKey: keyof typeof CARD_THEME_BY_KEY) => {
+    const accentColor = CARD_THEME_BY_KEY[cardKey].accent;
+
+    if (cardKey === "entries") {
+      return (
+        <Svg viewBox="0 0 96 78" width={96} height={78} style={styles.accentBottomRight}>
+          <Circle cx={86} cy={82} r={44} fill={accentColor + "7A"} />
+          <Circle cx={86} cy={82} r={30} fill={accentColor + "56"} />
+        </Svg>
+      );
+    }
+
+    if (cardKey === "drawers") {
+      return (
+        <View style={styles.accentBottomRight}>
+          <MaterialCommunityIcons
+            name="sparkles-outline"
+            size={14}
+            color={accentColor + "B0"}
+            style={styles.sparkleOne}
+          />
+          <MaterialCommunityIcons
+            name="sparkles-outline"
+            size={11}
+            color={accentColor + "9A"}
+            style={styles.sparkleTwo}
+          />
+          <MaterialCommunityIcons
+            name="sparkles-outline"
+            size={9}
+            color={accentColor + "86"}
+            style={styles.sparkleThree}
+          />
+          <MaterialCommunityIcons
+            name="sparkles-outline"
+            size={8}
+            color={accentColor + "78"}
+            style={styles.sparkleFour}
+          />
+        </View>
+      );
+    }
+
+    if (cardKey === "insights") {
+      return (
+        <Svg viewBox="0 0 96 78" width={96} height={78} style={styles.accentBottomRight}>
+          <Path
+            d="M8 78 C24 54 48 50 96 42 L96 78 Z"
+            fill={accentColor + "6C"}
+          />
+          <Path
+            d="M24 78 C42 58 62 56 96 52 L96 78 Z"
+            fill={accentColor + "52"}
+          />
+        </Svg>
+      );
+    }
+
+    return (
+      <Svg viewBox="0 0 96 78" width={96} height={78} style={styles.accentBottomRight}>
+        <Path
+          d="M40 78 A58 58 0 0 1 96 24"
+          fill="none"
+          stroke={accentColor + "AA"}
+          strokeWidth={1.9}
+        />
+        <Path
+          d="M54 78 A46 46 0 0 1 96 38"
+          fill="none"
+          stroke={accentColor + "95"}
+          strokeWidth={1.7}
+        />
+        <Path
+          d="M68 78 A33 33 0 0 1 96 50"
+          fill="none"
+          stroke={accentColor + "80"}
+          strokeWidth={1.5}
+        />
+      </Svg>
+    );
+  }, []);
+
   return (
     <SafeArea>
       <Screen style={[styles.container, { backgroundColor: HOME_BACKGROUND }]}>
@@ -127,14 +241,16 @@ export function HomeScreen() {
             {!isLoading && entries.length === 0 ? (
               <Card
                 style={styles.createFirstEntryCard}
+                variant="elevated"
                 onPress={handleCreateFirstEntry}
                 accessibilityLabel="Create first entry"
               >
                 <CardIconWrap style={styles.dashboardIcon}>
                   <MaterialCommunityIcons
                     name="file-document-edit-outline"
-                    size={28}
+                    size={24}
                     color="#556950"
+                    style={styles.dashboardIconGlyph}
                   />
                 </CardIconWrap>
                 <Text
@@ -170,36 +286,49 @@ export function HomeScreen() {
             ) : null}
 
             <View style={styles.dashboardGrid}>
-              {DASHBOARD_CARDS.map((card) => (
-                <Card
-                  key={card.key}
-                  style={styles.dashboardCard}
-                  onPress={() => router.push(card.route)}
-                  accessibilityLabel={`${card.title} dashboard card`}
-                >
-                  <CardIconWrap style={styles.dashboardIcon}>
-                    <MaterialCommunityIcons
-                      name={card.icon}
-                      size={28}
-                      color="#556950"
-                    />
-                  </CardIconWrap>
-                  <Text
+              {DASHBOARD_CARDS.map((card) => {
+                const cardTheme = CARD_THEME_BY_KEY[card.key as keyof typeof CARD_THEME_BY_KEY];
+                return (
+                  <Card
+                    key={card.key}
                     style={[
-                      styles.dashboardTitle,
+                      styles.dashboardCard,
                       {
-                        color: HOME_TEXT,
-                        fontFamily: theme.fonts.serif,
+                        backgroundColor: cardTheme.surface,
+                        borderColor: cardTheme.border,
                       },
                     ]}
+                    onPress={() => router.push(card.route)}
+                    accessibilityLabel={`${card.title} dashboard card`}
                   >
-                    {card.title}
-                  </Text>
-                  <Text style={[theme.typography.bodySm, styles.dashboardDescription, { color: HOME_MUTED }]}>
-                    {card.description}
-                  </Text>
-                </Card>
-              ))}
+                    <View pointerEvents="none" style={styles.cardAccentLayer}>
+                      {renderCardAccent(card.key as keyof typeof CARD_THEME_BY_KEY)}
+                    </View>
+                    <CardIconWrap style={[styles.dashboardIcon, { backgroundColor: cardTheme.iconSurface }]}>
+                      <MaterialCommunityIcons
+                        name={card.icon}
+                        size={24}
+                        color={cardTheme.iconColor}
+                        style={styles.dashboardIconGlyph}
+                      />
+                    </CardIconWrap>
+                    <Text
+                      style={[
+                        styles.dashboardTitle,
+                        {
+                          color: HOME_TEXT,
+                          fontFamily: theme.fonts.serif,
+                        },
+                      ]}
+                    >
+                      {card.title}
+                    </Text>
+                    <Text style={[theme.typography.bodySm, styles.dashboardDescription, { color: HOME_MUTED }]}>
+                      {card.description}
+                    </Text>
+                  </Card>
+                );
+              })}
             </View>
 
             {recentlyUsedTags.length > 0 ? (
@@ -302,6 +431,8 @@ const styles = StyleSheet.create({
   dashboardCard: {
     width: "48%",
     minHeight: 168,
+    borderWidth: 1,
+    overflow: "hidden",
   },
   dashboardIcon: {
     width: 52,
@@ -309,6 +440,9 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: "#ECE6DB",
     marginBottom: 14,
+  },
+  dashboardIconGlyph: {
+    opacity: 0.86,
   },
   dashboardTitle: {
     fontSize: 24,
@@ -318,6 +452,39 @@ const styles = StyleSheet.create({
   },
   dashboardDescription: {
     lineHeight: 22,
+    maxWidth: "84%",
+  },
+  cardAccentLayer: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+    overflow: "hidden",
+  },
+  accentBottomRight: {
+    position: "absolute",
+    right: 0,
+    bottom: 0,
+    width: 96,
+    height: 78,
+  },
+  sparkleOne: {
+    position: "absolute",
+    right: 14,
+    bottom: 14,
+  },
+  sparkleTwo: {
+    position: "absolute",
+    right: 30,
+    bottom: 20,
+  },
+  sparkleThree: {
+    position: "absolute",
+    right: 8,
+    bottom: 30,
+  },
+  sparkleFour: {
+    position: "absolute",
+    right: 24,
+    bottom: 8,
   },
   section: {
     marginBottom: 20,

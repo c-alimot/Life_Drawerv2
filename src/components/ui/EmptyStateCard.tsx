@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useTheme } from "@styles/theme";
 import { StyleSheet, Text, View } from "react-native";
 import { Button } from "./Button";

@@ -6,7 +6,7 @@ import {
 } from "@components/layout";
 import { EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import { MOOD_MAP } from "@constants/moods";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import {
     useSearch,

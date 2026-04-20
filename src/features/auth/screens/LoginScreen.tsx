@@ -1,4 +1,4 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { SafeArea, Screen } from "@components/layout";
 import { Button } from "@components/ui";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -1,7 +1,7 @@
 import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { useTheme } from "@styles/theme";
 import type { EntryWithRelations } from "@types";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Card } from "./Card";
 

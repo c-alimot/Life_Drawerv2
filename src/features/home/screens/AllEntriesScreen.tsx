@@ -1,7 +1,7 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { AppModalSheet, Button, EmptyStateCard, EntryPreviewCard, FilterPill, SectionHeader } from "@components/ui";
 import { ENTRY_PREVIEW_PILLS } from "@constants/entryPreviewPills";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useDeleteEntry } from "@features/entries/hooks/useDeleteEntry";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";

@@ -8,7 +8,7 @@ import { AppModalSheet, Button, EmptyStateCard, EntryPreviewCard, FilterPill, Se
 import {
   ENTRY_PREVIEW_PILLS,
 } from "@constants/entryPreviewPills";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { Fonts, useTheme } from "@styles/theme";
 import { router, useLocalSearchParams } from "expo-router";

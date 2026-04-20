@@ -10,7 +10,7 @@ import {
 } from "@components/ui";
 import { ENTRY_PREVIEW_PILLS, sanitizeEntryPreviewLabel } from "@constants/entryPreviewPills";
 import { MOOD_MAP } from "@constants/moods";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useCreateDrawer } from "@features/drawers/hooks/useCreateDrawer";
 import { useDeleteDrawer } from "@features/drawers/hooks/useDeleteDrawer";
 import { useDrawers } from "@features/drawers/hooks/useDrawers";
@@ -698,13 +698,7 @@ export function EditEntryScreen() {
           : "Record voice memo",
       content: renderToolbarItem(
         <MaterialCommunityIcons
-          name={
-            isRecording
-              ? "stop-circle-outline"
-              : audioUri
-                ? "play-circle-outline"
-                : "microphone-outline"
-          }
+          name="mic"
           size={28}
           color={ENTRY_SECONDARY}
         />,

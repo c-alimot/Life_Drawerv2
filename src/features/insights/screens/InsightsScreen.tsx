@@ -1,6 +1,6 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { Card, CardIconWrap } from "@components/ui";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { MOOD_MAP, type MoodData } from "@constants/moods";
 import { useEntries } from "@features/entries/hooks/useEntries";
 import { useFocusEffect } from "@react-navigation/native";
@@ -124,23 +124,6 @@ export function InsightsScreen() {
     });
 
     return maxMood;
-  }, [archiveEntries]);
-
-  const writingStreak = useMemo(() => {
-    const dates = new Set(
-      archiveEntries.map((e) => new Date(e.createdAt).toLocaleDateString()),
-    );
-
-    let streak = 0;
-    let currentDate = new Date();
-    currentDate.setHours(0, 0, 0, 0);
-
-    while (dates.has(currentDate.toLocaleDateString())) {
-      streak++;
-      currentDate.setDate(currentDate.getDate() - 1);
-    }
-
-    return streak;
   }, [archiveEntries]);
 
   const mostCommonMoodData: MoodData | null = mostCommonMood
@@ -268,7 +251,7 @@ export function InsightsScreen() {
           </View>
 
           <View style={styles.featureStack}>
-            <Card style={styles.featureCard}>
+            <Card style={styles.featureCard} variant="elevated">
               <CardIconWrap style={styles.featureIconWrap}>
                 <MaterialCommunityIcons
                   name="timer-sand"
@@ -291,7 +274,7 @@ export function InsightsScreen() {
               </View>
             </Card>
 
-            <Card style={styles.featureCard}>
+            <Card style={styles.featureCard} variant="elevated">
               <CardIconWrap style={styles.featureIconWrap}>
                 <MaterialCommunityIcons
                   name="star-four-points-outline"
@@ -335,7 +318,7 @@ export function InsightsScreen() {
 
             <View style={styles.galleryGrid}>
               {galleryItems.map((item) => (
-                <Card key={item.key} style={styles.galleryTile}>
+                <Card key={item.key} style={styles.galleryTile} variant="elevated">
                   <MaterialCommunityIcons
                     name={item.icon}
                     size={28}
@@ -352,7 +335,7 @@ export function InsightsScreen() {
             </View>
           </View>
 
-          <Card style={styles.snapshotCard}>
+          <Card style={styles.snapshotCard} variant="elevated">
             <Text
               style={[
                 styles.snapshotTitle,
@@ -363,7 +346,7 @@ export function InsightsScreen() {
             </Text>
             <Text style={[styles.snapshotBody, { color: PAGE_MUTED }]}>
               {stats.totalEntries > 0
-                ? `${stats.totalEntries} entries, ${stats.avgWordsPerEntry} average words, and a ${writingStreak}-day writing rhythm are beginning to shape your archive.`
+                ? `${stats.totalEntries} entries and ${stats.avgWordsPerEntry} average words are beginning to shape your archive.`
                 : "Once you begin writing, this space will gently reflect your rhythms, themes, and returning moments."}
             </Text>
           </Card>

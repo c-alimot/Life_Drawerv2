@@ -1,6 +1,6 @@
 import { AppBottomNav, AppPageHeader, SafeArea, Screen } from "@components/layout";
 import { AppModalSheet, Button, SectionHeader } from "@components/ui";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useCreateTag } from "@features/tags/hooks/useCreateTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useFocusEffect } from "@react-navigation/native";

@@ -20,7 +20,7 @@ import { useDeleteTag } from "@features/tags/hooks/useDeleteTag";
 import { useTags } from "@features/tags/hooks/useTags";
 import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@components/ui/icons";
 import { useTheme } from "@styles/theme";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
@@ -742,7 +742,7 @@ export function CreateEntryScreen() {
       accessibilityLabel: isRecording ? "Stop recording" : "Start voice memo",
       content: renderToolbarItem(
         <MaterialCommunityIcons
-          name={isRecording ? "stop-circle-outline" : "microphone-outline"}
+          name="mic"
           size={28}
           color={ENTRY_SECONDARY}
         />,
