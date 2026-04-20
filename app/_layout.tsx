@@ -186,41 +186,17 @@ export default function RootLayout() {
     if (isBootstrapping) return;
     if (bootError) return;
 
-    let isMounted = true;
-
     const syncRoute = async () => {
       const isAuthRoute =
         pathname === "/intro" ||
         pathname === "/login" ||
         pathname === "/signup" ||
         pathname === "/onboarding";
-      const isProtectedRoute = !isAuthRoute;
 
       if (!user) {
-        const onboardingCompleted = await getOnboardingCompleted();
-
-        if (!isMounted) return;
-
-        if (onboardingCompleted !== hasCompletedOnboarding) {
-          setHasCompletedOnboardingState(onboardingCompleted);
+        if (pathname !== "/onboarding") {
+          router.replace("/onboarding");
         }
-
-        if (!onboardingCompleted) {
-          if (pathname !== "/onboarding") {
-            router.replace("/onboarding");
-          }
-          return;
-        }
-
-        if (pathname === "/onboarding") {
-          router.replace("/intro");
-          return;
-        }
-
-        if (isProtectedRoute) {
-          router.replace("/intro");
-        }
-
         return;
       }
 
@@ -230,10 +206,6 @@ export default function RootLayout() {
     };
 
     syncRoute();
-
-    return () => {
-      isMounted = false;
-    };
   }, [bootError, hasCompletedOnboarding, isBootstrapping, pathname, router, user]);
 
   const handleRetryBootstrap = useCallback(async () => {

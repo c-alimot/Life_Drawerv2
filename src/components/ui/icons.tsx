@@ -40,6 +40,8 @@ const ICON_NAME_MAP: Record<string, string> = {
   "dots-horizontal": "Ellipsis",
   email: "Mail",
   password: "Lock",
+  "eye-outline": "Eye",
+  "eye-off-outline": "EyeOff",
   check: "Check",
   close: "X",
   "tune-variant": "SlidersHorizontal",
