@@ -6,7 +6,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "@store";
 import { useTheme } from "@styles/theme";
 import { router } from "expo-router";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
@@ -88,12 +88,10 @@ export function HomeScreen() {
   const theme = useTheme();
   const { user } = useAuthStore();
   const { entries, isLoading, fetchRecentEntries } = useEntries();
-  const hasLoadedInitialData = useRef(false);
 
   useFocusEffect(
     useCallback(() => {
-      if (user && !hasLoadedInitialData.current) {
-        hasLoadedInitialData.current = true;
+      if (user) {
         fetchRecentEntries(40);
       }
     }, [user, fetchRecentEntries]),
