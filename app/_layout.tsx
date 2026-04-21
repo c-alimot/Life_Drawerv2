@@ -192,11 +192,31 @@ export default function RootLayout() {
         pathname === "/login" ||
         pathname === "/signup" ||
         pathname === "/onboarding";
+      const isProtectedRoute = !isAuthRoute;
 
       if (!user) {
-        if (pathname !== "/onboarding") {
-          router.replace("/onboarding");
+        const onboardingCompleted = await getOnboardingCompleted();
+
+        if (onboardingCompleted !== hasCompletedOnboarding) {
+          setHasCompletedOnboardingState(onboardingCompleted);
         }
+
+        if (!onboardingCompleted) {
+          if (pathname !== "/onboarding") {
+            router.replace("/onboarding");
+          }
+          return;
+        }
+
+        if (pathname === "/onboarding") {
+          router.replace("/intro");
+          return;
+        }
+
+        if (isProtectedRoute) {
+          router.replace("/intro");
+        }
+
         return;
       }
 
