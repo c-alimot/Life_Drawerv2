@@ -33,6 +33,8 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
+const PAGE_CARD_CREAM = "#FBFAF7";
+const PAGE_CARD_BORDER = "#E7DED2";
 const CANCEL_BUTTON_BG = "#E3E1DC";
 const CANCEL_BUTTON_BORDER = "#C9C4BB";
 const CANCEL_BUTTON_TEXT = "#5F6368";
@@ -355,7 +357,13 @@ export function DrawersScreen() {
               </>
             }
             renderItem={({ item }) => (
-              <Card style={styles.card} variant="elevated">
+              <Card
+                style={[
+                  styles.card,
+                  { backgroundColor: PAGE_CARD_CREAM, borderColor: PAGE_CARD_BORDER },
+                ]}
+                variant="elevated"
+              >
                 <TouchableOpacity
                   style={styles.cardPressable}
                   onPress={() => {

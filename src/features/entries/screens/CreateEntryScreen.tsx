@@ -78,6 +78,7 @@ const ENTRY_CANCEL_BG = "#E3E1DC";
 const ENTRY_CANCEL_BORDER = "#C9C4BB";
 const ENTRY_CANCEL_TEXT = "#5F6368";
 const ENTRY_PLACEHOLDER = "#8A8178";
+const ENTRY_TEXTBOX_BG = "#F8F6F2";
 const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
 const STARTER_DRAWER_ID = "starter-drawer";
 const STARTER_DRAWER = {
@@ -692,7 +693,7 @@ export function CreateEntryScreen() {
       key: "drawers",
       borderColor:
         selectedDrawers.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedDrawers.length > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Add to drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
@@ -708,7 +709,7 @@ export function CreateEntryScreen() {
     {
       key: "tags",
       borderColor: selectedTags.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedTags.length > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowTagModal(true),
       accessibilityLabel: "Add tags",
       accessibilityHint: `${selectedTags.length} tags selected`,
@@ -725,7 +726,7 @@ export function CreateEntryScreen() {
       key: "images",
       borderColor:
         selectedMedia.imageUris.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedMedia.imageUris.length > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: pickImages,
       accessibilityLabel: "Add images",
       accessibilityHint: `${selectedMedia.imageUris.length}/${MAX_IMAGES} images`,
@@ -742,7 +743,7 @@ export function CreateEntryScreen() {
       key: "audio",
       borderColor:
         selectedMedia.audioUri || isRecording ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedMedia.audioUri || isRecording ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: isRecording ? stopRecording : startRecording,
       accessibilityLabel: isRecording ? "Stop recording" : "Start voice memo",
       content: renderToolbarItem(
@@ -757,7 +758,7 @@ export function CreateEntryScreen() {
     {
       key: "mood",
       borderColor: mood ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: mood ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowMoodPicker(true),
       accessibilityLabel: "Add mood",
       accessibilityHint: mood ? `Mood: ${MOOD_MAP[mood]?.label}` : "Select a mood",
@@ -1002,7 +1003,7 @@ export function CreateEntryScreen() {
                   {
                     borderColor: ENTRY_ACCENT,
                     color: ENTRY_TEXT,
-                    backgroundColor: "#F8F6F2",
+                    backgroundColor: ENTRY_TEXTBOX_BG,
                   },
                 ]}
                 placeholder="Start writing..."
@@ -1223,7 +1224,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ECE6DB",
+    backgroundColor: ENTRY_TEXTBOX_BG,
     borderColor: ENTRY_ACCENT,
     padding: 8,
     shadowColor: "#2F2924",

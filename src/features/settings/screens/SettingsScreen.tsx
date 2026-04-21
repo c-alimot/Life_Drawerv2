@@ -30,6 +30,8 @@ const PAGE_MUTED = "#6F6860";
 const PAGE_PRIMARY = "#8C9A7F";
 const PAGE_SECONDARY = "#556950";
 const PAGE_BORDER = "#B39C87";
+const PAGE_CARD_CREAM = "#FBFAF7";
+const PAGE_CARD_BORDER = "#E7DED2";
 const SETTINGS_PREFERENCES_KEY = "lifeDrawer.settings.preferences";
 
 type SettingsPanel =
@@ -556,8 +558,8 @@ export function SettingsScreen() {
             style={[
               styles.profileCard,
               {
-                backgroundColor: PAGE_SURFACE,
-                borderColor: PAGE_BORDER,
+                backgroundColor: PAGE_CARD_CREAM,
+                borderColor: PAGE_CARD_BORDER,
                 shadowColor: PAGE_TEXT,
               },
             ]}
@@ -653,7 +655,8 @@ export function SettingsScreen() {
                 style={[
                   styles.optionCard,
                   {
-                    backgroundColor: PAGE_SURFACE,
+                    backgroundColor: PAGE_CARD_CREAM,
+                    borderColor: PAGE_CARD_BORDER,
                     shadowColor: PAGE_TEXT,
                   },
                 ]}

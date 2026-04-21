@@ -81,6 +81,7 @@ const ENTRY_CANCEL_BG = "#E3E1DC";
 const ENTRY_CANCEL_BORDER = "#C9C4BB";
 const ENTRY_CANCEL_TEXT = "#5F6368";
 const ENTRY_PLACEHOLDER = "#8A8178";
+const ENTRY_TEXTBOX_BG = "#F8F6F2";
 const STARTER_DRAWER_HIDDEN_KEY = "life-drawer:starter-drawer-hidden";
 const STARTER_DRAWER_ID = "starter-drawer";
 const STARTER_DRAWER = {
@@ -639,7 +640,7 @@ export function EditEntryScreen() {
       key: "drawers",
       borderColor:
         selectedDrawers.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedDrawers.length > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowDrawerModal(true),
       accessibilityLabel: "Manage drawers",
       accessibilityHint: `${selectedDrawers.length} drawers selected`,
@@ -656,7 +657,7 @@ export function EditEntryScreen() {
       key: "tags",
       borderColor:
         selectedTags.length > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: selectedTags.length > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowTagModal(true),
       accessibilityLabel: "Manage tags",
       accessibilityHint: `${selectedTags.length} tags selected`,
@@ -672,7 +673,7 @@ export function EditEntryScreen() {
     {
       key: "images",
       borderColor: totalImages > 0 ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: totalImages > 0 ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: pickImages,
       disabled: totalImages >= MAX_IMAGES,
       accessibilityLabel: "Add images",
@@ -690,7 +691,7 @@ export function EditEntryScreen() {
       key: "audio",
       borderColor:
         isRecording || audioUri ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: isRecording || audioUri ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: isRecording
         ? stopRecording
         : audioUri
@@ -713,7 +714,7 @@ export function EditEntryScreen() {
     {
       key: "mood",
       borderColor: mood ? ENTRY_SECONDARY : ENTRY_ACCENT,
-      backgroundColor: mood ? "#E6E2D8" : "#ECE6DB",
+      backgroundColor: ENTRY_TEXTBOX_BG,
       onPress: () => setShowMoodPicker(true),
       accessibilityLabel: "Change mood",
       accessibilityHint: mood
@@ -986,7 +987,7 @@ export function EditEntryScreen() {
                   {
                     borderColor: ENTRY_ACCENT,
                     color: ENTRY_TEXT,
-                    backgroundColor: "#F8F6F2",
+                    backgroundColor: ENTRY_TEXTBOX_BG,
                   },
                 ]}
                 placeholder="Start writing..."
@@ -1223,7 +1224,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ECE6DB",
+    backgroundColor: ENTRY_TEXTBOX_BG,
     borderColor: ENTRY_ACCENT,
     padding: 8,
   },

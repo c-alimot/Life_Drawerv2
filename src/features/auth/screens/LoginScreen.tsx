@@ -52,7 +52,7 @@ export function LoginScreen() {
 
   const emailValue = watch("email");
   const fieldLabelStyle = [theme.typography.labelSm, styles.fieldLabel, { color: AUTH_TEXT }];
-  const fieldErrorStyle = [theme.typography.bodySm, styles.fieldError, { color: theme.colors.errorText }];
+  const fieldErrorStyle = [theme.typography.bodySm, styles.fieldError, { color: "#FFFFFF" }];
   const bottomPromptStyle = [theme.typography.body, styles.bottomPrompt, { color: AUTH_TEXT }];
   const bottomLinkStyle = [theme.typography.body, styles.bottomLink, { color: AUTH_PRIMARY }];
 
@@ -131,7 +131,7 @@ export function LoginScreen() {
                 <Text
                   style={[
                     theme.typography.bodySm,
-                    { color: theme.colors.errorText },
+                    { color: "#FFFFFF" },
                   ]}
                   accessible
                   accessibilityRole="alert"
