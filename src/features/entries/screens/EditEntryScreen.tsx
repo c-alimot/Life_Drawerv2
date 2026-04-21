@@ -21,7 +21,7 @@ import { useTags } from "@features/tags/hooks/useTags";
 import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import type { MoodValue } from "@types";
 import { Audio } from "expo-av";
@@ -101,6 +101,7 @@ const starterDrawerStorage = Platform.OS === "web" ? webStorage : AsyncStorage;
 
 export function EditEntryScreen() {
   const theme = useTheme();
+  const navigation = useNavigation();
   const { entryId, fromSearch } = useLocalSearchParams<{
     entryId: string;
     fromSearch?: string;
@@ -165,6 +166,7 @@ export function EditEntryScreen() {
   >(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const bypassExitPromptRef = useRef(false);
 
   const mood = watch("mood");
   const titleValue = watch("title");
@@ -326,6 +328,10 @@ export function EditEntryScreen() {
       }
       recordingRef.current = null;
       setIsRecording(false);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
     } catch {
       Alert.alert("Error", "Failed to stop recording");
     }
@@ -334,8 +340,19 @@ export function EditEntryScreen() {
   const playAudio = useCallback(async () => {
     try {
       if (!audioUri) return;
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
       if (soundRef.current) {
-        await soundRef.current.playAsync();
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded && status.didJustFinish) {
+          await soundRef.current.replayAsync();
+        } else {
+          await soundRef.current.playAsync();
+        }
         setIsAudioPlaying(true);
         return;
       }
@@ -512,6 +529,7 @@ export function EditEntryScreen() {
 
     if (result) {
       Alert.alert("Success", "Entry updated successfully");
+      bypassExitPromptRef.current = true;
       if (openedFromSearch) {
         router.replace("/search");
       } else {
@@ -523,6 +541,7 @@ export function EditEntryScreen() {
   };
 
   const handleBack = useCallback(() => {
+    bypassExitPromptRef.current = true;
     if (openedFromSearch) {
       router.replace("/search");
       return;
@@ -587,6 +606,24 @@ export function EditEntryScreen() {
     setShowExitPrompt(false);
     handleSubmit(onSubmit)();
   };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (bypassExitPromptRef.current) {
+        bypassExitPromptRef.current = false;
+        return;
+      }
+
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      setShowExitPrompt(true);
+    });
+
+    return unsubscribe;
+  }, [hasUnsavedChanges, navigation]);
 
   const visibleExistingImages =
     entry?.images.filter((imageUri) => !removedImageUris.includes(imageUri)) ||
@@ -853,6 +890,13 @@ export function EditEntryScreen() {
             containerStyle={styles.toolbar}
             buttonStyle={styles.toolbarButton}
           />
+
+          {isRecording ? (
+            <View style={styles.recordingStatusRow}>
+              <View style={styles.recordingStatusDot} />
+              <Text style={styles.recordingStatusText}>Recording voice memo...</Text>
+            </View>
+          ) : null}
 
           <EntryImageStrip
             title="MEDIA"
@@ -1242,6 +1286,25 @@ const styles = StyleSheet.create({
   },
   toolbarMoodIcon: {
     fontSize: 24,
+  },
+  recordingStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: -2,
+    marginBottom: 10,
+    gap: 8,
+  },
+  recordingStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: ENTRY_DANGER,
+  },
+  recordingStatusText: {
+    color: ENTRY_MUTED,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
   },
   titleInput: {
     fontSize: 46,

@@ -21,6 +21,7 @@ import { useTags } from "@features/tags/hooks/useTags";
 import { useUpdateTag } from "@features/tags/hooks/useUpdateTag";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MaterialCommunityIcons } from "@components/ui/icons";
+import { useNavigation } from "@react-navigation/native";
 import { useTheme } from "@styles/theme";
 import { Audio } from "expo-av";
 import * as ImagePicker from "expo-image-picker";
@@ -164,6 +165,7 @@ async function reverseGeocodeWithNominatim(
 
 export function CreateEntryScreen() {
   const theme = useTheme();
+  const navigation = useNavigation();
   const { createEntry, isLoading, error } = useCreateEntryWithMedia();
   const { drawers, fetchDrawers } = useDrawers();
   const { tags, fetchTags } = useTags();
@@ -207,6 +209,7 @@ export function CreateEntryScreen() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isStarterDrawerHidden, setIsStarterDrawerHidden] = useState(false);
   const [newDrawerName, setNewDrawerName] = useState("");
   const [newTagName, setNewTagName] = useState("");
@@ -214,6 +217,7 @@ export function CreateEntryScreen() {
   const [pendingImageRemoveIndex, setPendingImageRemoveIndex] = useState<number | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
   const recordingRef = useRef<Audio.Recording | null>(null);
+  const bypassExitPromptRef = useRef(false);
 
   const mood = watch("mood");
   const titleValue = watch("title");
@@ -343,6 +347,10 @@ export function CreateEntryScreen() {
 
       recordingRef.current = null;
       setIsRecording(false);
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
     } catch {
       Alert.alert("Error", "Failed to stop recording");
     }
@@ -352,23 +360,60 @@ export function CreateEntryScreen() {
     try {
       if (!selectedMedia.audioUri) return;
 
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
+
       if (soundRef.current) {
-        await soundRef.current.unloadAsync();
+        const status = await soundRef.current.getStatusAsync();
+        if (status.isLoaded && status.didJustFinish) {
+          await soundRef.current.replayAsync();
+        } else {
+          await soundRef.current.playAsync();
+        }
+        setIsAudioPlaying(true);
+        return;
       }
 
       const { sound } = await Audio.Sound.createAsync(
         { uri: selectedMedia.audioUri },
-        { shouldPlay: true }
+        { shouldPlay: true },
       );
 
       soundRef.current = sound;
-      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) {
+          setIsAudioPlaying(false);
+          return;
+        }
+        setIsAudioPlaying(status.isPlaying);
+        if (status.didJustFinish) {
+          setIsAudioPlaying(false);
+        }
+      });
+      setIsAudioPlaying(true);
     } catch {
       Alert.alert("Error", "Failed to play audio");
     }
   }, [selectedMedia.audioUri]);
 
+  const pauseAudio = useCallback(async () => {
+    try {
+      if (!soundRef.current) return;
+      await soundRef.current.pauseAsync();
+      setIsAudioPlaying(false);
+    } catch {
+      Alert.alert("Error", "Failed to pause audio");
+    }
+  }, []);
+
   const removeAudio = useCallback(() => {
+    if (soundRef.current) {
+      soundRef.current.unloadAsync().catch(() => {});
+      soundRef.current = null;
+    }
+    setIsAudioPlaying(false);
     setSelectedMedia((prev) => ({
       ...prev,
       audioUri: null,
@@ -561,6 +606,7 @@ export function CreateEntryScreen() {
 
     if (entry) {
       Alert.alert("Success", "Entry created successfully");
+      bypassExitPromptRef.current = true;
       router.back();
     } else {
       Alert.alert("Error", error?.message || "Failed to save entry");
@@ -568,6 +614,7 @@ export function CreateEntryScreen() {
   };
 
   const handleBack = useCallback(() => {
+    bypassExitPromptRef.current = true;
     router.back();
   }, []);
 
@@ -644,6 +691,24 @@ export function CreateEntryScreen() {
     setShowExitPrompt(false);
     handleSubmit(onSubmit)();
   };
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("beforeRemove", (event) => {
+      if (bypassExitPromptRef.current) {
+        bypassExitPromptRef.current = false;
+        return;
+      }
+
+      if (!hasUnsavedChanges) {
+        return;
+      }
+
+      event.preventDefault();
+      setShowExitPrompt(true);
+    });
+
+    return unsubscribe;
+  }, [hasUnsavedChanges, navigation]);
 
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -899,6 +964,13 @@ export function CreateEntryScreen() {
             buttonStyle={styles.toolbarButton}
           />
 
+          {isRecording ? (
+            <View style={styles.recordingStatusRow}>
+              <View style={styles.recordingStatusDot} />
+              <Text style={styles.recordingStatusText}>Recording voice memo...</Text>
+            </View>
+          ) : null}
+
           <EntryImageStrip
             items={selectedMedia.imageUris}
             titleColor={theme.colors.textSecondary}
@@ -914,23 +986,36 @@ export function CreateEntryScreen() {
                 <Text
                   style={[theme.typography.body, { color: ENTRY_TEXT }]}
                 >
-                  🎙️ Voice Memo
+                  Voice Memo
                 </Text>
-                <TouchableOpacity
-                  onPress={playAudio}
-                  accessible
-                  accessibilityLabel="Play voice memo"
-                  accessibilityRole="button"
-                >
-                  <Text
-                    style={[
-                      theme.typography.bodySm,
-                      { color: ENTRY_TEXT },
-                    ]}
+                <View style={styles.audioActions}>
+                  <TouchableOpacity
+                    onPress={playAudio}
+                    accessible
+                    accessibilityLabel="Play voice memo"
+                    accessibilityRole="button"
                   >
-                    Play
-                  </Text>
-                </TouchableOpacity>
+                    <Text style={[theme.typography.bodySm, { color: ENTRY_TEXT }]}>
+                      Play
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={pauseAudio}
+                    disabled={!isAudioPlaying}
+                    accessible
+                    accessibilityLabel="Pause voice memo"
+                    accessibilityRole="button"
+                  >
+                    <Text
+                      style={[
+                        theme.typography.bodySm,
+                        { color: isAudioPlaying ? ENTRY_TEXT : "#8A8178" },
+                      ]}
+                    >
+                      Pause
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -1248,6 +1333,25 @@ const styles = StyleSheet.create({
   toolbarMoodIcon: {
     fontSize: 24,
   },
+  recordingStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: -2,
+    marginBottom: 10,
+    gap: 8,
+  },
+  recordingStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 999,
+    backgroundColor: ENTRY_DANGER,
+  },
+  recordingStatusText: {
+    color: ENTRY_MUTED,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
   contentInput: {
     borderWidth: 1,
     borderRadius: 24,
@@ -1305,6 +1409,12 @@ const styles = StyleSheet.create({
   },
   audioContent: {
     flex: 1,
+    gap: 4,
+  },
+  audioActions: {
+    flexDirection: "row",
+    gap: 14,
+    alignItems: "center",
   },
   linkedPreviewSection: {
     marginBottom: 14,
