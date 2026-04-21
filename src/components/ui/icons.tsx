@@ -34,6 +34,7 @@ const ICON_NAME_MAP: Record<string, string> = {
   "food-apple-outline": "Apple",
   target: "Target",
   "notebook-outline": "NotebookPen",
+  "notebook-edit-outline": "NotebookPen",
   "school-outline": "GraduationCap",
   "camera-outline": "Camera",
   "dots-vertical": "EllipsisVertical",
