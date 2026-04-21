@@ -260,7 +260,7 @@ export function AllEntriesScreen() {
 
               {entries.length === 0 ? (
                 <EmptyStateCard
-                  icon="pen"
+                  icon="pencil-outline"
                   title="No matching entries"
                   description="Try a different sort or filter to explore more of your archive."
                 />
